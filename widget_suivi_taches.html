@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CMQ – Suivi des actions</title>
+<title>CMQ – Suivi des projets</title>
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -16,9 +16,44 @@
   --rsm:6px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
 body{font-family:var(--font);background:#f4f3f0;color:#1a1a1a;min-height:100vh;font-size:13px}
-.hdr{background:#fff;border-bottom:.5px solid #ddd;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+
+/* ── PAGE D'ACCUEIL ── */
+#pageAccueil{display:flex;flex-direction:column;min-height:100vh}
+.accueil-header{background:#fff;border-bottom:.5px solid #ddd;padding:16px 28px;display:flex;align-items:center;gap:12px}
+.accueil-logo{width:38px;height:38px;border-radius:9px;background:var(--p600);display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;font-weight:800}
+.accueil-header h1{font-size:16px;font-weight:700;color:#1a1a1a}
+.accueil-header p{font-size:12px;color:#999;margin-top:2px}
+.accueil-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px}
+.accueil-subtitle{font-size:13px;color:#888;margin-bottom:36px;text-align:center}
+.projets-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:100%;max-width:680px}
+.projet-card{border-radius:16px;padding:28px 24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;border:.5px solid transparent}
+.projet-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.12)}
+.projet-card:active{transform:translateY(0)}
+.projet-card-bg{position:absolute;inset:0;opacity:.07;font-size:140px;display:flex;align-items:center;justify-content:center;pointer-events:none;line-height:1}
+.projet-card-badge{display:inline-block;font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:14px;letter-spacing:.06em}
+.projet-card h2{font-size:20px;font-weight:700;margin-bottom:6px}
+.projet-card p{font-size:12px;opacity:.75;line-height:1.5;margin-bottom:18px}
+.projet-card-stats{display:flex;gap:14px}
+.projet-card-stat{font-size:11px}
+.projet-card-stat strong{display:block;font-size:18px;font-weight:700;line-height:1;margin-bottom:2px}
+.projet-card-arrow{position:absolute;bottom:20px;right:20px;font-size:20px;opacity:.4}
+/* FIBI card */
+.card-fibi{background:linear-gradient(135deg,#534AB7 0%,#3C3489 100%);color:#fff;border-color:var(--p600)}
+.card-fibi .projet-card-badge{background:rgba(255,255,255,.2);color:#fff}
+/* BEA card */
+.card-bea{background:linear-gradient(135deg,#0F6E56 0%,#085041 100%);color:#fff;border-color:var(--t600)}
+.card-bea .projet-card-badge{background:rgba(255,255,255,.2);color:#fff}
+.accueil-footer{padding:20px;text-align:center;font-size:11px;color:#ccc}
+
+/* ── PAGE PROJET ── */
+#pageProjet{display:none;flex-direction:column;min-height:100vh}
+.hdr{background:#fff;border-bottom:.5px solid #ddd;padding:11px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
 .hdr-left{display:flex;align-items:center;gap:10px}
-.logo{width:32px;height:32px;border-radius:7px;background:var(--p600);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;font-weight:700}
+.btn-back{background:none;border:.5px solid #ddd;border-radius:var(--rsm);padding:5px 10px;font-size:11px;cursor:pointer;color:#666;font-family:var(--font);display:flex;align-items:center;gap:5px}
+.btn-back:hover{background:#f8f8f8}
+.hdr-projet-badge{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.05em}
+.badge-fibi{background:var(--p50);color:var(--p800)}
+.badge-bea{background:var(--t50);color:var(--t800)}
 .hdr h1{font-size:14px;font-weight:600}
 .hdr-sub{font-size:11px;color:#999;margin-top:1px}
 .hdr-right{display:flex;align-items:center;gap:8px}
@@ -26,10 +61,12 @@ body{font-family:var(--font);background:#f4f3f0;color:#1a1a1a;min-height:100vh;f
 .hdr-alert.visible{display:inline-flex}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
 .hdr-alert{animation:pulse 2s infinite}
+/* TABS */
 .tabs{display:flex;gap:0;padding:0 20px;background:#fff;border-bottom:.5px solid #e0e0e0}
 .tab{padding:9px 16px;font-size:12px;color:#888;cursor:pointer;border:none;border-bottom:2px solid transparent;background:none;font-family:var(--font);transition:all .15s;white-space:nowrap;position:relative}
 .tab.active{color:var(--p600);border-bottom-color:var(--p600);font-weight:500}
 .tab-badge{position:absolute;top:5px;right:4px;background:var(--c600);color:#fff;border-radius:8px;padding:1px 5px;font-size:9px;font-weight:700}
+/* FILTRES */
 .filter-bar{padding:12px 20px 0;background:#fff;border-bottom:.5px solid #f0f0f0}
 .filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;align-items:center}
 .filter-group{display:flex;flex-direction:column;gap:3px}
@@ -119,7 +156,7 @@ select:focus,input:focus{outline:none;border-color:var(--p600);box-shadow:0 0 0 
 .hebdo-item-name{font-size:12px;font-weight:500;color:#222;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hebdo-item-meta{font-size:10px;color:#999;margin-top:2px}
 .hebdo-item-dl{font-size:10px;padding:2px 6px;border-radius:4px;flex-shrink:0}
-.hebdo-edit-btn{opacity:0;font-size:10px;padding:2px 6px;border-radius:4px;background:var(--p50);color:var(--p600);border:none;cursor:pointer;transition:opacity .15s;flex-shrink:0}
+.hebdo-edit-btn{opacity:0;font-size:10px;padding:2px 6px;border-radius:4px;background:var(--p50);color:var(--p600);border:none;cursor:pointer;flex-shrink:0;transition:opacity .15s}
 .hebdo-item:hover .hebdo-edit-btn{opacity:1}
 .hebdo-empty{padding:18px;text-align:center;font-size:12px;color:#bbb}
 /* GANTT */
@@ -145,7 +182,7 @@ select:focus,input:focus{outline:none;border-color:var(--p600);box-shadow:0 0 0 
 .gantt-row-lbl-sub{font-size:9px;color:#aaa;margin-top:1px}
 .gantt-tl{flex:1;position:relative;overflow:hidden;min-height:36px}
 .gantt-bar{position:absolute;height:18px;border-radius:4px;top:50%;transform:translateY(-50%);cursor:pointer;display:flex;align-items:center;padding:0 5px;font-size:9px;color:#fff;font-weight:500;white-space:nowrap;overflow:hidden;min-width:4px}
-.gantt-bar:hover{opacity:.85;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.gantt-bar:hover{opacity:.85}
 .gantt-bar.late{box-shadow:inset 0 0 0 1.5px var(--c600)}
 .gantt-today{position:absolute;top:0;bottom:0;width:1.5px;background:var(--p600);opacity:.5;pointer-events:none;z-index:5}
 .gantt-grp-hd{background:#fafafa}
@@ -185,75 +222,138 @@ select:focus,input:focus{outline:none;border-color:var(--p600);box-shadow:0 0 0 
 .modal-ft{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:.5px solid #f0f0f0}
 textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--rsm);font-size:12px;resize:vertical;min-height:60px;font-family:var(--font)}
 .req{color:var(--c600);margin-left:2px}
-@media(max-width:800px){.kanban{flex-direction:column}.k-col{flex:none;width:100%}.hebdo-grid,.dash-grid{grid-template-columns:1fr}.gantt-label-col,.gantt-row-lbl{width:120px}}
+@media(max-width:700px){.projets-grid{grid-template-columns:1fr}.kanban{flex-direction:column}.k-col{flex:none;width:100%}.hebdo-grid,.dash-grid{grid-template-columns:1fr}.gantt-label-col,.gantt-row-lbl{width:120px}}
 </style>
 </head>
 <body>
 
-<div class="hdr">
-  <div class="hdr-left">
-    <div class="logo">C</div>
+<!-- ══════════════════════════════════════════
+     PAGE D'ACCUEIL CMQ
+     ══════════════════════════════════════════ -->
+<div id="pageAccueil">
+  <div class="accueil-header">
+    <div class="accueil-logo">C</div>
     <div>
-      <h1>CMQ — Suivi des actions FIBI</h1>
-      <div class="hdr-sub" id="hdrSub">Chargement…</div>
+      <h1>CMQ Bioéco — Suivi des projets</h1>
+      <p>Campus des Métiers et des Qualifications</p>
     </div>
   </div>
-  <div class="hdr-right">
-    <div class="hdr-alert" id="hdrAlert" onclick="switchTab('hebdo')">⚠ <span id="hdrAlertTxt"></span></div>
-    <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Nouvelle tâche</button>
-  </div>
-</div>
+  <div class="accueil-body">
+    <p class="accueil-subtitle">Sélectionnez un projet pour accéder au suivi des actions</p>
+    <div class="projets-grid">
 
-<div class="tabs">
-  <button class="tab active" onclick="switchTab('kanban')">Kanban</button>
-  <button class="tab" onclick="switchTab('liste')">Liste</button>
-  <button class="tab" onclick="switchTab('hebdo')">Réunion hebdo</button>
-  <button class="tab" onclick="switchTab('gantt')">Gantt</button>
-  <button class="tab" onclick="switchTab('dashboard')">Dashboard</button>
-</div>
+      <!-- FIBI -->
+      <div class="projet-card card-fibi" onclick="openProjet('fibi')">
+        <div class="projet-card-bg">🔬</div>
+        <div class="projet-card-badge">PIA4</div>
+        <h2>FIBI</h2>
+        <p>Formations Innovantes en Biotechnologies Industrielles</p>
+        <div class="projet-card-stats">
+          <div class="projet-card-stat">
+            <strong id="fibi-total">—</strong>tâches
+          </div>
+          <div class="projet-card-stat">
+            <strong id="fibi-encours">—</strong>en cours
+          </div>
+          <div class="projet-card-stat" id="fibi-late-wrap">
+            <strong id="fibi-late" style="color:#fca5a5">—</strong>en retard
+          </div>
+        </div>
+        <span class="projet-card-arrow">→</span>
+      </div>
 
-<div class="filter-bar">
-  <div class="filters">
-    <div class="filter-group"><span class="filter-label">WP</span>
-      <select id="fWP" onchange="applyFilters()"><option value="">Tous les WPs</option></select></div>
-    <div class="filter-group"><span class="filter-label">Responsable</span>
-      <select id="fQui" onchange="applyFilters()"><option value="">Tous</option></select></div>
-    <div class="filter-group"><span class="filter-label">Recherche</span>
-      <input type="text" id="fSearch" placeholder="Tâche, commentaire…" oninput="applyFilters()"></div>
-    <div class="filter-group" style="margin-left:auto"><span class="filter-label">Priorité</span>
-      <select id="fPrio" onchange="applyFilters()"><option value="">Toutes</option><option value="Haute">Haute</option><option value="Normale">Normale</option></select></div>
-    <button class="btn btn-ghost btn-sm" onclick="resetFilters()" style="align-self:flex-end">Réinitialiser</button>
-  </div>
-  <div class="stats-bar" id="statsBar"></div>
-</div>
+      <!-- BEA -->
+      <div class="projet-card card-bea" onclick="openProjet('bea')">
+        <div class="projet-card-bg">🌿</div>
+        <div class="projet-card-badge">PIA3</div>
+        <h2>BEA</h2>
+        <p>Bioeco Academy — Formations et rayonnement de la bioéconomie</p>
+        <div class="projet-card-stats">
+          <div class="projet-card-stat">
+            <strong id="bea-total">—</strong>tâches
+          </div>
+          <div class="projet-card-stat">
+            <strong id="bea-encours">—</strong>en cours
+          </div>
+          <div class="projet-card-stat">
+            <strong id="bea-late" style="color:#fca5a5">—</strong>en retard
+          </div>
+        </div>
+        <span class="projet-card-arrow">→</span>
+      </div>
 
-<div class="tab-panel active" id="tab-kanban">
-  <div id="kanbanAlert"></div>
-  <div class="kanban" id="kanbanBoard"></div>
-</div>
-
-<div class="tab-panel" id="tab-liste"><div id="listeContent"></div></div>
-
-<div class="tab-panel" id="tab-hebdo"><div id="hebdoContent"></div></div>
-
-<div class="tab-panel" id="tab-gantt">
-  <div class="gantt-controls">
-    <div class="gantt-mode-toggle">
-      <button class="gmt-btn active" id="gBtnWP" onclick="setGanttMode('wp')">Par WP</button>
-      <button class="gmt-btn" id="gBtnMb" onclick="setGanttMode('membre')">Par responsable</button>
-    </div>
-    <div class="gantt-nav">
-      <button onclick="gPrev()">←</button>
-      <span class="gantt-period" id="gPeriod"></span>
-      <button onclick="gNext()">→</button>
-      <button class="btn btn-ghost btn-sm" onclick="gToday()">Aujourd'hui</button>
     </div>
   </div>
-  <div id="ganttContent"></div>
+  <div class="accueil-footer">CMQ Bioéco · Université de Reims Champagne-Ardenne</div>
 </div>
 
-<div class="tab-panel" id="tab-dashboard"><div id="dashContent"></div></div>
+<!-- ══════════════════════════════════════════
+     PAGE PROJET (FIBI ou BEA)
+     ══════════════════════════════════════════ -->
+<div id="pageProjet">
+  <div class="hdr">
+    <div class="hdr-left">
+      <button class="btn-back" onclick="goAccueil()">← Projets</button>
+      <span class="hdr-projet-badge" id="projetBadge">PIA4</span>
+      <div>
+        <h1 id="projetTitre">FIBI</h1>
+        <div class="hdr-sub" id="hdrSub">Chargement…</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="hdr-alert" id="hdrAlert" onclick="switchTab('hebdo')">⚠ <span id="hdrAlertTxt"></span></div>
+      <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Nouvelle tâche</button>
+    </div>
+  </div>
 
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('kanban')">Kanban</button>
+    <button class="tab" onclick="switchTab('liste')">Liste</button>
+    <button class="tab" onclick="switchTab('hebdo')">Réunion hebdo</button>
+    <button class="tab" onclick="switchTab('gantt')">Gantt</button>
+    <button class="tab" onclick="switchTab('dashboard')">Dashboard</button>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filters">
+      <div class="filter-group"><span class="filter-label" id="labelWP">WP / Axe</span>
+        <select id="fWP" onchange="applyFilters()"><option value="">Tous</option></select></div>
+      <div class="filter-group"><span class="filter-label">Responsable</span>
+        <select id="fQui" onchange="applyFilters()"><option value="">Tous</option></select></div>
+      <div class="filter-group"><span class="filter-label">Recherche</span>
+        <input type="text" id="fSearch" placeholder="Tâche, commentaire…" oninput="applyFilters()"></div>
+      <div class="filter-group" style="margin-left:auto"><span class="filter-label">Priorité</span>
+        <select id="fPrio" onchange="applyFilters()"><option value="">Toutes</option><option value="Haute">Haute</option><option value="Normale">Normale</option></select></div>
+      <button class="btn btn-ghost btn-sm" onclick="resetFilters()" style="align-self:flex-end">Réinitialiser</button>
+    </div>
+    <div class="stats-bar" id="statsBar"></div>
+  </div>
+
+  <div class="tab-panel active" id="tab-kanban">
+    <div id="kanbanAlert"></div>
+    <div class="kanban" id="kanbanBoard"></div>
+  </div>
+  <div class="tab-panel" id="tab-liste"><div id="listeContent"></div></div>
+  <div class="tab-panel" id="tab-hebdo"><div id="hebdoContent"></div></div>
+  <div class="tab-panel" id="tab-gantt">
+    <div class="gantt-controls">
+      <div class="gantt-mode-toggle">
+        <button class="gmt-btn active" id="gBtnWP" onclick="setGanttMode('wp')">Par axe/WP</button>
+        <button class="gmt-btn" id="gBtnMb" onclick="setGanttMode('membre')">Par responsable</button>
+      </div>
+      <div class="gantt-nav">
+        <button onclick="gPrev()">←</button>
+        <span class="gantt-period" id="gPeriod"></span>
+        <button onclick="gNext()">→</button>
+        <button class="btn btn-ghost btn-sm" onclick="gToday()">Aujourd'hui</button>
+      </div>
+    </div>
+    <div id="ganttContent"></div>
+  </div>
+  <div class="tab-panel" id="tab-dashboard"><div id="dashContent"></div></div>
+</div>
+
+<!-- MODALE TÂCHE -->
 <div class="overlay" id="taskOverlay">
 <div class="modal">
   <div class="modal-hd">
@@ -265,7 +365,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <div class="fg"><label class="fl">Responsable <span class="req">*</span></label><select id="mQui" style="width:100%"></select></div>
     <div class="fg"><label class="fl">Statut</label><select id="mStatut" style="width:100%"><option>A traiter</option><option>En cours</option><option>En attente</option><option>Réalisé</option><option>Problématique à résoudre</option></select></div>
-    <div class="fg"><label class="fl">WP</label><select id="mWP" style="width:100%"></select></div>
+    <div class="fg"><label class="fl" id="mLabelWP">WP / Axe</label><select id="mWP" style="width:100%"></select></div>
     <div class="fg"><label class="fl">Priorité</label><select id="mPrio" style="width:100%"><option value="Normale">Normale</option><option value="Haute">Haute</option></select></div>
     <div class="fg"><label class="fl">Deadline</label><input type="date" id="mDeadline" style="width:100%"></div>
     <div class="fg"><label class="fl">Date réalisation</label><input type="date" id="mDateReal" style="width:100%"></div>
@@ -281,8 +381,15 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 </div>
 
 <script>
-let TACHES=[],MEMBRES=[],WPS=[],filteredTaches=[],activeStatut='',editingId=null;
-let ganttMode='wp',ganttOffset=0;
+/* ── ÉTAT ── */
+let DATA = {
+  fibi: { taches:[], membres:[], wps:[] },
+  bea:  { taches:[], membres:[], wps:[] },
+};
+let currentProjet = null;
+let TACHES=[], MEMBRES=[], WPS=[];
+let filteredTaches=[], activeStatut='', editingId=null;
+let ganttMode='wp', ganttOffset=0;
 const wpGroupState={};
 
 const SC={
@@ -295,24 +402,70 @@ const SC={
 const SO=['A traiter','En cours','En attente','Problématique à résoudre','Réalisé'];
 const TAB_IDS=['kanban','liste','hebdo','gantt','dashboard'];
 
-const fmtDate=ts=>ts?new Date(ts*1000).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}):'';
+/* ── UTILS ── */
+const fmtDate=ts=>{if(!ts)return'';if(typeof ts==='number')return new Date(ts*1000).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});const d=new Date(ts);return isNaN(d)?'':d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})};
 const toTs=s=>s?Math.floor(new Date(s).getTime()/1000):null;
-const fromTs=ts=>ts?new Date(ts*1000).toISOString().split('T')[0]:'';
-function initials(n){if(!n)return'?';const p=n.trim().split(/[\s&]+/);return p.length>=2?(p[0][0]+p[1][0]).toUpperCase():n.substring(0,2).toUpperCase()}
-function dlCls(ts){if(!ts)return'';const d=(ts-Date.now()/1000)/86400;return d<0?'dl-late':d<=7?'dl-soon':'dl-ok'}
-function dlLbl(ts){if(!ts)return'';const d=Math.ceil((ts-Date.now()/1000)/86400);return d<0?`${Math.abs(d)}j retard`:d===0?'Auj.':d<=7?`${d}j`:fmtDate(ts)}
-function wpCol(c){return({'WP1':'#534AB7','WP2':'#0F6E56','WP3':'#854F0B','WP4':'#993C1D','WP5':'#185FA5'})[c]||'#888'}
-function wpBg(c){return({'WP1':'#EEEDFE','WP2':'#E1F5EE','WP3':'#FAEEDA','WP4':'#FAECE7','WP5':'#E6F1FB'})[c]||'#f4f3f0'}
+const fromTs=ts=>{if(!ts)return'';if(typeof ts==='string'&&ts.includes('-'))return ts;return new Date(ts*1000).toISOString().split('T')[0]};
+const getTs=t=>{if(!t.deadline)return null;if(typeof t.deadline==='number')return t.deadline;const d=new Date(t.deadline);return isNaN(d)?null:Math.floor(d.getTime()/1000)};
+function initials(n){if(!n)return'?';const p=n.trim().split(/[\s,&]+/);return p.length>=2?(p[0][0]+(p[1][0]||'')).toUpperCase():n.substring(0,2).toUpperCase()}
+function dlCls(t){const ts=getTs(t);if(!ts)return'';const d=(ts-Date.now()/1000)/86400;return d<0?'dl-late':d<=7?'dl-soon':'dl-ok'}
+function dlLbl(t){const ts=getTs(t);if(!ts)return'';const d=Math.ceil((ts-Date.now()/1000)/86400);return d<0?`${Math.abs(d)}j retard`:d===0?'Auj.':d<=7?`${d}j`:fmtDate(ts)}
+function wpCol(c){const m={'WP1':'#534AB7','WP2':'#0F6E56','WP3':'#854F0B','WP4':'#993C1D','WP5':'#185FA5','A1':'#534AB7','A2':'#0F6E56','A3':'#854F0B','A4':'#993C1D','A5':'#185FA5'};return m[c]||'#888'}
+function wpBg(c){const m={'WP1':'#EEEDFE','WP2':'#E1F5EE','WP3':'#FAEEDA','WP4':'#FAECE7','WP5':'#E6F1FB','A1':'#EEEDFE','A2':'#E1F5EE','A3':'#FAEEDA','A4':'#FAECE7','A5':'#E6F1FB'};return m[c]||'#f4f3f0'}
 function mCol(n){const c=['#534AB7','#0F6E56','#854F0B','#993C1D','#185FA5','#3C3489','#085041'];const i=MEMBRES.findIndex(m=>m.nom===n);return c[(i>=0?i:0)%c.length]}
 function mBg(n){const b=['#EEEDFE','#E1F5EE','#FAEEDA','#FAECE7','#E6F1FB','#f4f3f0'];const i=MEMBRES.findIndex(m=>m.nom===n);return b[(i>=0?i:0)%b.length]}
-const isLate=t=>t.deadline&&t.deadline<Date.now()/1000&&t.statut!=='Réalisé';
+const isLate=t=>{const ts=getTs(t);return ts&&ts<Date.now()/1000&&t.statut!=='Réalisé'};
 
+/* ── NAVIGATION ── */
+function openProjet(projet){
+  currentProjet=projet;
+  TACHES=DATA[projet].taches;
+  MEMBRES=DATA[projet].membres;
+  WPS=DATA[projet].wps;
+  wpGroupState[projet]=wpGroupState[projet]||{};
+  const isBea=projet==='bea';
+  document.getElementById('projetBadge').textContent=isBea?'PIA3':'PIA4';
+  document.getElementById('projetBadge').className='hdr-projet-badge '+(isBea?'badge-bea':'badge-fibi');
+  document.getElementById('projetTitre').textContent=isBea?'BEA — Bioeco Academy':'FIBI — Biotechnologies Industrielles';
+  document.getElementById('labelWP').textContent=isBea?'Axe':'WP';
+  document.getElementById('mLabelWP').textContent=isBea?'Axe':'WP';
+  document.getElementById('pageAccueil').style.display='none';
+  document.getElementById('pageProjet').style.display='flex';
+  document.getElementById('pageProjet').style.flexDirection='column';
+  document.getElementById('pageProjet').style.minHeight='100vh';
+  populateSelects();
+  activeStatut='';ganttOffset=0;
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',i===0));
+  document.querySelectorAll('.tab-panel').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-kanban').classList.add('active');
+  applyFilters();
+}
+
+function goAccueil(){
+  document.getElementById('pageProjet').style.display='none';
+  document.getElementById('pageAccueil').style.display='flex';
+  updateAccueilStats();
+}
+
+function updateAccueilStats(){
+  ['fibi','bea'].forEach(p=>{
+    const t=DATA[p].taches;
+    const late=t.filter(isLate).length;
+    document.getElementById(p+'-total').textContent=t.length||'—';
+    document.getElementById(p+'-encours').textContent=t.filter(x=>x.statut==='En cours').length||'0';
+    document.getElementById(p+'-late').textContent=late||'0';
+  });
+}
+
+/* ── TABS ── */
 function switchTab(t){
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',TAB_IDS[i]===t));
   document.querySelectorAll('.tab-panel').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
   render();
 }
+
+/* ── FILTRES ── */
 function applyFilters(){
   const wp=document.getElementById('fWP')?.value||'';
   const qui=document.getElementById('fQui')?.value||'';
@@ -331,6 +484,7 @@ function applyFilters(){
 function resetFilters(){['fWP','fQui','fSearch','fPrio'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});activeStatut='';applyFilters()}
 function filterByStatut(s){activeStatut=activeStatut===s?'':s;applyFilters()}
 
+/* ── RENDER ── */
 function render(){
   renderStats();renderHeader();
   const a=document.querySelector('.tab-panel.active')?.id;
@@ -365,7 +519,7 @@ function renderStats(){
 function renderKanban(){
   const late=filteredTaches.filter(isLate);
   document.getElementById('kanbanAlert').innerHTML=late.length?
-    `<div class="alert-banner"><strong>⚠ ${late.length} tâche${late.length>1?'s':''} en retard</strong> — deadlines dépassées
+    `<div class="alert-banner"><strong>⚠ ${late.length} tâche${late.length>1?'s':''} en retard</strong>
     <button class="alert-banner-close" onclick="this.parentNode.style.display='none'">×</button></div>`:'';
   document.getElementById('kanbanBoard').innerHTML=SO.map(statut=>{
     const cfg=SC[statut];const cards=filteredTaches.filter(t=>t.statut===statut);
@@ -376,9 +530,9 @@ function renderKanban(){
           <div class="k-card-title">${t.tache}</div>
           <div class="k-card-meta">
             <span class="k-card-wp" style="background:${wpBg(t.wp_code)};color:${wpCol(t.wp_code)}">${t.wp_code}</span>
-            <span class="k-card-qui">${initials(t.qui)} ${t.qui.split(/[\s&]+/)[0]}</span>
+            <span class="k-card-qui">${initials(t.qui)} ${t.qui.split(/[\s,&]+/)[0]}</span>
             ${t.priorite==='Haute'?'<span style="font-size:9px;background:#FAECE7;color:#993C1D;padding:1px 5px;border-radius:3px;font-weight:600">URGENT</span>':''}
-            ${t.deadline?`<span class="k-card-deadline ${dlCls(t.deadline)}" style="margin-left:auto">${dlLbl(t.deadline)}</span>`:''}
+            ${dlLbl(t)?`<span class="k-card-deadline ${dlCls(t)}" style="margin-left:auto">${dlLbl(t)}</span>`:''}
           </div>
           ${t.commentaire?`<div class="k-card-comment">${t.commentaire.substring(0,60)}${t.commentaire.length>60?'…':''}</div>`:''}
         </div>`).join('')||'<div style="padding:12px;text-align:center;font-size:11px;color:#ccc">Aucune tâche</div>'}
@@ -387,13 +541,14 @@ function renderKanban(){
 }
 
 function renderListe(){
+  const gs=wpGroupState[currentProjet]||{};
   const wpCodes=[...new Set(filteredTaches.map(t=>t.wp_code))].sort();
   document.getElementById('listeContent').innerHTML=wpCodes.map(code=>{
-    const tasks=filteredTaches.filter(t=>t.wp_code===code).sort((a,b)=>{const s=SO.indexOf(a.statut)-SO.indexOf(b.statut);return s||((a.deadline||9e9)-(b.deadline||9e9))});
+    const tasks=filteredTaches.filter(t=>t.wp_code===code).sort((a,b)=>{const s=SO.indexOf(a.statut)-SO.indexOf(b.statut);return s||(getTs(a)||9e9)-(getTs(b)||9e9)});
     const done=tasks.filter(t=>t.statut==='Réalisé').length;
     const late=tasks.filter(isLate).length;
     const pct=tasks.length?Math.round(done/tasks.length*100):0;
-    const isOpen=wpGroupState[code]!==false;
+    const isOpen=gs[code]!==false;
     const wp=WPS.find(w=>w.code===code);
     const title=wp?wp.label.split(' - ').slice(1).join(' '):code;
     return`<div class="wp-group">
@@ -407,7 +562,7 @@ function renderListe(){
         </div>
         <span class="wp-group-chevron ${isOpen?'open':''}">▶</span>
       </div>
-      <div class="wp-group-body${isOpen?'':' collapsed'}" id="wpg-${code}">
+      <div class="wp-group-body${isOpen?'':' collapsed'}">
         <table class="list-table">
           <thead><tr><th>Tâche</th><th>Responsable</th><th>Statut</th><th>Deadline</th><th>Priorité</th><th></th></tr></thead>
           <tbody>${tasks.map(t=>{const cfg=SC[t.statut]||{badge:'s-atraiter',label:t.statut};return`
@@ -415,9 +570,9 @@ function renderListe(){
               <td class="td-tache"><div>${t.tache}</div><div class="td-tache-sub">${t.projet_label||''}</div></td>
               <td><div style="display:flex;align-items:center;gap:5px">
                 <div style="width:22px;height:22px;border-radius:50%;background:${mBg(t.qui)};color:${mCol(t.qui)};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600">${initials(t.qui)}</div>
-                ${t.qui.split(/[\s&]+/)[0]}</div></td>
+                ${t.qui.split(/[\s,&]+/)[0]}</div></td>
               <td><span class="statut-badge ${cfg.badge}">${cfg.label}</span></td>
-              <td>${t.deadline?`<span class="k-card-deadline ${dlCls(t.deadline)}">${fmtDate(t.deadline)}</span>`:'-'}</td>
+              <td>${dlLbl(t)?`<span class="k-card-deadline ${dlCls(t)}">${dlLbl(t)}</span>`:'-'}</td>
               <td>${t.priorite==='Haute'?'<span class="prio-haute">Haute</span>':'<span class="prio-normale">Normale</span>'}</td>
               <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openEditModal(${t.id})">Éditer</button></td>
             </tr>`;}).join('')}</tbody>
@@ -425,34 +580,32 @@ function renderListe(){
       </div></div>`;
   }).join('');
 }
-function toggleWpGroup(code){wpGroupState[code]=wpGroupState[code]===false;renderListe()}
+function toggleWpGroup(code){if(!wpGroupState[currentProjet])wpGroupState[currentProjet]={};wpGroupState[currentProjet][code]=wpGroupState[currentProjet][code]===false?true:false;renderListe()}
 
 function renderHebdo(){
   const now=Date.now()/1000,w7=now+7*86400;
   const all=TACHES;
-  const late=all.filter(t=>t.deadline&&t.deadline<now&&t.statut!=='Réalisé').sort((a,b)=>a.deadline-b.deadline);
-  const twk=all.filter(t=>t.deadline&&t.deadline>=now&&t.deadline<=w7&&t.statut!=='Réalisé').sort((a,b)=>a.deadline-b.deadline);
+  const late=all.filter(t=>{const ts=getTs(t);return ts&&ts<now&&t.statut!=='Réalisé'}).sort((a,b)=>(getTs(a)||0)-(getTs(b)||0));
+  const twk=all.filter(t=>{const ts=getTs(t);return ts&&ts>=now&&ts<=w7&&t.statut!=='Réalisé'}).sort((a,b)=>(getTs(a)||0)-(getTs(b)||0));
   const pbs=all.filter(t=>t.statut==='Problématique à résoudre');
   const done=[...all].filter(t=>t.statut==='Réalisé').sort((a,b)=>(b.date_realisation||0)-(a.date_realisation||0)).slice(0,8);
-  const enc=all.filter(t=>t.statut==='En cours').sort((a,b)=>(a.deadline||9e9)-(b.deadline||9e9));
+  const enc=all.filter(t=>t.statut==='En cours').sort((a,b)=>(getTs(a)||9e9)-(getTs(b)||9e9));
   const mon=new Date();mon.setDate(mon.getDate()-mon.getDay()+1);
   const sun=new Date(mon);sun.setDate(mon.getDate()+6);
   const wkLbl=`${mon.toLocaleDateString('fr-FR',{day:'2-digit',month:'long'})} → ${sun.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}`;
-  function item(t,dotColor){return`<div class="hebdo-item" onclick="openEditModal(${t.id})">
-    <div class="hebdo-item-dot" style="background:${dotColor}"></div>
+  function item(t,dc){return`<div class="hebdo-item" onclick="openEditModal(${t.id})">
+    <div class="hebdo-item-dot" style="background:${dc}"></div>
     <div class="hebdo-item-text">
       <div class="hebdo-item-name">${t.tache}</div>
-      <div class="hebdo-item-meta">${t.qui} · <span style="font-size:10px;padding:1px 5px;border-radius:3px;background:${wpBg(t.wp_code)};color:${wpCol(t.wp_code)}">${t.wp_code}</span></div>
+      <div class="hebdo-item-meta">${t.qui.split(/[\s,&]+/)[0]} · <span style="font-size:10px;padding:1px 5px;border-radius:3px;background:${wpBg(t.wp_code)};color:${wpCol(t.wp_code)}">${t.wp_code}</span></div>
     </div>
-    ${t.deadline?`<span class="hebdo-item-dl ${dlCls(t.deadline)}">${fmtDate(t.deadline)}</span>`:''}
+    ${dlLbl(t)?`<span class="hebdo-item-dl ${dlCls(t)}">${dlLbl(t)}</span>`:''}
     <button class="hebdo-edit-btn" onclick="event.stopPropagation();openEditModal(${t.id})">Éditer</button>
   </div>`}
-  function section(title,icon,iBg,cBg,cColor,items,dotColor){return`<div class="hebdo-section">
+  function section(title,icon,iBg,cBg,cColor,items,dc){return`<div class="hebdo-section">
     <div class="hebdo-hd"><div class="hebdo-icon" style="background:${iBg}">${icon}</div>
-      <span class="hebdo-title">${title}</span>
-      <span class="hebdo-count" style="background:${cBg};color:${cColor}">${items.length}</span>
-    </div>
-    ${items.length?items.map(t=>item(t,dotColor)).join(''):'<div class="hebdo-empty">Aucune tâche</div>'}
+      <span class="hebdo-title">${title}</span><span class="hebdo-count" style="background:${cBg};color:${cColor}">${items.length}</span></div>
+    ${items.length?items.map(t=>item(t,dc)).join(''):'<div class="hebdo-empty">Aucune tâche</div>'}
   </div>`}
   document.getElementById('hebdoContent').innerHTML=`
     <div class="hebdo-header">
@@ -473,7 +626,6 @@ function renderHebdo(){
     <div style="margin-top:12px">${section('Réalisé récemment ✓','✅','#E1F5EE','#5DCAA5','#085041',done,'#0F6E56')}</div>`;
 }
 
-/* GANTT */
 function setGanttMode(m){ganttMode=m;document.getElementById('gBtnWP').classList.toggle('active',m==='wp');document.getElementById('gBtnMb').classList.toggle('active',m==='membre');renderGantt()}
 function gPrev(){ganttOffset--;renderGantt()}
 function gNext(){ganttOffset++;renderGantt()}
@@ -481,12 +633,8 @@ function gToday(){ganttOffset=0;renderGantt()}
 
 function renderGantt(){
   const DAYS=28;
-  const base=new Date();
-  base.setDate(base.getDate()-base.getDay()+1+ganttOffset*7);
-  base.setHours(0,0,0,0);
-  const startTs=base.getTime()/1000;
-  const endTs=startTs+DAYS*86400;
-  const totalSec=endTs-startTs;
+  const base=new Date();base.setDate(base.getDate()-base.getDay()+1+ganttOffset*7);base.setHours(0,0,0,0);
+  const startTs=base.getTime()/1000,endTs=startTs+DAYS*86400,totalSec=endTs-startTs;
   const todayTs=new Date().setHours(0,0,0,0)/1000;
   const todayPct=((todayTs-startTs)/totalSec*100).toFixed(1);
   const endD=new Date(base);endD.setDate(base.getDate()+DAYS-1);
@@ -495,45 +643,34 @@ function renderGantt(){
   const days=Array.from({length:DAYS},(_,i)=>{const d=new Date(base);d.setDate(base.getDate()+i);return d});
   const dayHdr=days.map(d=>{const ts=d.getTime()/1000;const isT=Math.abs(ts-todayTs)<86400;const isW=d.getDay()===0||d.getDay()===6;
     return`<div class="gantt-day ${isT?'today-col':''} ${isW?'wknd':''}">${d.getDate()}<br><span style="font-size:8px">${['Di','Lu','Ma','Me','Je','Ve','Sa'][d.getDay()]}</span></div>`;}).join('');
-  const tasks=filteredTaches.filter(t=>t.statut!=='Réalisé'&&t.deadline);
+  const tasks=filteredTaches.filter(t=>t.statut!=='Réalisé'&&getTs(t));
   function bar(t){
+    const ts=getTs(t);if(!ts)return'';
     const s=Math.max(t.date_creation||startTs,startTs);
-    const e=Math.min(t.deadline,endTs);
+    const e=Math.min(ts,endTs);
     if(e<startTs||s>endTs)return'';
     const l=Math.max(0,(s-startTs)/totalSec*100);
     const w=Math.max(0.4,(e-s)/totalSec*100);
     const color=SC[t.statut]?.color||'#888';
-    return`<div class="gantt-bar${isLate(t)?' late':''}" style="left:${l.toFixed(1)}%;width:${w.toFixed(1)}%;background:${color}" onclick="openEditModal(${t.id})" title="${t.tache} · ${fmtDate(t.deadline)}">${w>8?t.tache.substring(0,18):''}</div>`;
+    return`<div class="gantt-bar${isLate(t)?' late':''}" style="left:${l.toFixed(1)}%;width:${w.toFixed(1)}%;background:${color}" onclick="openEditModal(${t.id})" title="${t.tache}">${w>8?t.tache.substring(0,18):''}</div>`;
   }
   let groups=[];
-  if(ganttMode==='wp'){
-    const codes=[...new Set(tasks.map(t=>t.wp_code))].sort();
+  if(ganttMode==='wp'){const codes=[...new Set(tasks.map(t=>t.wp_code))].sort();
     groups=codes.map(code=>({key:code,label:code,sub:WPS.find(w=>w.code===code)?.label.split(' - ').slice(1).join(' ')||'',color:wpCol(code),bg:wpBg(code),tasks:tasks.filter(t=>t.wp_code===code)}));
-  } else {
-    const noms=[...new Set(tasks.map(t=>t.qui.split(/[\s&]+/)[0]))].sort();
-    groups=noms.map(nom=>({key:nom,label:nom,sub:'',color:mCol(nom),bg:mBg(nom),tasks:tasks.filter(t=>t.qui.includes(nom))}));
-  }
+  }else{const noms=[...new Set(tasks.map(t=>t.qui.split(/[\s,&]+/)[0]))].sort();
+    groups=noms.map(nom=>({key:nom,label:nom,sub:'',color:mCol(nom),bg:mBg(nom),tasks:tasks.filter(t=>t.qui.includes(nom))}));}
   const rows=groups.map(g=>`
     <div class="gantt-row gantt-grp-hd">
-      <div class="gantt-grp-lbl" style="color:${g.color}">
-        <span style="background:${g.bg};padding:2px 6px;border-radius:4px;font-size:10px">${g.label}</span>
-        ${g.sub?`<span style="font-size:9px;color:#aaa;font-weight:400;display:block;margin-top:1px">${g.sub}</span>`:''}
-      </div>
+      <div class="gantt-grp-lbl" style="color:${g.color}"><span style="background:${g.bg};padding:2px 6px;border-radius:4px;font-size:10px">${g.label}</span>${g.sub?`<span style="font-size:9px;color:#aaa;font-weight:400;display:block;margin-top:1px">${g.sub}</span>`:''}</div>
       <div class="gantt-tl"><div class="gantt-today" style="left:${todayPct}%"></div>${g.tasks.map(bar).join('')||'<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#ddd">—</div>'}</div>
     </div>`+
     g.tasks.map(t=>{const b=bar(t);if(!b)return'';return`<div class="gantt-row" style="cursor:pointer" onclick="openEditModal(${t.id})">
-      <div class="gantt-row-lbl">
-        <div class="gantt-row-lbl-main">${t.tache.substring(0,28)}${t.tache.length>28?'…':''}</div>
-        <div class="gantt-row-lbl-sub">${ganttMode==='wp'?t.qui.split(/[\s&]+/)[0]:`<span style="background:${wpBg(t.wp_code)};color:${wpCol(t.wp_code)};padding:1px 4px;border-radius:3px;font-size:9px">${t.wp_code}</span>`}</div>
-      </div>
+      <div class="gantt-row-lbl"><div class="gantt-row-lbl-main">${t.tache.substring(0,28)}${t.tache.length>28?'…':''}</div>
+        <div class="gantt-row-lbl-sub">${ganttMode==='wp'?t.qui.split(/[\s,&]+/)[0]:`<span style="background:${wpBg(t.wp_code)};color:${wpCol(t.wp_code)};padding:1px 4px;border-radius:3px;font-size:9px">${t.wp_code}</span>`}</div></div>
       <div class="gantt-tl"><div class="gantt-today" style="left:${todayPct}%"></div>${b}</div>
-    </div>`;}).join('')
-  ).join('');
+    </div>`;}).join('')).join('');
   document.getElementById('ganttContent').innerHTML=`<div class="gantt-wrap">
-    <div class="gantt-header-row">
-      <div class="gantt-label-col">${ganttMode==='wp'?'WP':'Responsable'}</div>
-      <div class="gantt-days-hd">${dayHdr}</div>
-    </div>
+    <div class="gantt-header-row"><div class="gantt-label-col">${ganttMode==='wp'?'Axe/WP':'Responsable'}</div><div class="gantt-days-hd">${dayHdr}</div></div>
     ${rows||`<div class="gantt-empty">Aucune tâche avec deadline dans cette période</div>`}
   </div>`;
 }
@@ -547,10 +684,10 @@ function renderDash(){
     <div class="progress-bg"><div class="progress-fill" style="width:${p}%;background:${wpCol(wp.code)}"></div></div></div>`;}).join('');
   const memRows=MEMBRES.map((m,i)=>{const tasks=all.filter(t=>t.qui.includes(m.nom));if(!tasks.length)return'';
     const d=tasks.filter(t=>t.statut==='Réalisé').length,e=tasks.filter(t=>t.statut==='En cours').length;
-    const a=tasks.filter(t=>t.statut==='A traiter').length,p=tasks.filter(t=>t.statut==='Problématique à résoudre').length,l=tasks.filter(isLate).length;
+    const a=tasks.filter(t=>t.statut==='A traiter').length,l=tasks.filter(isLate).length;
     return`<div class="membre-row"><div class="av-sm" style="background:${mBg(m.nom)};color:${mCol(m.nom)}">${initials(m.nom)}</div>
       <div class="membre-info"><div class="membre-name">${m.nom}</div><div class="membre-stats">${tasks.length} tâches · ${d} réalisées${l?` · <span style="color:var(--c600);font-weight:600">${l} retard</span>`:''}</div></div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap">${e?`<span class="m-chip" style="background:var(--b50);color:var(--b800)">${e} enc.</span>`:''}${a?`<span class="m-chip" style="background:var(--p50);color:var(--p800)">${a} à trait.</span>`:''}${p?`<span class="m-chip" style="background:var(--c50);color:var(--c800)">${p} pb</span>`:''}</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">${e?`<span class="m-chip" style="background:var(--b50);color:var(--b800)">${e} enc.</span>`:''}${a?`<span class="m-chip" style="background:var(--p50);color:var(--p800)">${a} à trait.</span>`:''}</div>
     </div>`;}).join('');
   document.getElementById('dashContent').innerHTML=`
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
@@ -561,11 +698,12 @@ function renderDash(){
         </div>`).join('')}
     </div>
     <div class="dash-grid">
-      <div class="dash-card"><div class="dash-card-hd"><span class="dash-card-title">Avancement par WP</span></div>${wpRows}</div>
+      <div class="dash-card"><div class="dash-card-hd"><span class="dash-card-title">Avancement par ${currentProjet==='bea'?'Axe':'WP'}</span></div>${wpRows}</div>
       <div class="dash-card"><div class="dash-card-hd"><span class="dash-card-title">Charge par membre</span></div>${memRows}</div>
     </div>`;
 }
 
+/* ── MODALE ── */
 function openAddModal(){
   editingId=null;document.getElementById('modalTitle').textContent='Nouvelle tâche';
   ['mTache','mProjet','mComment'].forEach(id=>document.getElementById(id).value='');
@@ -591,58 +729,87 @@ function closeModal(){document.getElementById('taskOverlay').classList.remove('o
 async function saveTask(){
   const tache=document.getElementById('mTache').value.trim(),qui=document.getElementById('mQui').value;
   if(!tache||!qui){alert('Nom et responsable obligatoires.');return}
+  const tableId=currentProjet==='fibi'?'SUIVI_TACHES':'SUIVI_TACHES_BEA';
   const record={tache,qui,statut:document.getElementById('mStatut').value,wp_code:document.getElementById('mWP').value,
-    priorite:document.getElementById('mPrio').value,deadline:toTs(document.getElementById('mDeadline').value),
-    date_realisation:toTs(document.getElementById('mDateReal').value),projet_label:document.getElementById('mProjet').value,
+    priorite:document.getElementById('mPrio').value,deadline:document.getElementById('mDeadline').value||null,
+    date_realisation:document.getElementById('mDateReal').value||null,projet_label:document.getElementById('mProjet').value,
     commentaire:document.getElementById('mComment').value,wp_label:WPS.find(w=>w.code===document.getElementById('mWP').value)?.label||'',
-    Cree_par:'widget',date_creation:Math.floor(Date.now()/1000)};
+    Cree_par:'widget',date_creation:new Date().toISOString().split('T')[0]};
   try{
-    if(editingId){await grist.docApi.applyUserActions([['UpdateRecord','SUIVI_TACHES',editingId,record]]);
+    if(editingId){await grist.docApi.applyUserActions([['UpdateRecord',tableId,editingId,record]]);
       const i=TACHES.findIndex(t=>t.id===editingId);if(i>=0)TACHES[i]={...TACHES[i],...record};
-    }else{const res=await grist.docApi.applyUserActions([['AddRecord','SUIVI_TACHES',null,record]]);
-      TACHES.push({id:res?.retValues?.[0]??TACHES.length+1,...record});}
-    closeModal();applyFilters();
+    }else{const res=await grist.docApi.applyUserActions([['AddRecord',tableId,null,record]]);
+      const newId=res?.retValues?.[0]??TACHES.length+1;
+      TACHES.push({id:newId,...record});DATA[currentProjet].taches=TACHES;}
+    closeModal();applyFilters();updateAccueilStats();
   }catch(e){console.error(e);alert('Erreur: '+e.message)}
 }
 async function deleteTask(){
   if(!editingId||!confirm('Supprimer ?'))return;
-  try{await grist.docApi.applyUserActions([['RemoveRecord','SUIVI_TACHES',editingId]])}catch(e){console.warn(e)}
-  TACHES=TACHES.filter(t=>t.id!==editingId);closeModal();applyFilters();
+  const tableId=currentProjet==='fibi'?'SUIVI_TACHES':'SUIVI_TACHES_BEA';
+  try{await grist.docApi.applyUserActions([['RemoveRecord',tableId,editingId]])}catch(e){console.warn(e)}
+  TACHES=TACHES.filter(t=>t.id!==editingId);DATA[currentProjet].taches=TACHES;
+  closeModal();applyFilters();updateAccueilStats();
 }
 
-function tableToRows(t){if(!t)return[];const k=Object.keys(t),l=t[k[0]]?.length||0;return Array.from({length:l},(_,i)=>{const r={};k.forEach(c=>r[c]=t[c][i]);return r})}
+/* ── SELECTS ── */
 function populateSelects(){
-  const wp=document.getElementById('fWP');WPS.forEach(w=>{const o=document.createElement('option');o.value=w.code;o.textContent=w.code+' - '+w.label.split(' - ').slice(1).join(' ');wp.appendChild(o)});
-  const qi=document.getElementById('fQui');MEMBRES.forEach(m=>{const o=document.createElement('option');o.value=m.nom;o.textContent=m.nom;qi.appendChild(o)});
-  const mq=document.getElementById('mQui');mq.innerHTML='<option value="">— Choisir —</option>';MEMBRES.forEach(m=>{const o=document.createElement('option');o.value=m.nom;o.textContent=m.nom;mq.appendChild(o)});
-  const mw=document.getElementById('mWP');mw.innerHTML='<option value="">— Choisir —</option>';WPS.forEach(w=>{const o=document.createElement('option');o.value=w.code;o.textContent=w.code;mw.appendChild(o)});
+  const wp=document.getElementById('fWP');wp.innerHTML='<option value="">Tous</option>';
+  WPS.forEach(w=>{const o=document.createElement('option');o.value=w.code;o.textContent=w.code+' - '+w.label.split(' - ').slice(1).join(' ');wp.appendChild(o)});
+  const qi=document.getElementById('fQui');qi.innerHTML='<option value="">Tous</option>';
+  MEMBRES.forEach(m=>{const o=document.createElement('option');o.value=m.nom;o.textContent=m.nom;qi.appendChild(o)});
+  const mq=document.getElementById('mQui');mq.innerHTML='<option value="">— Choisir —</option>';
+  MEMBRES.forEach(m=>{const o=document.createElement('option');o.value=m.nom;o.textContent=m.nom;mq.appendChild(o)});
+  const mw=document.getElementById('mWP');mw.innerHTML='<option value="">— Choisir —</option>';
+  WPS.forEach(w=>{const o=document.createElement('option');o.value=w.code;o.textContent=w.code;mw.appendChild(o)});
 }
+
+/* ── CHARGEMENT ── */
+function tableToRows(t){if(!t)return[];const k=Object.keys(t),l=t[k[0]]?.length||0;return Array.from({length:l},(_,i)=>{const r={};k.forEach(c=>r[c]=t[c][i]);return r})}
+
 async function loadAll(){
   try{
-    const [t,m,w]=await Promise.all([grist.docApi.fetchTable('SUIVI_TACHES'),grist.docApi.fetchTable('CONFIG_MEMBRES_EQUIPE'),grist.docApi.fetchTable('CONFIG_WPS')]);
-    TACHES=tableToRows(t);MEMBRES=tableToRows(m);WPS=tableToRows(w);populateSelects();applyFilters();
+    const [tFibi,mFibi,wFibi,tBea,mBea,wBea]=await Promise.all([
+      grist.docApi.fetchTable('SUIVI_TACHES'),
+      grist.docApi.fetchTable('CONFIG_MEMBRES_EQUIPE'),
+      grist.docApi.fetchTable('CONFIG_WPS'),
+      grist.docApi.fetchTable('SUIVI_TACHES_BEA'),
+      grist.docApi.fetchTable('CONFIG_MEMBRES_BEA'),
+      grist.docApi.fetchTable('CONFIG_AXES_BEA'),
+    ]);
+    DATA.fibi={taches:tableToRows(tFibi),membres:tableToRows(mFibi),wps:tableToRows(wFibi)};
+    DATA.bea={taches:tableToRows(tBea),membres:tableToRows(mBea),wps:tableToRows(wBea)};
+    updateAccueilStats();
   }catch(e){console.warn('Démo:',e.message);loadDemo()}
 }
+
 function loadDemo(){
-  WPS=[{id:1,code:'WP1',label:'WP1 - Excellence professionnelle'},{id:2,code:'WP2',label:'WP2 - Excellence académique'},{id:3,code:'WP3',label:'WP3 - Accompagnement des parcours'},{id:4,code:'WP4',label:'WP4 - Attractivité'},{id:5,code:'WP5',label:'WP5 - Pilotage'}];
-  MEMBRES=[{id:1,nom:'Sofiane'},{id:2,nom:'Camille'},{id:3,nom:'Claire'},{id:4,nom:'Nathalie'},{id:5,nom:'Fred'},{id:6,nom:'Danu'}];
   const n=Math.floor(Date.now()/1000);
-  TACHES=[
-    {id:1,tache:"Catalogue colorations - validation",qui:'Sofiane',statut:'Réalisé',wp_code:'WP1',wp_label:'WP1',projet_label:'Coloration',priorite:'Normale',deadline:n-5*86400,date_realisation:n-3*86400,commentaire:'',date_creation:n-20*86400},
-    {id:2,tache:"Mail relance déclaration Orion",qui:'Sofiane',statut:'En cours',wp_code:'WP1',wp_label:'WP1',projet_label:'Coloration',priorite:'Haute',deadline:n+2*86400,date_realisation:null,commentaire:'',date_creation:n-10*86400},
-    {id:3,tache:"Réunion fin études ENSAIA",qui:'Sofiane',statut:'En cours',wp_code:'WP2',wp_label:'WP2',projet_label:'M2 EnR',priorite:'Normale',deadline:n+5*86400,date_realisation:null,commentaire:'',date_creation:n-8*86400},
-    {id:4,tache:"Définition thèse sciences éducation",qui:'Claire',statut:'A traiter',wp_code:'WP2',wp_label:'WP2',projet_label:'Thèse',priorite:'Normale',deadline:n+20*86400,date_realisation:null,commentaire:'Avec Nathalie',date_creation:n-5*86400},
-    {id:5,tache:"Réunion Master Durabilité",qui:'Camille',statut:'En cours',wp_code:'WP2',wp_label:'WP2',projet_label:'Master',priorite:'Normale',deadline:n-2*86400,date_realisation:null,commentaire:'',date_creation:n-15*86400},
-    {id:6,tache:"Réunion DFPA/EXEBIO/CMQ",qui:'Camille',statut:'En cours',wp_code:'WP3',wp_label:'WP3',projet_label:'Formations courtes',priorite:'Haute',deadline:n+4*86400,date_realisation:null,commentaire:'',date_creation:n-7*86400},
-    {id:7,tache:"Validation process cadrage formations",qui:'Présidence',statut:'Problématique à résoudre',wp_code:'WP3',wp_label:'WP3',projet_label:'Formations courtes',priorite:'Haute',deadline:null,date_realisation:null,commentaire:'Lettre VP',date_creation:n-30*86400},
-    {id:8,tache:"VF Reacto! - prestataire",qui:'Sofiane',statut:'En cours',wp_code:'WP4',wp_label:'WP4',projet_label:'Reacto!',priorite:'Normale',deadline:n+15*86400,date_realisation:null,commentaire:'',date_creation:n-12*86400},
-    {id:9,tache:"Frise Jobio - Impression",qui:'Sofiane',statut:'A traiter',wp_code:'WP4',wp_label:'WP4',projet_label:'Jobio',priorite:'Normale',deadline:n+14*86400,date_realisation:null,commentaire:'',date_creation:n-3*86400},
-    {id:10,tache:"COPIL FIBI - Ordre du jour",qui:'Claire',statut:'A traiter',wp_code:'WP5',wp_label:'WP5',projet_label:'Pilotage',priorite:'Haute',deadline:n+7*86400,date_realisation:null,commentaire:'',date_creation:n-1*86400},
-    {id:11,tache:"Réunion établissements partenaires",qui:'Sofiane',statut:'A traiter',wp_code:'WP1',wp_label:'WP1',projet_label:'Coloration',priorite:'Normale',deadline:n+30*86400,date_realisation:null,commentaire:'',date_creation:n-2*86400},
-    {id:12,tache:"GT Open-Badges Grand Est",qui:'Camille',statut:'En cours',wp_code:'WP3',wp_label:'WP3',projet_label:'Open Badges',priorite:'Normale',deadline:n+3*86400,date_realisation:null,commentaire:'',date_creation:n-6*86400},
-  ];
-  populateSelects();applyFilters();
+  DATA.fibi={
+    taches:[
+      {id:1,tache:"Mail relance déclaration Orion",qui:'Sofiane',statut:'En cours',wp_code:'WP1',wp_label:'WP1 - Excellence',projet_label:'Coloration',priorite:'Haute',deadline:n+2*86400,date_realisation:null,commentaire:''},
+      {id:2,tache:"Réunion DFPA/EXEBIO/CMQ",qui:'Camille',statut:'En cours',wp_code:'WP3',wp_label:'WP3',projet_label:'Formations courtes',priorite:'Haute',deadline:n-1*86400,date_realisation:null,commentaire:''},
+      {id:3,tache:"COPIL FIBI - Ordre du jour",qui:'Claire',statut:'A traiter',wp_code:'WP5',wp_label:'WP5',projet_label:'Pilotage',priorite:'Haute',deadline:n+7*86400,date_realisation:null,commentaire:''},
+      {id:4,tache:"Frise Jobio - Impression",qui:'Sofiane',statut:'A traiter',wp_code:'WP4',wp_label:'WP4',projet_label:'Jobio',priorite:'Normale',deadline:n+14*86400,date_realisation:null,commentaire:''},
+      {id:5,tache:"GT Open-Badges",qui:'Camille',statut:'Réalisé',wp_code:'WP3',wp_label:'WP3',projet_label:'Open Badges',priorite:'Normale',deadline:n-5*86400,date_realisation:n-5*86400,commentaire:''},
+    ],
+    membres:[{id:1,nom:'Sofiane'},{id:2,nom:'Camille'},{id:3,nom:'Claire'},{id:4,nom:'Nathalie'},{id:5,nom:'Fred'}],
+    wps:[{id:1,code:'WP1',label:'WP1 - Excellence professionnelle'},{id:2,code:'WP2',label:'WP2 - Excellence académique'},{id:3,code:'WP3',label:'WP3 - Accompagnement'},{id:4,code:'WP4',label:'WP4 - Attractivité'},{id:5,code:'WP5',label:'WP5 - Pilotage'}],
+  };
+  DATA.bea={
+    taches:[
+      {id:1,tache:"Création BC artiste",qui:'Clarisse',statut:'A traiter',wp_code:'A4',wp_label:'A4 - Ouverture sociétale',projet_label:'Art & Bioeco',priorite:'Normale',deadline:'2026-05-01',date_realisation:null,commentaire:''},
+      {id:2,tache:"Cahier des charges affiche",qui:'Clarisse',statut:'En cours',wp_code:'A4',wp_label:'A4 - Ouverture sociétale',projet_label:'Art & Bioeco',priorite:'Haute',deadline:null,date_realisation:null,commentaire:''},
+      {id:3,tache:"Visite du site",qui:'Gisell',statut:'A traiter',wp_code:'A5',wp_label:'A5 - Déploiement international',projet_label:'International',priorite:'Normale',deadline:'2026-05-21',date_realisation:null,commentaire:''},
+      {id:4,tache:"Prise de contact artiste",qui:'Clarisse',statut:'Réalisé',wp_code:'A4',wp_label:'A4 - Ouverture sociétale',projet_label:'Art & Bioeco',priorite:'Normale',deadline:null,date_realisation:null,commentaire:''},
+      {id:5,tache:"Réunion comité de pilotage",qui:'Claire',statut:'A traiter',wp_code:'A1',wp_label:'A1 - Bâtiment Totem',projet_label:'Totem',priorite:'Haute',deadline:'2026-06-04',date_realisation:null,commentaire:''},
+    ],
+    membres:[{id:1,nom:'Clarisse'},{id:2,nom:'Gisell'},{id:3,nom:'Claire'},{id:4,nom:'Léo'},{id:5,nom:'Camille'}],
+    wps:[{id:1,code:'A1',label:'A1 - Bâtiment Totem'},{id:2,code:'A3',label:'A3 - Formations innovantes'},{id:3,code:'A4',label:'A4 - Ouverture sociétale'},{id:4,code:'A5',label:'A5 - Déploiement international'}],
+  };
+  updateAccueilStats();
 }
+
 grist.ready({requiredAccess:'full'});
 loadAll();
 </script>

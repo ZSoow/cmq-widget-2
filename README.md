@@ -1,1 +1,0 @@
-# cmq-widget-2

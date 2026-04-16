@@ -17,43 +17,49 @@
 }
 body{font-family:var(--font);background:#f4f3f0;color:#1a1a1a;min-height:100vh;font-size:13px}
 
-/* ── PAGE D'ACCUEIL ── */
-#pageAccueil{display:flex;flex-direction:column;min-height:100vh}
-.accueil-header{background:#fff;border-bottom:.5px solid #ddd;padding:16px 28px;display:flex;align-items:center;gap:12px}
-.accueil-logo{width:38px;height:38px;border-radius:9px;background:var(--p600);display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;font-weight:800}
-.accueil-header h1{font-size:16px;font-weight:700;color:#1a1a1a}
-.accueil-header p{font-size:12px;color:#999;margin-top:2px}
-.accueil-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px}
-.accueil-subtitle{font-size:13px;color:#888;margin-bottom:36px;text-align:center}
-.projets-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:100%;max-width:680px}
-.projet-card{border-radius:16px;padding:28px 24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;border:.5px solid transparent}
-.projet-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.12)}
-.projet-card:active{transform:translateY(0)}
-.projet-card-bg{position:absolute;inset:0;opacity:.07;font-size:140px;display:flex;align-items:center;justify-content:center;pointer-events:none;line-height:1}
-.projet-card-badge{display:inline-block;font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:14px;letter-spacing:.06em}
-.projet-card h2{font-size:20px;font-weight:700;margin-bottom:6px}
-.projet-card p{font-size:12px;opacity:.75;line-height:1.5;margin-bottom:18px}
-.projet-card-stats{display:flex;gap:14px}
-.projet-card-stat{font-size:11px}
-.projet-card-stat strong{display:block;font-size:18px;font-weight:700;line-height:1;margin-bottom:2px}
-.projet-card-arrow{position:absolute;bottom:20px;right:20px;font-size:20px;opacity:.4}
-/* FIBI card */
-.card-fibi{background:linear-gradient(135deg,#534AB7 0%,#3C3489 100%);color:#fff;border-color:var(--p600)}
-.card-fibi .projet-card-badge{background:rgba(255,255,255,.2);color:#fff}
-/* BEA card */
-.card-bea{background:linear-gradient(135deg,#0F6E56 0%,#085041 100%);color:#fff;border-color:var(--t600)}
-.card-bea .projet-card-badge{background:rgba(255,255,255,.2);color:#fff}
-.accueil-footer{padding:20px;text-align:center;font-size:11px;color:#ccc}
+/* ══ PAGE ACCUEIL ══ */
+#pageAccueil{min-height:100vh;display:flex;flex-direction:column}
+.acc-hdr{background:#fff;border-bottom:.5px solid #ddd;padding:16px 28px;display:flex;align-items:center;justify-content:space-between}
+.acc-hdr-left{display:flex;align-items:center;gap:12px}
+.acc-logo{width:38px;height:38px;border-radius:9px;background:var(--p600);display:flex;align-items:center;justify-content:center;font-size:17px;color:#fff;font-weight:800}
+.acc-hdr h1{font-size:16px;font-weight:700}
+.acc-hdr p{font-size:12px;color:#999;margin-top:2px}
+.acc-body{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 24px}
+.acc-subtitle{font-size:13px;color:#888;margin-bottom:28px;text-align:center}
 
-/* ── PAGE PROJET ── */
+/* Grille projets responsive */
+.projets-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;width:100%;max-width:900px;margin-bottom:18px}
+
+/* Carte projet */
+.projet-card{border-radius:16px;padding:26px 22px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;border:.5px solid transparent;color:#fff}
+.projet-card:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(0,0,0,.15)}
+.projet-card:active{transform:translateY(0)}
+.pc-bg{position:absolute;right:-10px;bottom:-10px;font-size:100px;opacity:.1;pointer-events:none;line-height:1}
+.pc-badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:12px;background:rgba(255,255,255,.2);letter-spacing:.06em}
+.pc-title{font-size:22px;font-weight:700;margin-bottom:5px}
+.pc-desc{font-size:12px;opacity:.75;line-height:1.5;margin-bottom:16px}
+.pc-stats{display:flex;gap:16px}
+.pc-stat strong{display:block;font-size:20px;font-weight:700;line-height:1;margin-bottom:2px}
+.pc-stat span{font-size:10px;opacity:.75}
+.pc-arrow{position:absolute;bottom:18px;right:18px;font-size:20px;opacity:.35}
+.pc-late-badge{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.25);backdrop-filter:blur(4px);border-radius:10px;padding:3px 8px;font-size:10px;font-weight:600}
+
+/* Carte + Nouveau projet */
+.card-new{border-radius:16px;padding:26px 22px;cursor:pointer;transition:all .2s;border:2px dashed #ddd;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:180px;color:#bbb}
+.card-new:hover{border-color:var(--p200);background:var(--p50);color:var(--p600);transform:translateY(-2px)}
+.card-new-icon{width:44px;height:44px;border-radius:50%;border:2px dashed currentColor;display:flex;align-items:center;justify-content:center;font-size:22px}
+.card-new-label{font-size:13px;font-weight:600}
+.card-new-sub{font-size:11px;opacity:.6;text-align:center}
+
+.acc-footer{padding:20px;text-align:center;font-size:11px;color:#ccc}
+
+/* ══ PAGE PROJET ══ */
 #pageProjet{display:none;flex-direction:column;min-height:100vh}
 .hdr{background:#fff;border-bottom:.5px solid #ddd;padding:11px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
 .hdr-left{display:flex;align-items:center;gap:10px}
-.btn-back{background:none;border:.5px solid #ddd;border-radius:var(--rsm);padding:5px 10px;font-size:11px;cursor:pointer;color:#666;font-family:var(--font);display:flex;align-items:center;gap:5px}
+.btn-back{background:none;border:.5px solid #ddd;border-radius:var(--rsm);padding:5px 10px;font-size:11px;cursor:pointer;color:#666;font-family:var(--font)}
 .btn-back:hover{background:#f8f8f8}
-.hdr-projet-badge{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.05em}
-.badge-fibi{background:var(--p50);color:var(--p800)}
-.badge-bea{background:var(--t50);color:var(--t800)}
+.hdr-badge{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.05em;color:#fff}
 .hdr h1{font-size:14px;font-weight:600}
 .hdr-sub{font-size:11px;color:#999;margin-top:1px}
 .hdr-right{display:flex;align-items:center;gap:8px}
@@ -61,17 +67,19 @@ body{font-family:var(--font);background:#f4f3f0;color:#1a1a1a;min-height:100vh;f
 .hdr-alert.visible{display:inline-flex}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
 .hdr-alert{animation:pulse 2s infinite}
+
 /* TABS */
-.tabs{display:flex;gap:0;padding:0 20px;background:#fff;border-bottom:.5px solid #e0e0e0}
+.tabs{display:flex;padding:0 20px;background:#fff;border-bottom:.5px solid #e0e0e0}
 .tab{padding:9px 16px;font-size:12px;color:#888;cursor:pointer;border:none;border-bottom:2px solid transparent;background:none;font-family:var(--font);transition:all .15s;white-space:nowrap;position:relative}
 .tab.active{color:var(--p600);border-bottom-color:var(--p600);font-weight:500}
 .tab-badge{position:absolute;top:5px;right:4px;background:var(--c600);color:#fff;border-radius:8px;padding:1px 5px;font-size:9px;font-weight:700}
+
 /* FILTRES */
 .filter-bar{padding:12px 20px 0;background:#fff;border-bottom:.5px solid #f0f0f0}
 .filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;align-items:center}
 .filter-group{display:flex;flex-direction:column;gap:3px}
 .filter-label{font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.04em}
-select,input[type=text],input[type=date]{padding:7px 10px;border:.5px solid #ddd;border-radius:var(--rsm);font-size:12px;color:#333;background:#fff;font-family:var(--font);min-width:120px}
+select,input[type=text],input[type=date],input[type=color]{padding:7px 10px;border:.5px solid #ddd;border-radius:var(--rsm);font-size:12px;color:#333;background:#fff;font-family:var(--font);min-width:120px}
 select:focus,input:focus{outline:none;border-color:var(--p600);box-shadow:0 0 0 2px var(--p50)}
 .btn{padding:7px 14px;border-radius:var(--rsm);font-size:12px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
 .btn-primary{background:var(--p600);color:#fff}.btn-primary:hover{background:var(--p800)}
@@ -88,6 +96,7 @@ select:focus,input:focus{outline:none;border-color:var(--p600);box-shadow:0 0 0 
 .sc-probleme{background:var(--c50);border-color:var(--c200);color:var(--c800)}.sc-probleme.active{background:var(--c600);border-color:var(--c600);color:#fff}
 .tab-panel{display:none;padding:16px 20px}
 .tab-panel.active{display:block}
+
 /* KANBAN */
 .kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;align-items:flex-start}
 .k-col{flex:0 0 240px;background:#f4f3f0;border-radius:10px;overflow:hidden}
@@ -104,12 +113,13 @@ select:focus,input:focus{outline:none;border-color:var(--p600);box-shadow:0 0 0 
 .k-card-qui{font-size:10px;color:#888}
 .k-card-deadline{font-size:10px;padding:2px 6px;border-radius:4px;margin-left:auto}
 .dl-ok{background:var(--t50);color:var(--t800)}.dl-soon{background:var(--a50);color:var(--a800)}.dl-late{background:var(--c50);color:var(--c800);font-weight:600}
-.k-card-comment{font-size:10px;color:#aaa;margin-top:5px;font-style:italic;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k-card-comment{font-size:10px;color:#aaa;margin-top:5px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .k-realise .k-col-hd{background:var(--t50)}.k-realise .k-col-title{color:var(--t800)}.k-realise .k-col-count{background:var(--t200);color:var(--t800)}
 .k-encours .k-col-hd{background:var(--b50)}.k-encours .k-col-title{color:var(--b800)}.k-encours .k-col-count{background:var(--b200);color:var(--b800)}
 .k-atraiter .k-col-hd{background:var(--p50)}.k-atraiter .k-col-title{color:var(--p800)}.k-atraiter .k-col-count{background:var(--p200);color:var(--p800)}
 .k-attente .k-col-hd{background:var(--a50)}.k-attente .k-col-title{color:var(--a800)}.k-attente .k-col-count{background:var(--a200);color:var(--a800)}
 .k-probleme .k-col-hd{background:var(--c50)}.k-probleme .k-col-title{color:var(--c800)}.k-probleme .k-col-count{background:var(--c200);color:var(--c800)}
+
 /* LISTE GROUPÉE */
 .wp-group{margin-bottom:10px;border-radius:10px;overflow:hidden;border:.5px solid #e0e0e0}
 .wp-group-hd{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;cursor:pointer;user-select:none;border-bottom:.5px solid #f0f0f0}
@@ -122,8 +132,7 @@ select:focus,input:focus{outline:none;border-color:var(--p600);box-shadow:0 0 0 
 .wp-group-late{font-size:10px;padding:2px 6px;border-radius:8px;background:var(--c50);color:var(--c800);font-weight:500}
 .wp-group-chevron{font-size:11px;color:#bbb;transition:transform .2s;margin-left:4px}
 .wp-group-chevron.open{transform:rotate(90deg)}
-.wp-group-body{background:#fff}
-.wp-group-body.collapsed{display:none}
+.wp-group-body{background:#fff}.wp-group-body.collapsed{display:none}
 .list-table{width:100%;border-collapse:collapse}
 .list-table th{padding:8px 12px;text-align:left;font-size:10px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.04em;background:#fafafa;border-bottom:.5px solid #f0f0f0}
 .list-table td{padding:8px 12px;border-bottom:.5px solid #f5f5f5;vertical-align:middle}
@@ -135,6 +144,7 @@ select:focus,input:focus{outline:none;border-color:var(--p600);box-shadow:0 0 0 
 .s-realise{background:var(--t50);color:var(--t800)}.s-encours{background:var(--b50);color:var(--b800)}.s-atraiter{background:var(--p50);color:var(--p800)}.s-attente{background:var(--a50);color:var(--a800)}.s-probleme{background:var(--c50);color:var(--c800)}
 .prio-haute{background:var(--c50);color:var(--c800);padding:2px 7px;border-radius:8px;font-size:10px;font-weight:500}
 .prio-normale{color:#bbb;font-size:10px}
+
 /* HEBDO */
 .hebdo-header{background:#fff;border-radius:10px;border:.5px solid #e0e0e0;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .hebdo-kpis{display:flex;gap:10px}
@@ -159,6 +169,7 @@ select:focus,input:focus{outline:none;border-color:var(--p600);box-shadow:0 0 0 
 .hebdo-edit-btn{opacity:0;font-size:10px;padding:2px 6px;border-radius:4px;background:var(--p50);color:var(--p600);border:none;cursor:pointer;flex-shrink:0;transition:opacity .15s}
 .hebdo-item:hover .hebdo-edit-btn{opacity:1}
 .hebdo-empty{padding:18px;text-align:center;font-size:12px;color:#bbb}
+
 /* GANTT */
 .gantt-controls{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
 .gantt-mode-toggle{display:flex;border:.5px solid #ddd;border-radius:6px;overflow:hidden}
@@ -170,7 +181,7 @@ select:focus,input:focus{outline:none;border-color:var(--p600);box-shadow:0 0 0 
 .gantt-period{font-size:12px;font-weight:500;color:#333;min-width:200px;text-align:center}
 .gantt-wrap{background:#fff;border-radius:10px;border:.5px solid #e0e0e0;overflow:hidden}
 .gantt-header-row{display:flex;border-bottom:.5px solid #e0e0e0}
-.gantt-label-col{width:200px;flex-shrink:0;padding:8px 14px;font-size:10px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.04em;background:#fafafa;border-right:.5px solid #f0f0f0}
+.gantt-label-col{width:200px;flex-shrink:0;padding:8px 14px;font-size:10px;font-weight:600;color:#888;text-transform:uppercase;background:#fafafa;border-right:.5px solid #f0f0f0}
 .gantt-days-hd{flex:1;display:flex;overflow:hidden;background:#fafafa}
 .gantt-day{flex:1;text-align:center;font-size:9px;color:#aaa;padding:8px 2px;border-right:.5px solid #f5f5f5;min-width:20px}
 .gantt-day.today-col{background:var(--p50);color:var(--p800);font-weight:600}
@@ -188,6 +199,7 @@ select:focus,input:focus{outline:none;border-color:var(--p600);box-shadow:0 0 0 
 .gantt-grp-hd{background:#fafafa}
 .gantt-grp-lbl{width:200px;flex-shrink:0;padding:7px 14px;font-size:10px;font-weight:700;color:#444;border-right:.5px solid #f0f0f0}
 .gantt-empty{padding:30px;text-align:center;font-size:12px;color:#bbb}
+
 /* DASHBOARD */
 .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
 .dash-card{background:#fff;border-radius:10px;border:.5px solid #e0e0e0;overflow:hidden}
@@ -210,10 +222,12 @@ select:focus,input:focus{outline:none;border-color:var(--p600);box-shadow:0 0 0 
 .alert-banner{background:var(--c50);border:.5px solid var(--c200);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--c800);display:flex;align-items:center;gap:8px}
 .alert-banner strong{font-weight:600}
 .alert-banner-close{margin-left:auto;cursor:pointer;font-size:16px;opacity:.5;background:none;border:none;color:var(--c800)}
-/* MODALE */
+
+/* MODALES */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center}
 .overlay.open{display:flex}
 .modal{background:#fff;border-radius:12px;width:520px;max-width:96vw;max-height:90vh;overflow-y:auto;padding:22px;box-shadow:0 8px 40px rgba(0,0,0,.18)}
+.modal-sm{width:420px}
 .modal-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
 .modal-title{font-size:15px;font-weight:600}
 .btn-x{background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;padding:0 4px}
@@ -222,81 +236,43 @@ select:focus,input:focus{outline:none;border-color:var(--p600);box-shadow:0 0 0 
 .modal-ft{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:.5px solid #f0f0f0}
 textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--rsm);font-size:12px;resize:vertical;min-height:60px;font-family:var(--font)}
 .req{color:var(--c600);margin-left:2px}
-@media(max-width:700px){.projets-grid{grid-template-columns:1fr}.kanban{flex-direction:column}.k-col{flex:none;width:100%}.hebdo-grid,.dash-grid{grid-template-columns:1fr}.gantt-label-col,.gantt-row-lbl{width:120px}}
+
+/* Aperçu couleur projet */
+.color-preview{width:100%;height:50px;border-radius:var(--rsm);margin-top:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;transition:background .2s}
+
+@media(max-width:700px){.kanban{flex-direction:column}.k-col{flex:none;width:100%}.hebdo-grid,.dash-grid{grid-template-columns:1fr}.gantt-label-col,.gantt-row-lbl{width:120px}}
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════
-     PAGE D'ACCUEIL CMQ
-     ══════════════════════════════════════════ -->
+<!-- ══ PAGE ACCUEIL ══ -->
 <div id="pageAccueil">
-  <div class="accueil-header">
-    <div class="accueil-logo">C</div>
-    <div>
-      <h1>CMQ Bioéco — Suivi des projets</h1>
-      <p>Campus des Métiers et des Qualifications</p>
+  <div class="acc-hdr">
+    <div class="acc-hdr-left">
+      <div class="acc-logo">C</div>
+      <div>
+        <h1>CMQ Bioéco — Suivi des projets</h1>
+        <p>Campus des Métiers et des Qualifications · Université de Reims</p>
+      </div>
     </div>
   </div>
-  <div class="accueil-body">
-    <p class="accueil-subtitle">Sélectionnez un projet pour accéder au suivi des actions</p>
-    <div class="projets-grid">
-
-      <!-- FIBI -->
-      <div class="projet-card card-fibi" onclick="openProjet('fibi')">
-        <div class="projet-card-bg">🔬</div>
-        <div class="projet-card-badge">PIA4</div>
-        <h2>FIBI</h2>
-        <p>Formations Innovantes en Biotechnologies Industrielles</p>
-        <div class="projet-card-stats">
-          <div class="projet-card-stat">
-            <strong id="fibi-total">—</strong>tâches
-          </div>
-          <div class="projet-card-stat">
-            <strong id="fibi-encours">—</strong>en cours
-          </div>
-          <div class="projet-card-stat" id="fibi-late-wrap">
-            <strong id="fibi-late" style="color:#fca5a5">—</strong>en retard
-          </div>
-        </div>
-        <span class="projet-card-arrow">→</span>
-      </div>
-
-      <!-- BEA -->
-      <div class="projet-card card-bea" onclick="openProjet('bea')">
-        <div class="projet-card-bg">🌿</div>
-        <div class="projet-card-badge">PIA3</div>
-        <h2>BEA</h2>
-        <p>Bioeco Academy — Formations et rayonnement de la bioéconomie</p>
-        <div class="projet-card-stats">
-          <div class="projet-card-stat">
-            <strong id="bea-total">—</strong>tâches
-          </div>
-          <div class="projet-card-stat">
-            <strong id="bea-encours">—</strong>en cours
-          </div>
-          <div class="projet-card-stat">
-            <strong id="bea-late" style="color:#fca5a5">—</strong>en retard
-          </div>
-        </div>
-        <span class="projet-card-arrow">→</span>
-      </div>
-
+  <div class="acc-body">
+    <p class="acc-subtitle">Sélectionnez un projet pour accéder au suivi des actions</p>
+    <div class="projets-grid" id="projetsGrid">
+      <!-- Cartes générées dynamiquement -->
     </div>
   </div>
-  <div class="accueil-footer">CMQ Bioéco · Université de Reims Champagne-Ardenne</div>
+  <div class="acc-footer">CMQ Bioéco · Université de Reims Champagne-Ardenne</div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     PAGE PROJET (FIBI ou BEA)
-     ══════════════════════════════════════════ -->
+<!-- ══ PAGE PROJET ══ -->
 <div id="pageProjet">
   <div class="hdr">
     <div class="hdr-left">
       <button class="btn-back" onclick="goAccueil()">← Projets</button>
-      <span class="hdr-projet-badge" id="projetBadge">PIA4</span>
+      <span class="hdr-badge" id="projetBadge"></span>
       <div>
-        <h1 id="projetTitre">FIBI</h1>
+        <h1 id="projetTitre"></h1>
         <div class="hdr-sub" id="hdrSub">Chargement…</div>
       </div>
     </div>
@@ -305,7 +281,6 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
       <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Nouvelle tâche</button>
     </div>
   </div>
-
   <div class="tabs">
     <button class="tab active" onclick="switchTab('kanban')">Kanban</button>
     <button class="tab" onclick="switchTab('liste')">Liste</button>
@@ -313,7 +288,6 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     <button class="tab" onclick="switchTab('gantt')">Gantt</button>
     <button class="tab" onclick="switchTab('dashboard')">Dashboard</button>
   </div>
-
   <div class="filter-bar">
     <div class="filters">
       <div class="filter-group"><span class="filter-label" id="labelWP">WP / Axe</span>
@@ -328,11 +302,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     </div>
     <div class="stats-bar" id="statsBar"></div>
   </div>
-
-  <div class="tab-panel active" id="tab-kanban">
-    <div id="kanbanAlert"></div>
-    <div class="kanban" id="kanbanBoard"></div>
-  </div>
+  <div class="tab-panel active" id="tab-kanban"><div id="kanbanAlert"></div><div class="kanban" id="kanbanBoard"></div></div>
   <div class="tab-panel" id="tab-liste"><div id="listeContent"></div></div>
   <div class="tab-panel" id="tab-hebdo"><div id="hebdoContent"></div></div>
   <div class="tab-panel" id="tab-gantt">
@@ -356,12 +326,8 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 <!-- MODALE TÂCHE -->
 <div class="overlay" id="taskOverlay">
 <div class="modal">
-  <div class="modal-hd">
-    <span class="modal-title" id="modalTitle">Nouvelle tâche</span>
-    <button class="btn-x" onclick="closeModal()">×</button>
-  </div>
-  <div class="fg"><label class="fl">Tâche <span class="req">*</span></label>
-    <input type="text" id="mTache" style="width:100%" placeholder="Description de la tâche…"></div>
+  <div class="modal-hd"><span class="modal-title" id="modalTitle">Nouvelle tâche</span><button class="btn-x" onclick="closeModal()">×</button></div>
+  <div class="fg"><label class="fl">Tâche <span class="req">*</span></label><input type="text" id="mTache" style="width:100%" placeholder="Description de la tâche…"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <div class="fg"><label class="fl">Responsable <span class="req">*</span></label><select id="mQui" style="width:100%"></select></div>
     <div class="fg"><label class="fl">Statut</label><select id="mStatut" style="width:100%"><option>A traiter</option><option>En cours</option><option>En attente</option><option>Réalisé</option><option>Problématique à résoudre</option></select></div>
@@ -380,13 +346,40 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 </div>
 </div>
 
+<!-- MODALE NOUVEAU PROJET -->
+<div class="overlay" id="newProjetOverlay">
+<div class="modal modal-sm">
+  <div class="modal-hd"><span class="modal-title">Nouveau projet</span><button class="btn-x" onclick="closeNewProjet()">×</button></div>
+  <div class="fg"><label class="fl">Nom court <span class="req">*</span></label>
+    <input type="text" id="npId" style="width:100%;text-transform:uppercase" placeholder="Ex: CYCLO" maxlength="10" oninput="this.value=this.value.toUpperCase();updateProjetPreview()"></div>
+  <div class="fg"><label class="fl">Nom complet <span class="req">*</span></label>
+    <input type="text" id="npNom" style="width:100%" placeholder="Ex: Cycl'Organic" oninput="updateProjetPreview()"></div>
+  <div class="fg"><label class="fl">Description</label>
+    <input type="text" id="npDesc" style="width:100%" placeholder="Ex: Valorisation des déchets organiques" oninput="updateProjetPreview()"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="fg"><label class="fl">Type de projet</label>
+      <select id="npType" style="width:100%"><option value="PIA3">PIA3</option><option value="PIA4">PIA4</option><option value="Autre">Autre</option></select></div>
+    <div class="fg"><label class="fl">Couleur principale</label>
+      <input type="color" id="npColor" value="#534AB7" style="width:100%;height:36px;padding:2px 4px;cursor:pointer" oninput="updateProjetPreview()"></div>
+  </div>
+  <!-- Aperçu de la carte -->
+  <div class="fg">
+    <label class="fl">Aperçu</label>
+    <div class="color-preview" id="npPreview" style="background:#534AB7">
+      <span id="npPreviewText">NOUVEAU PROJET</span>
+    </div>
+  </div>
+  <div class="modal-ft">
+    <button class="btn btn-ghost" onclick="closeNewProjet()">Annuler</button>
+    <button class="btn btn-primary" onclick="saveNewProjet()">Créer le projet</button>
+  </div>
+</div>
+</div>
+
 <script>
-/* ── ÉTAT ── */
-let DATA = {
-  fibi: { taches:[], membres:[], wps:[] },
-  bea:  { taches:[], membres:[], wps:[] },
-};
-let currentProjet = null;
+/* ── ÉTAT GLOBAL ── */
+let PROJETS=[], ALL_TACHES=[], ALL_MEMBRES=[];
+let currentProjetId=null;
 let TACHES=[], MEMBRES=[], WPS=[];
 let filteredTaches=[], activeStatut='', editingId=null;
 let ganttMode='wp', ganttOffset=0;
@@ -407,54 +400,143 @@ const fmtDate=ts=>{if(!ts)return'';if(typeof ts==='number')return new Date(ts*10
 const toTs=s=>s?Math.floor(new Date(s).getTime()/1000):null;
 const fromTs=ts=>{if(!ts)return'';if(typeof ts==='string'&&ts.includes('-'))return ts;return new Date(ts*1000).toISOString().split('T')[0]};
 const getTs=t=>{if(!t.deadline)return null;if(typeof t.deadline==='number')return t.deadline;const d=new Date(t.deadline);return isNaN(d)?null:Math.floor(d.getTime()/1000)};
-function initials(n){if(!n)return'?';const p=n.trim().split(/[\s,&]+/);return p.length>=2?(p[0][0]+(p[1][0]||'')).toUpperCase():n.substring(0,2).toUpperCase()}
+function initials(n){if(!n)return'?';const p=n.trim().split(/[\s,&]+/);return p.length>=2?(p[0][0]+(p[1]?.[0]||'')).toUpperCase():n.substring(0,2).toUpperCase()}
 function dlCls(t){const ts=getTs(t);if(!ts)return'';const d=(ts-Date.now()/1000)/86400;return d<0?'dl-late':d<=7?'dl-soon':'dl-ok'}
 function dlLbl(t){const ts=getTs(t);if(!ts)return'';const d=Math.ceil((ts-Date.now()/1000)/86400);return d<0?`${Math.abs(d)}j retard`:d===0?'Auj.':d<=7?`${d}j`:fmtDate(ts)}
-function wpCol(c){const m={'WP1':'#534AB7','WP2':'#0F6E56','WP3':'#854F0B','WP4':'#993C1D','WP5':'#185FA5','A1':'#534AB7','A2':'#0F6E56','A3':'#854F0B','A4':'#993C1D','A5':'#185FA5'};return m[c]||'#888'}
-function wpBg(c){const m={'WP1':'#EEEDFE','WP2':'#E1F5EE','WP3':'#FAEEDA','WP4':'#FAECE7','WP5':'#E6F1FB','A1':'#EEEDFE','A2':'#E1F5EE','A3':'#FAEEDA','A4':'#FAECE7','A5':'#E6F1FB'};return m[c]||'#f4f3f0'}
-function mCol(n){const c=['#534AB7','#0F6E56','#854F0B','#993C1D','#185FA5','#3C3489','#085041'];const i=MEMBRES.findIndex(m=>m.nom===n);return c[(i>=0?i:0)%c.length]}
-function mBg(n){const b=['#EEEDFE','#E1F5EE','#FAEEDA','#FAECE7','#E6F1FB','#f4f3f0'];const i=MEMBRES.findIndex(m=>m.nom===n);return b[(i>=0?i:0)%b.length]}
+function hexToRgb(h){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return`${r},${g},${b}`}
+function lightenHex(h,p=0.85){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);const lr=Math.round(r+(255-r)*p),lg=Math.round(g+(255-g)*p),lb=Math.round(b+(255-b)*p);return`#${lr.toString(16).padStart(2,'0')}${lg.toString(16).padStart(2,'0')}${lb.toString(16).padStart(2,'0')}`}
+
+// Couleurs WP/Axe dynamiques selon couleur projet
+function wpCol(code){
+  if(!currentProjetId)return'#888';
+  const proj=PROJETS.find(p=>p.projet_id===currentProjetId);
+  if(!proj)return'#888';
+  const base=proj.couleur;
+  const palette=[base,'#185FA5','#854F0B','#993C1D','#0F6E56'];
+  const idx=['WP1','WP2','WP3','WP4','WP5','A1','A2','A3','A4','A5'].indexOf(code);
+  return palette[idx>=0?idx%palette.length:0];
+}
+function wpBg(code){return lightenHex(wpCol(code))}
+function mCol(n){const cols=['#534AB7','#0F6E56','#854F0B','#993C1D','#185FA5','#3C3489','#085041'];const i=MEMBRES.findIndex(m=>m.nom===n);return cols[(i>=0?i:0)%cols.length]}
+function mBg(n){return lightenHex(mCol(n))}
 const isLate=t=>{const ts=getTs(t);return ts&&ts<Date.now()/1000&&t.statut!=='Réalisé'};
 
+/* ── PAGE ACCUEIL ── */
+function renderAccueil(){
+  const grid=document.getElementById('projetsGrid');
+  grid.innerHTML = PROJETS.map(p=>{
+    const tasks=ALL_TACHES.filter(t=>t.projet_id===p.projet_id);
+    const late=tasks.filter(isLate).length;
+    const enc=tasks.filter(t=>t.statut==='En cours').length;
+    const done=tasks.filter(t=>t.statut==='Réalisé').length;
+    const pct=tasks.length?Math.round(done/tasks.length*100):0;
+    const bg=p.couleur||'#534AB7';
+    const emoji={'PIA3':'🌿','PIA4':'🔬','Autre':'📋'}[p.type_projet]||'📋';
+    return`<div class="projet-card" style="background:linear-gradient(135deg,${bg} 0%,${darken(bg,.15)} 100%)" onclick="openProjet('${p.projet_id}')">
+      <div class="pc-bg">${emoji}</div>
+      ${late>0?`<div class="pc-late-badge">⚠ ${late} retard${late>1?'s':''}</div>`:''}
+      <div class="pc-badge">${p.type_projet||''}</div>
+      <div class="pc-title">${p.nom}</div>
+      <div class="pc-desc">${p.description||p.nom_long||''}</div>
+      <div class="pc-stats">
+        <div class="pc-stat"><strong>${tasks.length}</strong><span>tâches</span></div>
+        <div class="pc-stat"><strong>${enc}</strong><span>en cours</span></div>
+        <div class="pc-stat"><strong>${pct}%</strong><span>réalisé</span></div>
+      </div>
+      <span class="pc-arrow">→</span>
+    </div>`;
+  }).join('') +
+  `<div class="card-new" onclick="openNewProjet()">
+    <div class="card-new-icon">+</div>
+    <div class="card-new-label">Nouveau projet</div>
+    <div class="card-new-sub">Ajouter un projet PIA<br>ou tout autre suivi d'actions</div>
+  </div>`;
+}
+
+function darken(hex,p){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  const dr=Math.round(r*(1-p)),dg=Math.round(g*(1-p)),db=Math.round(b*(1-p));
+  return`#${dr.toString(16).padStart(2,'0')}${dg.toString(16).padStart(2,'0')}${db.toString(16).padStart(2,'0')}`;
+}
+
+/* ── NOUVEAU PROJET ── */
+function openNewProjet(){document.getElementById('newProjetOverlay').classList.add('open');updateProjetPreview()}
+function closeNewProjet(){document.getElementById('newProjetOverlay').classList.remove('open')}
+function updateProjetPreview(){
+  const id=document.getElementById('npId').value||'CODE';
+  const nom=document.getElementById('npNom').value||'Nom du projet';
+  const color=document.getElementById('npColor').value;
+  document.getElementById('npPreview').style.background=color;
+  document.getElementById('npPreviewText').textContent=`${id} — ${nom}`;
+}
+
+async function saveNewProjet(){
+  const id=document.getElementById('npId').value.trim().toUpperCase();
+  const nom=document.getElementById('npNom').value.trim();
+  if(!id||!nom){alert('Code et nom obligatoires.');return}
+  if(PROJETS.find(p=>p.projet_id===id)){alert(`Un projet "${id}" existe déjà.`);return}
+  const color=document.getElementById('npColor').value;
+  const record={
+    projet_id:id, nom, nom_long:nom,
+    type_projet:document.getElementById('npType').value,
+    couleur:color, couleur_bg:lightenHex(color),
+    description:document.getElementById('npDesc').value,
+    actif:'1'
+  };
+  try{
+    await grist.docApi.applyUserActions([['AddRecord','CONFIG_PROJETS',null,record]]);
+    PROJETS.push(record);
+    closeNewProjet();
+    renderAccueil();
+    // Réinitialiser le formulaire
+    ['npId','npNom','npDesc'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('npColor').value='#534AB7';
+  }catch(e){
+    // Mode démo : ajouter localement
+    PROJETS.push(record);
+    closeNewProjet();
+    renderAccueil();
+    ['npId','npNom','npDesc'].forEach(id=>document.getElementById(id).value='');
+  }
+}
+
 /* ── NAVIGATION ── */
-function openProjet(projet){
-  currentProjet=projet;
-  TACHES=DATA[projet].taches;
-  MEMBRES=DATA[projet].membres;
-  WPS=DATA[projet].wps;
-  wpGroupState[projet]=wpGroupState[projet]||{};
-  const isBea=projet==='bea';
-  document.getElementById('projetBadge').textContent=isBea?'PIA3':'PIA4';
-  document.getElementById('projetBadge').className='hdr-projet-badge '+(isBea?'badge-bea':'badge-fibi');
-  document.getElementById('projetTitre').textContent=isBea?'BEA — Bioeco Academy':'FIBI — Biotechnologies Industrielles';
-  document.getElementById('labelWP').textContent=isBea?'Axe':'WP';
-  document.getElementById('mLabelWP').textContent=isBea?'Axe':'WP';
+function openProjet(projetId){
+  currentProjetId=projetId;
+  const proj=PROJETS.find(p=>p.projet_id===projetId);
+  if(!proj)return;
+  TACHES=ALL_TACHES.filter(t=>t.projet_id===projetId);
+  MEMBRES=ALL_MEMBRES.filter(m=>m.projet_id===projetId);
+  // Construire WPS depuis les tâches
+  const wpMap={};
+  TACHES.forEach(t=>{if(t.wp_code&&!wpMap[t.wp_code])wpMap[t.wp_code]={code:t.wp_code,label:t.wp_label||t.wp_code}});
+  WPS=Object.values(wpMap).sort((a,b)=>a.code.localeCompare(b.code));
+
+  document.getElementById('projetBadge').textContent=proj.type_projet||proj.nom;
+  document.getElementById('projetBadge').style.background=proj.couleur||'#534AB7';
+  document.getElementById('projetTitre').textContent=`${proj.nom}${proj.nom_long&&proj.nom_long!==proj.nom?' — '+proj.nom_long:''}`;
+  document.getElementById('labelWP').textContent=projetId==='BEA'?'Axe':'WP';
+  document.getElementById('mLabelWP').textContent=projetId==='BEA'?'Axe':'WP';
   document.getElementById('pageAccueil').style.display='none';
   document.getElementById('pageProjet').style.display='flex';
   document.getElementById('pageProjet').style.flexDirection='column';
-  document.getElementById('pageProjet').style.minHeight='100vh';
+
+  // Couleur accent des tabs selon projet
+  document.documentElement.style.setProperty('--tab-active',proj.couleur||'#534AB7');
+
   populateSelects();
   activeStatut='';ganttOffset=0;
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',i===0));
   document.querySelectorAll('.tab-panel').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-kanban').classList.add('active');
+  if(!wpGroupState[projetId])wpGroupState[projetId]={};
   applyFilters();
 }
 
 function goAccueil(){
   document.getElementById('pageProjet').style.display='none';
   document.getElementById('pageAccueil').style.display='flex';
-  updateAccueilStats();
-}
-
-function updateAccueilStats(){
-  ['fibi','bea'].forEach(p=>{
-    const t=DATA[p].taches;
-    const late=t.filter(isLate).length;
-    document.getElementById(p+'-total').textContent=t.length||'—';
-    document.getElementById(p+'-encours').textContent=t.filter(x=>x.statut==='En cours').length||'0';
-    document.getElementById(p+'-late').textContent=late||'0';
-  });
+  renderAccueil();
 }
 
 /* ── TABS ── */
@@ -534,14 +616,14 @@ function renderKanban(){
             ${t.priorite==='Haute'?'<span style="font-size:9px;background:#FAECE7;color:#993C1D;padding:1px 5px;border-radius:3px;font-weight:600">URGENT</span>':''}
             ${dlLbl(t)?`<span class="k-card-deadline ${dlCls(t)}" style="margin-left:auto">${dlLbl(t)}</span>`:''}
           </div>
-          ${t.commentaire?`<div class="k-card-comment">${t.commentaire.substring(0,60)}${t.commentaire.length>60?'…':''}</div>`:''}
+          ${t.commentaire?`<div class="k-card-comment">${(t.commentaire+'').substring(0,60)}</div>`:''}
         </div>`).join('')||'<div style="padding:12px;text-align:center;font-size:11px;color:#ccc">Aucune tâche</div>'}
       </div></div>`;
   }).join('');
 }
 
 function renderListe(){
-  const gs=wpGroupState[currentProjet]||{};
+  const gs=wpGroupState[currentProjetId]||{};
   const wpCodes=[...new Set(filteredTaches.map(t=>t.wp_code))].sort();
   document.getElementById('listeContent').innerHTML=wpCodes.map(code=>{
     const tasks=filteredTaches.filter(t=>t.wp_code===code).sort((a,b)=>{const s=SO.indexOf(a.statut)-SO.indexOf(b.statut);return s||(getTs(a)||9e9)-(getTs(b)||9e9)});
@@ -550,7 +632,7 @@ function renderListe(){
     const pct=tasks.length?Math.round(done/tasks.length*100):0;
     const isOpen=gs[code]!==false;
     const wp=WPS.find(w=>w.code===code);
-    const title=wp?wp.label.split(' - ').slice(1).join(' '):code;
+    const title=wp?wp.label.replace(/^[^-]+ - /,''):code;
     return`<div class="wp-group">
       <div class="wp-group-hd" onclick="toggleWpGroup('${code}')">
         <span class="wp-group-badge" style="background:${wpBg(code)};color:${wpCol(code)}">${code}</span>
@@ -580,7 +662,7 @@ function renderListe(){
       </div></div>`;
   }).join('');
 }
-function toggleWpGroup(code){if(!wpGroupState[currentProjet])wpGroupState[currentProjet]={};wpGroupState[currentProjet][code]=wpGroupState[currentProjet][code]===false?true:false;renderListe()}
+function toggleWpGroup(code){if(!wpGroupState[currentProjetId])wpGroupState[currentProjetId]={};wpGroupState[currentProjetId][code]=wpGroupState[currentProjetId][code]===false;renderListe()}
 
 function renderHebdo(){
   const now=Date.now()/1000,w7=now+7*86400;
@@ -646,22 +728,20 @@ function renderGantt(){
   const tasks=filteredTaches.filter(t=>t.statut!=='Réalisé'&&getTs(t));
   function bar(t){
     const ts=getTs(t);if(!ts)return'';
-    const s=Math.max(t.date_creation||startTs,startTs);
-    const e=Math.min(ts,endTs);
+    const s=startTs,e=Math.min(ts,endTs);
     if(e<startTs||s>endTs)return'';
-    const l=Math.max(0,(s-startTs)/totalSec*100);
-    const w=Math.max(0.4,(e-s)/totalSec*100);
+    const l=0,w=Math.max(0.4,(e-s)/totalSec*100);
     const color=SC[t.statut]?.color||'#888';
-    return`<div class="gantt-bar${isLate(t)?' late':''}" style="left:${l.toFixed(1)}%;width:${w.toFixed(1)}%;background:${color}" onclick="openEditModal(${t.id})" title="${t.tache}">${w>8?t.tache.substring(0,18):''}</div>`;
+    return`<div class="gantt-bar${isLate(t)?' late':''}" style="left:${l}%;width:${w.toFixed(1)}%;background:${color}" onclick="openEditModal(${t.id})" title="${t.tache}">${w>8?t.tache.substring(0,18):''}</div>`;
   }
   let groups=[];
   if(ganttMode==='wp'){const codes=[...new Set(tasks.map(t=>t.wp_code))].sort();
-    groups=codes.map(code=>({key:code,label:code,sub:WPS.find(w=>w.code===code)?.label.split(' - ').slice(1).join(' ')||'',color:wpCol(code),bg:wpBg(code),tasks:tasks.filter(t=>t.wp_code===code)}));
+    groups=codes.map(code=>({key:code,label:code,sub:WPS.find(w=>w.code===code)?.label.replace(/^[^-]+ - /,'')||'',color:wpCol(code),bg:wpBg(code),tasks:tasks.filter(t=>t.wp_code===code)}));
   }else{const noms=[...new Set(tasks.map(t=>t.qui.split(/[\s,&]+/)[0]))].sort();
     groups=noms.map(nom=>({key:nom,label:nom,sub:'',color:mCol(nom),bg:mBg(nom),tasks:tasks.filter(t=>t.qui.includes(nom))}));}
   const rows=groups.map(g=>`
     <div class="gantt-row gantt-grp-hd">
-      <div class="gantt-grp-lbl" style="color:${g.color}"><span style="background:${g.bg};padding:2px 6px;border-radius:4px;font-size:10px">${g.label}</span>${g.sub?`<span style="font-size:9px;color:#aaa;font-weight:400;display:block;margin-top:1px">${g.sub}</span>`:''}</div>
+      <div class="gantt-grp-lbl" style="color:${g.color}"><span style="background:${g.bg};padding:2px 6px;border-radius:4px;font-size:10px">${g.label}</span>${g.sub?`<span style="font-size:9px;color:#aaa;display:block;margin-top:1px">${g.sub}</span>`:''}</div>
       <div class="gantt-tl"><div class="gantt-today" style="left:${todayPct}%"></div>${g.tasks.map(bar).join('')||'<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#ddd">—</div>'}</div>
     </div>`+
     g.tasks.map(t=>{const b=bar(t);if(!b)return'';return`<div class="gantt-row" style="cursor:pointer" onclick="openEditModal(${t.id})">
@@ -670,7 +750,7 @@ function renderGantt(){
       <div class="gantt-tl"><div class="gantt-today" style="left:${todayPct}%"></div>${b}</div>
     </div>`;}).join('')).join('');
   document.getElementById('ganttContent').innerHTML=`<div class="gantt-wrap">
-    <div class="gantt-header-row"><div class="gantt-label-col">${ganttMode==='wp'?'Axe/WP':'Responsable'}</div><div class="gantt-days-hd">${dayHdr}</div></div>
+    <div class="gantt-header-row"><div class="gantt-label-col">Axe / WP</div><div class="gantt-days-hd">${dayHdr}</div></div>
     ${rows||`<div class="gantt-empty">Aucune tâche avec deadline dans cette période</div>`}
   </div>`;
 }
@@ -679,8 +759,10 @@ function renderDash(){
   const all=TACHES,total=all.length,done=all.filter(t=>t.statut==='Réalisé').length;
   const enc=all.filter(t=>t.statut==='En cours').length,late=all.filter(isLate).length;
   const pct=Math.round(done/total*100)||0;
+  const proj=PROJETS.find(p=>p.projet_id===currentProjetId);
+  const accentColor=proj?.couleur||'var(--p600)';
   const wpRows=WPS.map(wp=>{const tasks=all.filter(t=>t.wp_code===wp.code);const d=tasks.filter(t=>t.statut==='Réalisé').length;const p=tasks.length?Math.round(d/tasks.length*100):0;
-    return`<div class="wp-row"><div class="wp-row-top"><span class="wp-name"><span style="font-size:10px;padding:2px 6px;border-radius:4px;background:${wpBg(wp.code)};color:${wpCol(wp.code)};font-weight:600;margin-right:6px">${wp.code}</span>${wp.label.split(' - ').slice(1).join(' ')}</span><span class="wp-pct">${d}/${tasks.length} — ${p}%</span></div>
+    return`<div class="wp-row"><div class="wp-row-top"><span class="wp-name"><span style="font-size:10px;padding:2px 6px;border-radius:4px;background:${wpBg(wp.code)};color:${wpCol(wp.code)};font-weight:600;margin-right:6px">${wp.code}</span>${wp.label.replace(/^[^-]+ - /,'')}</span><span class="wp-pct">${d}/${tasks.length} — ${p}%</span></div>
     <div class="progress-bg"><div class="progress-fill" style="width:${p}%;background:${wpCol(wp.code)}"></div></div></div>`;}).join('');
   const memRows=MEMBRES.map((m,i)=>{const tasks=all.filter(t=>t.qui.includes(m.nom));if(!tasks.length)return'';
     const d=tasks.filter(t=>t.statut==='Réalisé').length,e=tasks.filter(t=>t.statut==='En cours').length;
@@ -691,19 +773,19 @@ function renderDash(){
     </div>`;}).join('');
   document.getElementById('dashContent').innerHTML=`
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-      ${[['Tâches totales',total,'var(--p600)'],['Réalisées',`${done} (${pct}%)`,'var(--t600)'],['En cours',enc,'var(--b600)'],['En retard',late,'var(--c600)']].map(([l,v,c])=>`
+      ${[['Tâches totales',total,accentColor],['Réalisées',`${done} (${pct}%)`,'var(--t600)'],['En cours',enc,'var(--b600)'],['En retard',late,'var(--c600)']].map(([l,v,c])=>`
         <div style="flex:1;min-width:120px;background:#fff;border-radius:10px;border:.5px solid #e0e0e0;padding:12px 16px">
           <div style="font-size:22px;font-weight:600;color:${c};line-height:1">${v}</div>
           <div style="font-size:10px;color:#999;margin-top:4px;text-transform:uppercase;letter-spacing:.04em">${l}</div>
         </div>`).join('')}
     </div>
     <div class="dash-grid">
-      <div class="dash-card"><div class="dash-card-hd"><span class="dash-card-title">Avancement par ${currentProjet==='bea'?'Axe':'WP'}</span></div>${wpRows}</div>
-      <div class="dash-card"><div class="dash-card-hd"><span class="dash-card-title">Charge par membre</span></div>${memRows}</div>
+      <div class="dash-card"><div class="dash-card-hd"><span class="dash-card-title">Avancement par axe/WP</span></div>${wpRows||'<div style="padding:20px;text-align:center;color:#bbb;font-size:12px">Aucune tâche avec WP défini</div>'}</div>
+      <div class="dash-card"><div class="dash-card-hd"><span class="dash-card-title">Charge par membre</span></div>${memRows||'<div style="padding:20px;text-align:center;color:#bbb;font-size:12px">Aucun membre</div>'}</div>
     </div>`;
 }
 
-/* ── MODALE ── */
+/* ── MODALE TÂCHE ── */
 function openAddModal(){
   editingId=null;document.getElementById('modalTitle').textContent='Nouvelle tâche';
   ['mTache','mProjet','mComment'].forEach(id=>document.getElementById(id).value='');
@@ -717,7 +799,7 @@ function openEditModal(id){
   const t=TACHES.find(x=>x.id===id);if(!t)return;
   editingId=id;document.getElementById('modalTitle').textContent='Modifier la tâche';
   document.getElementById('mTache').value=t.tache;document.getElementById('mQui').value=t.qui;
-  document.getElementById('mStatut').value=t.statut;document.getElementById('mWP').value=t.wp_code;
+  document.getElementById('mStatut').value=t.statut;document.getElementById('mWP').value=t.wp_code||'';
   document.getElementById('mPrio').value=t.priorite||'Normale';
   document.getElementById('mDeadline').value=fromTs(t.deadline);document.getElementById('mDateReal').value=fromTs(t.date_realisation);
   document.getElementById('mProjet').value=t.projet_label||'';document.getElementById('mComment').value=t.commentaire||'';
@@ -729,33 +811,46 @@ function closeModal(){document.getElementById('taskOverlay').classList.remove('o
 async function saveTask(){
   const tache=document.getElementById('mTache').value.trim(),qui=document.getElementById('mQui').value;
   if(!tache||!qui){alert('Nom et responsable obligatoires.');return}
-  const tableId=currentProjet==='fibi'?'SUIVI_TACHES':'SUIVI_TACHES_BEA';
-  const record={tache,qui,statut:document.getElementById('mStatut').value,wp_code:document.getElementById('mWP').value,
-    priorite:document.getElementById('mPrio').value,deadline:document.getElementById('mDeadline').value||null,
-    date_realisation:document.getElementById('mDateReal').value||null,projet_label:document.getElementById('mProjet').value,
-    commentaire:document.getElementById('mComment').value,wp_label:WPS.find(w=>w.code===document.getElementById('mWP').value)?.label||'',
-    Cree_par:'widget',date_creation:new Date().toISOString().split('T')[0]};
+  const wpCode=document.getElementById('mWP').value;
+  const record={
+    projet_id:currentProjetId, tache, qui,
+    statut:document.getElementById('mStatut').value,
+    wp_code:wpCode,
+    wp_label:WPS.find(w=>w.code===wpCode)?.label||wpCode,
+    priorite:document.getElementById('mPrio').value,
+    deadline:document.getElementById('mDeadline').value||null,
+    date_realisation:document.getElementById('mDateReal').value||null,
+    projet_label:document.getElementById('mProjet').value,
+    commentaire:document.getElementById('mComment').value,
+    Cree_par:'widget',
+    date_creation:new Date().toISOString().split('T')[0]
+  };
   try{
-    if(editingId){await grist.docApi.applyUserActions([['UpdateRecord',tableId,editingId,record]]);
-      const i=TACHES.findIndex(t=>t.id===editingId);if(i>=0)TACHES[i]={...TACHES[i],...record};
-    }else{const res=await grist.docApi.applyUserActions([['AddRecord',tableId,null,record]]);
-      const newId=res?.retValues?.[0]??TACHES.length+1;
-      TACHES.push({id:newId,...record});DATA[currentProjet].taches=TACHES;}
-    closeModal();applyFilters();updateAccueilStats();
+    if(editingId){
+      await grist.docApi.applyUserActions([['UpdateRecord','SUIVI_TACHES_ALL',editingId,record]]);
+      const i=ALL_TACHES.findIndex(t=>t.id===editingId);
+      if(i>=0)ALL_TACHES[i]={...ALL_TACHES[i],...record};
+    }else{
+      const res=await grist.docApi.applyUserActions([['AddRecord','SUIVI_TACHES_ALL',null,record]]);
+      const newId=res?.retValues?.[0]??ALL_TACHES.length+1;
+      ALL_TACHES.push({id:newId,...record});
+    }
+    TACHES=ALL_TACHES.filter(t=>t.projet_id===currentProjetId);
+    closeModal();applyFilters();
   }catch(e){console.error(e);alert('Erreur: '+e.message)}
 }
 async function deleteTask(){
   if(!editingId||!confirm('Supprimer ?'))return;
-  const tableId=currentProjet==='fibi'?'SUIVI_TACHES':'SUIVI_TACHES_BEA';
-  try{await grist.docApi.applyUserActions([['RemoveRecord',tableId,editingId]])}catch(e){console.warn(e)}
-  TACHES=TACHES.filter(t=>t.id!==editingId);DATA[currentProjet].taches=TACHES;
-  closeModal();applyFilters();updateAccueilStats();
+  try{await grist.docApi.applyUserActions([['RemoveRecord','SUIVI_TACHES_ALL',editingId]])}catch(e){console.warn(e)}
+  ALL_TACHES=ALL_TACHES.filter(t=>t.id!==editingId);
+  TACHES=ALL_TACHES.filter(t=>t.projet_id===currentProjetId);
+  closeModal();applyFilters();
 }
 
 /* ── SELECTS ── */
 function populateSelects(){
   const wp=document.getElementById('fWP');wp.innerHTML='<option value="">Tous</option>';
-  WPS.forEach(w=>{const o=document.createElement('option');o.value=w.code;o.textContent=w.code+' - '+w.label.split(' - ').slice(1).join(' ');wp.appendChild(o)});
+  WPS.forEach(w=>{const o=document.createElement('option');o.value=w.code;o.textContent=w.code+' — '+w.label.replace(/^[^-]+ - /,'');wp.appendChild(o)});
   const qi=document.getElementById('fQui');qi.innerHTML='<option value="">Tous</option>';
   MEMBRES.forEach(m=>{const o=document.createElement('option');o.value=m.nom;o.textContent=m.nom;qi.appendChild(o)});
   const mq=document.getElementById('mQui');mq.innerHTML='<option value="">— Choisir —</option>';
@@ -769,45 +864,41 @@ function tableToRows(t){if(!t)return[];const k=Object.keys(t),l=t[k[0]]?.length|
 
 async function loadAll(){
   try{
-    const [tFibi,mFibi,wFibi,tBea,mBea,wBea]=await Promise.all([
-      grist.docApi.fetchTable('SUIVI_TACHES'),
-      grist.docApi.fetchTable('CONFIG_MEMBRES_EQUIPE'),
-      grist.docApi.fetchTable('CONFIG_WPS'),
-      grist.docApi.fetchTable('SUIVI_TACHES_BEA'),
-      grist.docApi.fetchTable('CONFIG_MEMBRES_BEA'),
-      grist.docApi.fetchTable('CONFIG_AXES_BEA'),
+    const [projets,taches,membres]=await Promise.all([
+      grist.docApi.fetchTable('CONFIG_PROJETS'),
+      grist.docApi.fetchTable('SUIVI_TACHES_ALL'),
+      grist.docApi.fetchTable('CONFIG_MEMBRES_ALL'),
     ]);
-    DATA.fibi={taches:tableToRows(tFibi),membres:tableToRows(mFibi),wps:tableToRows(wFibi)};
-    DATA.bea={taches:tableToRows(tBea),membres:tableToRows(mBea),wps:tableToRows(wBea)};
-    updateAccueilStats();
+    PROJETS=tableToRows(projets);
+    ALL_TACHES=tableToRows(taches);
+    ALL_MEMBRES=tableToRows(membres);
+    renderAccueil();
   }catch(e){console.warn('Démo:',e.message);loadDemo()}
 }
 
 function loadDemo(){
+  PROJETS=[
+    {projet_id:'FIBI',nom:'FIBI',nom_long:'Formations Innovantes en Biotechnologies Industrielles',type_projet:'PIA4',couleur:'#534AB7',couleur_bg:'#EEEDFE',description:'Excellence et innovation en biotechnologies industrielles'},
+    {projet_id:'BEA',nom:'BEA',nom_long:'Bioeco Academy',type_projet:'PIA3',couleur:'#0F6E56',couleur_bg:'#E1F5EE',description:'Formations et rayonnement de la bioéconomie'},
+  ];
   const n=Math.floor(Date.now()/1000);
-  DATA.fibi={
-    taches:[
-      {id:1,tache:"Mail relance déclaration Orion",qui:'Sofiane',statut:'En cours',wp_code:'WP1',wp_label:'WP1 - Excellence',projet_label:'Coloration',priorite:'Haute',deadline:n+2*86400,date_realisation:null,commentaire:''},
-      {id:2,tache:"Réunion DFPA/EXEBIO/CMQ",qui:'Camille',statut:'En cours',wp_code:'WP3',wp_label:'WP3',projet_label:'Formations courtes',priorite:'Haute',deadline:n-1*86400,date_realisation:null,commentaire:''},
-      {id:3,tache:"COPIL FIBI - Ordre du jour",qui:'Claire',statut:'A traiter',wp_code:'WP5',wp_label:'WP5',projet_label:'Pilotage',priorite:'Haute',deadline:n+7*86400,date_realisation:null,commentaire:''},
-      {id:4,tache:"Frise Jobio - Impression",qui:'Sofiane',statut:'A traiter',wp_code:'WP4',wp_label:'WP4',projet_label:'Jobio',priorite:'Normale',deadline:n+14*86400,date_realisation:null,commentaire:''},
-      {id:5,tache:"GT Open-Badges",qui:'Camille',statut:'Réalisé',wp_code:'WP3',wp_label:'WP3',projet_label:'Open Badges',priorite:'Normale',deadline:n-5*86400,date_realisation:n-5*86400,commentaire:''},
-    ],
-    membres:[{id:1,nom:'Sofiane'},{id:2,nom:'Camille'},{id:3,nom:'Claire'},{id:4,nom:'Nathalie'},{id:5,nom:'Fred'}],
-    wps:[{id:1,code:'WP1',label:'WP1 - Excellence professionnelle'},{id:2,code:'WP2',label:'WP2 - Excellence académique'},{id:3,code:'WP3',label:'WP3 - Accompagnement'},{id:4,code:'WP4',label:'WP4 - Attractivité'},{id:5,code:'WP5',label:'WP5 - Pilotage'}],
-  };
-  DATA.bea={
-    taches:[
-      {id:1,tache:"Création BC artiste",qui:'Clarisse',statut:'A traiter',wp_code:'A4',wp_label:'A4 - Ouverture sociétale',projet_label:'Art & Bioeco',priorite:'Normale',deadline:'2026-05-01',date_realisation:null,commentaire:''},
-      {id:2,tache:"Cahier des charges affiche",qui:'Clarisse',statut:'En cours',wp_code:'A4',wp_label:'A4 - Ouverture sociétale',projet_label:'Art & Bioeco',priorite:'Haute',deadline:null,date_realisation:null,commentaire:''},
-      {id:3,tache:"Visite du site",qui:'Gisell',statut:'A traiter',wp_code:'A5',wp_label:'A5 - Déploiement international',projet_label:'International',priorite:'Normale',deadline:'2026-05-21',date_realisation:null,commentaire:''},
-      {id:4,tache:"Prise de contact artiste",qui:'Clarisse',statut:'Réalisé',wp_code:'A4',wp_label:'A4 - Ouverture sociétale',projet_label:'Art & Bioeco',priorite:'Normale',deadline:null,date_realisation:null,commentaire:''},
-      {id:5,tache:"Réunion comité de pilotage",qui:'Claire',statut:'A traiter',wp_code:'A1',wp_label:'A1 - Bâtiment Totem',projet_label:'Totem',priorite:'Haute',deadline:'2026-06-04',date_realisation:null,commentaire:''},
-    ],
-    membres:[{id:1,nom:'Clarisse'},{id:2,nom:'Gisell'},{id:3,nom:'Claire'},{id:4,nom:'Léo'},{id:5,nom:'Camille'}],
-    wps:[{id:1,code:'A1',label:'A1 - Bâtiment Totem'},{id:2,code:'A3',label:'A3 - Formations innovantes'},{id:3,code:'A4',label:'A4 - Ouverture sociétale'},{id:4,code:'A5',label:'A5 - Déploiement international'}],
-  };
-  updateAccueilStats();
+  ALL_TACHES=[
+    {id:1,projet_id:'FIBI',tache:"Mail relance déclaration Orion",qui:'Sofiane',statut:'En cours',wp_code:'WP1',wp_label:'WP1 - Excellence',projet_label:'Coloration',priorite:'Haute',deadline:n+2*86400,commentaire:''},
+    {id:2,projet_id:'FIBI',tache:"Réunion DFPA/EXEBIO/CMQ",qui:'Camille',statut:'En cours',wp_code:'WP3',wp_label:'WP3',projet_label:'Formations courtes',priorite:'Haute',deadline:n-1*86400,commentaire:''},
+    {id:3,projet_id:'FIBI',tache:"COPIL FIBI - Ordre du jour",qui:'Claire',statut:'A traiter',wp_code:'WP5',wp_label:'WP5',projet_label:'Pilotage',priorite:'Haute',deadline:n+7*86400,commentaire:''},
+    {id:4,projet_id:'FIBI',tache:"GT Open-Badges",qui:'Camille',statut:'Réalisé',wp_code:'WP3',wp_label:'WP3',projet_label:'Open Badges',priorite:'Normale',deadline:n-5*86400,commentaire:''},
+    {id:5,projet_id:'BEA',tache:"Création BC artiste",qui:'Clarisse',statut:'A traiter',wp_code:'A4',wp_label:'A4 - Ouverture sociétale',projet_label:'Art & Bioeco',priorite:'Normale',deadline:'2026-05-01',commentaire:''},
+    {id:6,projet_id:'BEA',tache:"Cahier des charges affiche",qui:'Clarisse',statut:'En cours',wp_code:'A4',wp_label:'A4 - Ouverture sociétale',projet_label:'Art & Bioeco',priorite:'Haute',deadline:null,commentaire:''},
+    {id:7,projet_id:'BEA',tache:"Visite du site international",qui:'Gisell',statut:'A traiter',wp_code:'A5',wp_label:'A5 - International',projet_label:'International',priorite:'Normale',deadline:'2026-05-21',commentaire:''},
+    {id:8,projet_id:'BEA',tache:"Réunion comité de pilotage",qui:'Claire',statut:'Réalisé',wp_code:'A1',wp_label:'A1 - Bâtiment Totem',projet_label:'Totem',priorite:'Normale',deadline:null,commentaire:''},
+  ];
+  ALL_MEMBRES=[
+    {projet_id:'FIBI',nom:'Sofiane',couleur:'#534AB7'},{projet_id:'FIBI',nom:'Camille',couleur:'#0F6E56'},
+    {projet_id:'FIBI',nom:'Claire',couleur:'#854F0B'},{projet_id:'FIBI',nom:'Nathalie',couleur:'#993C1D'},
+    {projet_id:'BEA',nom:'Clarisse',couleur:'#534AB7'},{projet_id:'BEA',nom:'Gisell',couleur:'#0F6E56'},
+    {projet_id:'BEA',nom:'Claire',couleur:'#854F0B'},{projet_id:'BEA',nom:'Léo',couleur:'#993C1D'},
+  ];
+  renderAccueil();
 }
 
 grist.ready({requiredAccess:'full'});

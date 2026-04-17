@@ -380,7 +380,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 /* ── ÉTAT GLOBAL ── */
 let PROJETS=[], ALL_TACHES=[], ALL_MEMBRES=[];
 let currentProjetId=null;
-let TACHES=[], MEMBRES=[], WPS=[];
+let TACHES=[], MEMBRES=[], WPS=[], ALL_AXES=[];
 let filteredTaches=[], activeStatut='', editingId=null;
 let ganttMode='wp', ganttOffset=0;
 const wpGroupState={};
@@ -425,14 +425,14 @@ const isLate=t=>{const ts=getTs(t);return ts&&ts<Date.now()/1000&&t.statut!=='R�
 function renderAccueil(){
   const grid=document.getElementById('projetsGrid');
   grid.innerHTML = PROJETS.map(p=>{
-    const tasks=ALL_TACHES.filter(t=>t.projet_id===p.projet_id);
+    const tasks=ALL_TACHES.filter(t=>String(t.projet_id)===String(p.id||p.projet_id));
     const late=tasks.filter(isLate).length;
     const enc=tasks.filter(t=>t.statut==='En cours').length;
     const done=tasks.filter(t=>t.statut==='Réalisé').length;
     const pct=tasks.length?Math.round(done/tasks.length*100):0;
     const bg=p.couleur||'#534AB7';
     const emoji={'PIA3':'🌿','PIA4':'🔬','Autre':'📋'}[p.type_projet]||'📋';
-    return`<div class="projet-card" style="background:linear-gradient(135deg,${bg} 0%,${darken(bg,.15)} 100%)" onclick="openProjet('${p.projet_id}')">
+    return`<div class="projet-card" style="background:linear-gradient(135deg,${bg} 0%,${darken(bg,.15)} 100%)" onclick="openProjet(${p.id??p.projet_id})">
       <div class="pc-bg">${emoji}</div>
       ${late>0?`<div class="pc-late-badge">⚠ ${late} retard${late>1?'s':''}</div>`:''}
       <div class="pc-badge">${p.type_projet||''}</div>
@@ -503,14 +503,22 @@ async function saveNewProjet(){
 /* ── NAVIGATION ── */
 function openProjet(projetId){
   currentProjetId=projetId;
-  const proj=PROJETS.find(p=>p.projet_id===projetId);
+  // Cherche par p.id (nombre) OU p.projet_id (texte) pour compatibilité
+  const proj=PROJETS.find(p=>String(p.id)===String(projetId)||String(p.projet_id)===String(projetId));
   if(!proj)return;
-  TACHES=ALL_TACHES.filter(t=>t.projet_id===projetId);
-  MEMBRES=ALL_MEMBRES.filter(m=>m.projet_id===projetId);
+  const pid=String(projetId);
+  TACHES=ALL_TACHES.filter(t=>String(t.projet_id)===pid);
+  MEMBRES=ALL_MEMBRES.filter(m=>String(m.projet_id)===pid);
   // Construire WPS depuis les tâches
   const wpMap={};
   TACHES.forEach(t=>{if(t.wp_code&&!wpMap[t.wp_code])wpMap[t.wp_code]={code:t.wp_code,label:t.wp_label||t.wp_code}});
-  WPS=Object.values(wpMap).sort((a,b)=>a.code.localeCompare(b.code));
+  // Utiliser ALL_AXES si disponible, sinon construire depuis les tâches
+  if(ALL_AXES && ALL_AXES.length){
+    const pid=String(projetId);
+    WPS=ALL_AXES.filter(a=>String(a.projet_id)===pid);
+  } else {
+    WPS=Object.values(wpMap).sort((a,b)=>a.code.localeCompare(b.code));
+  }
 
   document.getElementById('projetBadge').textContent=proj.type_projet||proj.nom;
   document.getElementById('projetBadge').style.background=proj.couleur||'#534AB7';
@@ -835,7 +843,7 @@ async function saveTask(){
       const newId=res?.retValues?.[0]??ALL_TACHES.length+1;
       ALL_TACHES.push({id:newId,...record});
     }
-    TACHES=ALL_TACHES.filter(t=>t.projet_id===currentProjetId);
+    TACHES=ALL_TACHES.filter(t=>String(t.projet_id)===String(currentProjetId));
     closeModal();applyFilters();
   }catch(e){console.error(e);alert('Erreur: '+e.message)}
 }
@@ -843,7 +851,7 @@ async function deleteTask(){
   if(!editingId||!confirm('Supprimer ?'))return;
   try{await grist.docApi.applyUserActions([['RemoveRecord','SUIVI_TACHES_ALL',editingId]])}catch(e){console.warn(e)}
   ALL_TACHES=ALL_TACHES.filter(t=>t.id!==editingId);
-  TACHES=ALL_TACHES.filter(t=>t.projet_id===currentProjetId);
+  TACHES=ALL_TACHES.filter(t=>String(t.projet_id)===String(currentProjetId));
   closeModal();applyFilters();
 }
 
@@ -864,14 +872,16 @@ function tableToRows(t){if(!t)return[];const k=Object.keys(t),l=t[k[0]]?.length|
 
 async function loadAll(){
   try{
-    const [projets,taches,membres]=await Promise.all([
+    const [projets,taches,membres,axes]=await Promise.all([
       grist.docApi.fetchTable('CONFIG_PROJETS'),
       grist.docApi.fetchTable('SUIVI_TACHES_ALL'),
       grist.docApi.fetchTable('CONFIG_MEMBRES_ALL'),
+      grist.docApi.fetchTable('CONFIG_AXES_ALL'),
     ]);
     PROJETS=tableToRows(projets);
     ALL_TACHES=tableToRows(taches);
     ALL_MEMBRES=tableToRows(membres);
+    ALL_AXES=tableToRows(axes);
     renderAccueil();
   }catch(e){console.warn('Démo:',e.message);loadDemo()}
 }

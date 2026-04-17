@@ -820,18 +820,22 @@ async function saveTask(){
   const tache=document.getElementById('mTache').value.trim(),qui=document.getElementById('mQui').value;
   if(!tache||!qui){alert('Nom et responsable obligatoires.');return}
   const wpCode=document.getElementById('mWP').value;
+  // Colonnes exactes de SUIVI_TACHES_ALL dans Grist
   const record={
-    projet_id:currentProjetId, tache, qui,
-    statut:document.getElementById('mStatut').value,
-    wp_code:wpCode,
-    wp_label:WPS.find(w=>w.code===wpCode)?.label||wpCode,
-    priorite:document.getElementById('mPrio').value,
-    deadline:document.getElementById('mDeadline').value||null,
-    date_realisation:document.getElementById('mDateReal').value||null,
-    projet_label:document.getElementById('mProjet').value,
-    commentaire:document.getElementById('mComment').value,
-    Cree_par:'widget',
-    date_creation:new Date().toISOString().split('T')[0]
+    projet_id:  currentProjetId,
+    wp_code:    wpCode,
+    wp_label:   WPS.find(w=>w.code===wpCode)?.label||wpCode,
+    action_label: '',
+    sous_action_label: '',
+    projet_label: document.getElementById('mProjet').value,
+    tache:      tache,
+    qui:        qui,
+    statut:     document.getElementById('mStatut').value,
+    priorite:   document.getElementById('mPrio').value,
+    deadline:   document.getElementById('mDeadline').value||null,
+    date_realisation: document.getElementById('mDateReal').value||null,
+    commentaire: document.getElementById('mComment').value,
+    Cree_par:   'widget',
   };
   try{
     if(editingId){

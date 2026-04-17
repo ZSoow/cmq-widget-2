@@ -409,7 +409,7 @@ function lightenHex(h,p=0.85){const r=parseInt(h.slice(1,3),16),g=parseInt(h.sli
 // Couleurs WP/Axe dynamiques selon couleur projet
 function wpCol(code){
   if(!currentProjetId)return'#888';
-  const proj=PROJETS.find(p=>p.projet_id===currentProjetId);
+  const proj=PROJETS.find(p=>String(p.id2||p.id||p.projet_id)===String(currentProjetId));
   if(!proj)return'#888';
   const base=proj.couleur;
   const palette=[base,'#185FA5','#854F0B','#993C1D','#0F6E56'];
@@ -425,14 +425,14 @@ const isLate=t=>{const ts=getTs(t);return ts&&ts<Date.now()/1000&&t.statut!=='R�
 function renderAccueil(){
   const grid=document.getElementById('projetsGrid');
   grid.innerHTML = PROJETS.map(p=>{
-    const tasks=ALL_TACHES.filter(t=>String(t.projet_id)===String(p.id||p.projet_id));
+    const pid2=String(p.id2||p.id||p.projet_id); const tasks=ALL_TACHES.filter(t=>String(t.projet_id)===pid2);
     const late=tasks.filter(isLate).length;
     const enc=tasks.filter(t=>t.statut==='En cours').length;
     const done=tasks.filter(t=>t.statut==='Réalisé').length;
     const pct=tasks.length?Math.round(done/tasks.length*100):0;
     const bg=p.couleur||'#534AB7';
     const emoji={'PIA3':'🌿','PIA4':'🔬','Autre':'📋'}[p.type_projet]||'📋';
-    return`<div class="projet-card" style="background:linear-gradient(135deg,${bg} 0%,${darken(bg,.15)} 100%)" onclick="openProjet(${p.id??p.projet_id})">
+    return`<div class="projet-card" style="background:linear-gradient(135deg,${bg} 0%,${darken(bg,.15)} 100%)" onclick="openProjet(${p.id2??p.id??p.projet_id})">
       <div class="pc-bg">${emoji}</div>
       ${late>0?`<div class="pc-late-badge">⚠ ${late} retard${late>1?'s':''}</div>`:''}
       <div class="pc-badge">${p.type_projet||''}</div>
@@ -504,7 +504,7 @@ async function saveNewProjet(){
 function openProjet(projetId){
   currentProjetId=projetId;
   // Cherche par p.id (nombre) OU p.projet_id (texte) pour compatibilité
-  const proj=PROJETS.find(p=>String(p.id)===String(projetId)||String(p.projet_id)===String(projetId));
+  const proj=PROJETS.find(p=>String(p.id2||p.id)===String(projetId)||String(p.projet_id)===String(projetId));
   if(!proj)return;
   const pid=String(projetId);
   TACHES=ALL_TACHES.filter(t=>String(t.projet_id)===pid);
@@ -767,7 +767,7 @@ function renderDash(){
   const all=TACHES,total=all.length,done=all.filter(t=>t.statut==='Réalisé').length;
   const enc=all.filter(t=>t.statut==='En cours').length,late=all.filter(isLate).length;
   const pct=Math.round(done/total*100)||0;
-  const proj=PROJETS.find(p=>p.projet_id===currentProjetId);
+  const proj=PROJETS.find(p=>String(p.id2||p.id||p.projet_id)===String(currentProjetId));
   const accentColor=proj?.couleur||'var(--p600)';
   const wpRows=WPS.map(wp=>{const tasks=all.filter(t=>t.wp_code===wp.code);const d=tasks.filter(t=>t.statut==='Réalisé').length;const p=tasks.length?Math.round(d/tasks.length*100):0;
     return`<div class="wp-row"><div class="wp-row-top"><span class="wp-name"><span style="font-size:10px;padding:2px 6px;border-radius:4px;background:${wpBg(wp.code)};color:${wpCol(wp.code)};font-weight:600;margin-right:6px">${wp.code}</span>${wp.label.replace(/^[^-]+ - /,'')}</span><span class="wp-pct">${d}/${tasks.length} — ${p}%</span></div>
@@ -804,7 +804,7 @@ function openAddModal(){
   document.getElementById('taskOverlay').classList.add('open');
 }
 function openEditModal(id){
-  const t=TACHES.find(x=>x.id===id);if(!t)return;
+  const t=TACHES.find(x=>(x.id||x.id2)===id||(x.id2||x.id)===id);if(!t)return;
   editingId=id;document.getElementById('modalTitle').textContent='Modifier la tâche';
   document.getElementById('mTache').value=t.tache;document.getElementById('mQui').value=t.qui;
   document.getElementById('mStatut').value=t.statut;document.getElementById('mWP').value=t.wp_code||'';
@@ -840,7 +840,7 @@ async function saveTask(){
   try{
     if(editingId){
       await grist.docApi.applyUserActions([['UpdateRecord','SUIVI_TACHES_ALL',editingId,record]]);
-      const i=ALL_TACHES.findIndex(t=>t.id===editingId);
+      const i=ALL_TACHES.findIndex(t=>(t.id||t.id2)===editingId);
       if(i>=0)ALL_TACHES[i]={...ALL_TACHES[i],...record};
     }else{
       const res=await grist.docApi.applyUserActions([['AddRecord','SUIVI_TACHES_ALL',null,record]]);
@@ -854,7 +854,7 @@ async function saveTask(){
 async function deleteTask(){
   if(!editingId||!confirm('Supprimer ?'))return;
   try{await grist.docApi.applyUserActions([['RemoveRecord','SUIVI_TACHES_ALL',editingId]])}catch(e){console.warn(e)}
-  ALL_TACHES=ALL_TACHES.filter(t=>t.id!==editingId);
+  ALL_TACHES=ALL_TACHES.filter(t=>(t.id||t.id2)!==editingId);
   TACHES=ALL_TACHES.filter(t=>String(t.projet_id)===String(currentProjetId));
   closeModal();applyFilters();
 }

@@ -974,6 +974,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
    ÉTAT GLOBAL
 ══════════════════════════════════════════════ */
 let PROJETS=[], ALL_TACHES=[], ALL_MEMBRES=[], ALL_AXES=[];
+let indicActiveTab='suivi';
 let ACTN_PROJETS=[], ACTN_AXES=[], ACTN_ACTIONS=[], ACTN_SOUS_ACTIONS=[];
 let ALL_RH=[], ALL_INDIC_CONFIG=[], ALL_INDIC_VAL=[];
 let currentProjetId=null;
@@ -1494,71 +1495,118 @@ function renderSaPartnerChips(){
 
 function renderObjectifs(){
   const proj=PROJETS.find(p=>p.id===currentProjetId);
-  const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj?.code);
-  const accent=proj?.couleur||'#534AB7';
-  const targets=getIndicTargets(proj?.code||'');
+  const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj&&proj.code);
+  const accent=proj&&proj.couleur||'#534AB7';
+  const targets=getIndicTargets(proj&&proj.code||'');
 
-  // Sous-actions du projet → indicateurs associés
-  const projAxeIds=new Set(ACTN_AXES.filter(a=>a.projet_ref===actnProj?.id).map(a=>a.id));
+  const projAxeIds=new Set(ACTN_AXES.filter(a=>a.projet_ref===(actnProj&&actnProj.id)).map(a=>a.id));
   const projActIds=new Set(ACTN_ACTIONS.filter(a=>projAxeIds.has(a.wp_axe_ref)).map(a=>a.id));
   const projSaIds=new Set(ACTN_SOUS_ACTIONS.filter(sa=>projActIds.has(sa.action_ref)).map(sa=>sa.id));
   const projIndics=ALL_INDIC_CONFIG.filter(c=>projSaIds.has(c.type_sous_action));
 
-  // Totaux réalisés par indicateur
-  const projActions=actnProj?(window._ALL_ACTIONS||[]).filter(a=>a.projet_ref===actnProj.id):[];
-  const projActionIds=new Set(projActions.map(a=>a.id));
+  const allProjActions=actnProj?(window._ALL_ACTIONS||[]).filter(a=>a.projet_ref===actnProj.id):[];
+  const projActionIds=new Set(allProjActions.map(a=>a.id));
   const totals={};
-  ALL_INDIC_VAL.forEach(row=>{
+  ALL_INDIC_VAL.forEach(function(row){
     if(!projActionIds.has(row.action_ref))return;
-    const cfg=ALL_INDIC_CONFIG.find(c=>c.id===row.indicateur_ref);
+    var cfg=ALL_INDIC_CONFIG.find(function(c){return c.id===row.indicateur_ref;});
     if(!cfg)return;
     totals[cfg.Code_indicateur]=(totals[cfg.Code_indicateur]||0)+(typeof row.valeur==='number'?row.valeur:0);
   });
 
   if(!projIndics.length){
-    document.getElementById('objBody').innerHTML=`<div class="obj-empty">Aucun indicateur configuré pour ce projet.<br>Ajoutez des indicateurs via Administration puis saisissez des actions réalisées.</div>`;
+    document.getElementById('objBody').innerHTML='<div class="obj-empty">Aucun indicateur configuré pour ce projet.</div>';
     return;
   }
 
-  const rows=projIndics.map(ind=>{
-    const code=ind.Code_indicateur;
-    const val=totals[code]||0;
-    const target=targets[code]||0;
-    const pct=target>0?Math.min(100,Math.round(val/target*100)):null;
-    const barColor=pct===null?'#e0e0e0':pct>=100?'var(--t600)':pct>=50?accent:'var(--a600)';
-    const valColor=pct===null?accent:pct>=100?'var(--t600)':pct>=50?accent:'var(--a600)';
-    return`<div class="obj-card">
-      <div class="obj-card-info">
-        <div class="obj-card-name">${esc(ind.libelle_indicateurs)}</div>
-        <div class="obj-card-sub">${ind.obligatoire?'Obligatoire':'Optionnel'}</div>
-        ${target>0?`<div class="obj-bar-wrap">
-          <div class="obj-bar-bg"><div class="obj-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
-          <div class="obj-bar-labels"><span>${val.toLocaleString('fr-FR')} réalisé${pct!==null?` · ${pct}%`:''}</span><span>Objectif : ${target.toLocaleString('fr-FR')}</span></div>
-        </div>`:`<div style="font-size:11px;color:#ccc;font-style:italic;margin-top:5px">Définissez un objectif →</div>`}
-      </div>
-      <div class="obj-val" style="color:${valColor}">${val.toLocaleString('fr-FR')}</div>
-      <div class="obj-target-wrap">
-        <div class="obj-target-lbl">Objectif</div>
-        <input type="number" class="obj-target-input" id="obj_${code}" value="${target||''}" min="0" placeholder="—">
-      </div>
-    </div>`;
-  }).join('');
+  // Sous-onglets
+  var tabBar='<div class="subtab-bar" style="padding:0 0 14px;border-bottom:.5px solid #ebebeb;margin-bottom:16px">'
+    +'<button class="subtab'+(indicActiveTab==='suivi'?' active':'')+'" onclick="indicActiveTab=\'suivi\';renderObjectifs()">Suivi</button>'
+    +'<button class="subtab'+(indicActiveTab==='objectifs'?' active':'')+'" onclick="indicActiveTab=\'objectifs\';renderObjectifs()">Objectifs</button>'
+    +'</div>';
 
-  // Historique des actions récentes
-  const recentActions=actnProj?[...(window._ALL_ACTIONS||[])].filter(a=>a.projet_ref===actnProj.id).sort((a,b)=>b.date_suivi_action-a.date_suivi_action).slice(0,8):[];
-  const histRows=recentActions.map(a=>renderHistRow(a)).join('');
-  const histHTML=recentActions.length
-    ? '<div style="margin-top:28px"><div class="obj-section-lbl">Actions récentes</div><div class="act-history">'+histRows+'</div></div>'
-    : '<div style="margin-top:28px;text-align:center;padding:24px;background:#fff;border-radius:var(--r);border:.5px solid #e0e0e0;font-size:12px;color:#bbb">Aucune action — cliquez sur "Saisir une action" pour commencer.</div>';
+  var content='';
 
-  document.getElementById('objBody').innerHTML=
-    '<div class="obj-section-lbl">Indicateurs — '+esc(proj&&proj.nom||'')+'</div>'
-    +rows
-    +'<div style="margin-top:18px;display:flex;justify-content:flex-end;gap:8px">'
-    +'<button class="btn btn-ghost" onclick="renderObjectifs()">Annuler</button>'
-    +'<button class="btn btn-primary" onclick="saveAllTargets()">Enregistrer les objectifs</button>'
-    +'</div>'
-    +histHTML;
+  if(indicActiveTab==='objectifs'){
+    // ── Onglet Objectifs : cards avec inputs éditables ──
+    var rows=projIndics.map(function(ind){
+      var code=ind.Code_indicateur;
+      var val=totals[code]||0;
+      var target=targets[code]||0;
+      var pct=target>0?Math.min(100,Math.round(val/target*100)):null;
+      var barColor=pct===null?'#e0e0e0':pct>=100?'var(--t600)':pct>=50?accent:'var(--a600)';
+      var valColor=pct===null?accent:pct>=100?'var(--t600)':pct>=50?accent:'var(--a600)';
+      return'<div class="obj-card">'
+        +'<div class="obj-card-info">'
+        +'<div class="obj-card-name">'+esc(ind.libelle_indicateurs)+'</div>'
+        +(target>0?'<div class="obj-bar-wrap"><div class="obj-bar-bg"><div class="obj-bar-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div></div>':'')
+        +'</div>'
+        +'<div class="obj-val" style="color:'+valColor+'">'+val.toLocaleString('fr-FR')+'</div>'
+        +'<div class="obj-target-wrap">'
+        +'<div class="obj-target-lbl">Objectif</div>'
+        +'<input type="number" class="obj-target-input" id="obj_'+code+'" value="'+(target||'')+'" min="0" placeholder="—">'
+        +'</div></div>';
+    }).join('');
+    content=rows
+      +'<div style="margin-top:18px;display:flex;justify-content:flex-end;gap:8px">'
+      +'<button class="btn btn-primary" onclick="saveAllTargets()">Enregistrer les objectifs</button>'
+      +'</div>';
+
+  } else {
+    // ── Onglet Suivi : liste compacte + historique avec archivage ──
+    var suivi=projIndics.map(function(ind){
+      var code=ind.Code_indicateur;
+      var val=totals[code]||0;
+      var target=targets[code]||0;
+      var pct=target>0?Math.min(100,Math.round(val/target*100)):null;
+      var barColor=pct===null?'#e0e0e0':pct>=100?'var(--t600)':pct>=50?accent:'var(--a600)';
+      var bar=target>0
+        ?'<div style="display:flex;align-items:center;gap:8px;min-width:160px">'
+          +'<div class="obj-bar-bg" style="flex:1"><div class="obj-bar-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div>'
+          +'<span style="font-size:11px;color:#999;white-space:nowrap">'+pct+'% / '+target.toLocaleString('fr-FR')+'</span>'
+          +'</div>'
+        :'<span style="font-size:11px;color:#ccc">—</span>';
+      return'<div class="indic-target-row">'
+        +'<div class="indic-target-info"><div class="indic-target-name">'+esc(ind.libelle_indicateurs)+'</div></div>'
+        +'<div class="indic-target-num" style="color:'+(pct!==null&&pct>=100?'var(--t600)':accent)+'">'+val.toLocaleString('fr-FR')+'</div>'
+        +'<div class="indic-target-bar-wrap" style="min-width:180px">'+bar+'</div>'
+        +'</div>';
+    }).join('');
+    content='<div style="background:#fff;border:.5px solid #e0e0e0;border-radius:var(--r);overflow:hidden;margin-bottom:24px">'+suivi+'</div>';
+
+    // Historique avec archivage (seuil = 30 jours)
+    var oneMonthAgo=Math.floor(Date.now()/1000)-30*86400;
+    var sorted=[].concat(allProjActions).sort(function(a,b){return b.date_suivi_action-a.date_suivi_action;});
+    var recent=sorted.filter(function(a){return a.date_suivi_action>=oneMonthAgo;});
+    var archived=sorted.filter(function(a){return a.date_suivi_action<oneMonthAgo;});
+
+    if(recent.length){
+      content+='<div class="obj-section-lbl">Actions récentes (30 derniers jours)</div>'
+        +'<div class="act-history">'+recent.map(function(a){return renderHistRow(a);}).join('')+'</div>';
+    } else {
+      content+='<div style="text-align:center;padding:20px;background:#fff;border-radius:var(--r);border:.5px solid #e0e0e0;font-size:12px;color:#bbb">Aucune action ce mois-ci — cliquez sur "Saisir une action".</div>';
+    }
+
+    if(archived.length){
+      content+='<div style="margin-top:12px">'
+        +'<button class="btn btn-ghost btn-sm" onclick="toggleArchives(this)" style="width:100%">'
+        +'Archives — '+archived.length+' action'+(archived.length>1?'s':'')+' (avant 30 jours)'
+        +'</button>'
+        +'<div id="archivesBlock" style="display:none;margin-top:6px">'
+        +'<div class="act-history">'+archived.map(function(a){return renderHistRow(a);}).join('')+'</div>'
+        +'</div></div>';
+    }
+  }
+
+  document.getElementById('objBody').innerHTML=tabBar+content;
+}
+
+function toggleArchives(btn){
+  var block=document.getElementById('archivesBlock');
+  if(!block)return;
+  var open=block.style.display==='none';
+  block.style.display=open?'block':'none';
+  btn.textContent=open?'Masquer les archives':btn.textContent.replace('▲ ','');
 }
 
 function renderHistRow(a){
@@ -1595,6 +1643,7 @@ function saveAllTargets(){
   });
   saveIndicTargets(proj.code||'',targets);
   showToast('Objectifs enregistrés','success');
+  indicActiveTab='suivi';
   renderObjectifs();
   // Rafraîchir le stat sur le hub si besoin
   const ostat=document.getElementById('hubObjStat');

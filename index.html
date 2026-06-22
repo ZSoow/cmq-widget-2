@@ -1546,38 +1546,42 @@ function renderObjectifs(){
 
   // Historique des actions récentes
   const projActions=actnProj?[...(window._ALL_ACTIONS||[])].filter(a=>a.projet_ref===actnProj.id).sort((a,b)=>b.date_suivi_action-a.date_suivi_action).slice(0,8):[];
-  const histHTML=projActions.length?`
-    <div style="margin-top:28px">
-      <div class="obj-section-lbl">Actions récentes</div>
-      <div class="act-history">
-        ${projActions.map(a=>{
-          const rh=ALL_RH.find(m=>m.id===a.responsable_suivi_action_ref);
-          const wp=ACTN_AXES.find(w=>w.id===a.wp_axe_ref);
-          const sa=ACTN_SOUS_ACTIONS.find(s=>s.id===a.sous_action_ref);
-          const indics=getIndicForAction(a.id);
-          const path=[wp?.cod_wp_axe,sa?.cod_sous_action].filter(Boolean).join(' › ');
-          const chips=indics.map(iv=>{const cfg=ALL_INDIC_CONFIG.find(c=>c.id===iv.indicateur_ref);return cfg?`<span class="ah-chip">${esc(cfg.libelle_indicateurs)} <strong>${(iv.valeur||0).toLocaleString('fr-FR')}</strong></span>`:''}).filter(Boolean).join('');
-          const etabCnt=(window._ALL_ETAB_PARTS||[]).filter(p=>p.ACTION_CONCERNEE===a.id).length;
-          return`<div class="ah-item">
-            <div class="ah-top"><div class="ah-date">${fmtDateFull(a.date_suivi_action)}</div><div class="ah-name">${esc(a.nom_suivi_action||'(sans nom)')}</div></div>
-            <div class="ah-path">${esc(rh?.Membre||'')}${path?' · '+esc(path):''}${etabCnt?` · ${etabCnt} étab.`:''}</div>
-            ${chips?`<div class="ah-indics">${chips}</div>`:''}
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`:
-    `<div style="margin-top:28px;text-align:center;padding:24px;background:#fff;border-radius:var(--r);border:.5px solid #e0e0e0;font-size:12px;color:#bbb">
-      Aucune action enregistrée — cliquez sur "Saisir une action" pour commencer.
-    </div>`;
+  const histRows=projActions.map(a=>renderHistRow(a)).join('');
+  const histHTML=projActions.length
+    ? '<div style="margin-top:28px"><div class="obj-section-lbl">Actions récentes</div><div class="act-history">'+histRows+'</div></div>'
+    : '<div style="margin-top:28px;text-align:center;padding:24px;background:#fff;border-radius:var(--r);border:.5px solid #e0e0e0;font-size:12px;color:#bbb">Aucune action — cliquez sur "Saisir une action" pour commencer.</div>';
 
   document.getElementById('objBody').innerHTML=
-    `<div class="obj-section-lbl">Indicateurs — ${esc(proj?.nom||'')}</div>
-    ${rows}
-    <div style="margin-top:18px;display:flex;justify-content:flex-end;gap:8px">
-      <button class="btn btn-ghost" onclick="renderObjectifs()">Annuler</button>
-      <button class="btn btn-primary" onclick="saveAllTargets()">Enregistrer les objectifs</button>
-    </div>
-    ${histHTML}`;
+    '<div class="obj-section-lbl">Indicateurs — '+esc(proj&&proj.nom||'')+'</div>'
+    +rows
+    +'<div style="margin-top:18px;display:flex;justify-content:flex-end;gap:8px">'
+    +'<button class="btn btn-ghost" onclick="renderObjectifs()">Annuler</button>'
+    +'<button class="btn btn-primary" onclick="saveAllTargets()">Enregistrer les objectifs</button>'
+    +'</div>'
+    +histHTML;
+}
+
+function renderHistRow(a){
+  var rh=ALL_RH.find(function(m){return m.id===a.responsable_suivi_action_ref;});
+  var wp=ACTN_AXES.find(function(w){return w.id===a.wp_axe_ref;});
+  var sa=ACTN_SOUS_ACTIONS.find(function(s){return s.id===a.sous_action_ref;});
+  var indics=getIndicForAction(a.id);
+  var pathParts=[wp&&wp.cod_wp_axe,sa&&sa.cod_sous_action].filter(Boolean);
+  var path=pathParts.join(' > ');
+  var chips=indics.map(function(iv){
+    var cfg=ALL_INDIC_CONFIG.find(function(c){return c.id===iv.indicateur_ref;});
+    if(!cfg)return'';
+    return'<span class="ah-chip">'+esc(cfg.libelle_indicateurs)+' <strong>'+(iv.valeur||0).toLocaleString('fr-FR')+'</strong></span>';
+  }).filter(Boolean).join('');
+  var etabCnt=(window._ALL_ETAB_PARTS||[]).filter(function(p){return p.ACTION_CONCERNEE===a.id;}).length;
+  var pathLine=esc(rh&&rh.Membre||'');
+  if(path)pathLine+=(pathLine?' · ':'')+esc(path);
+  if(etabCnt)pathLine+=(pathLine?' · ':'')+etabCnt+' étab.';
+  return'<div class="ah-item">'
+    +'<div class="ah-top"><div class="ah-date">'+fmtDateFull(a.date_suivi_action)+'</div><div class="ah-name">'+esc(a.nom_suivi_action||'(sans nom)')+'</div></div>'
+    +'<div class="ah-path">'+pathLine+'</div>'
+    +(chips?'<div class="ah-indics">'+chips+'</div>':'')
+    +'</div>';
 }
 
 function saveAllTargets(){

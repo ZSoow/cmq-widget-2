@@ -1545,9 +1545,9 @@ function renderObjectifs(){
   }).join('');
 
   // Historique des actions récentes
-  const projActions=actnProj?[...(window._ALL_ACTIONS||[])].filter(a=>a.projet_ref===actnProj.id).sort((a,b)=>b.date_suivi_action-a.date_suivi_action).slice(0,8):[];
-  const histRows=projActions.map(a=>renderHistRow(a)).join('');
-  const histHTML=projActions.length
+  const recentActions=actnProj?[...(window._ALL_ACTIONS||[])].filter(a=>a.projet_ref===actnProj.id).sort((a,b)=>b.date_suivi_action-a.date_suivi_action).slice(0,8):[];
+  const histRows=recentActions.map(a=>renderHistRow(a)).join('');
+  const histHTML=recentActions.length
     ? '<div style="margin-top:28px"><div class="obj-section-lbl">Actions récentes</div><div class="act-history">'+histRows+'</div></div>'
     : '<div style="margin-top:28px;text-align:center;padding:24px;background:#fff;border-radius:var(--r);border:.5px solid #e0e0e0;font-size:12px;color:#bbb">Aucune action — cliquez sur "Saisir une action" pour commencer.</div>';
 

@@ -650,19 +650,85 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
   </div>
 </div>
 
-<!-- ══ PAGE OBJECTIFS ══ -->
+<!-- ══ PAGE INDICATEURS (objectifs + saisie action) ══ -->
 <div id="pageObjectifs">
   <div class="hdr">
     <div class="hdr-left">
       <button class="btn-back" onclick="goHub()">← Retour</button>
       <span class="proj-badge" id="objBadge"></span>
       <div>
-        <div class="hdr-title">Objectifs & Indicateurs</div>
+        <div class="hdr-title">Indicateurs & Actions</div>
         <div class="hdr-sub" id="objSub"></div>
       </div>
     </div>
     <div class="hdr-right">
       <button class="btn btn-ghost btn-sm" onclick="showRapport()">Rapport</button>
+      <button class="btn btn-primary btn-sm" onclick="openSaisieActionPanel()">+ Saisir une action</button>
+    </div>
+  </div>
+  <!-- Panneau de saisie action (masqué par défaut) -->
+  <div id="saisieActionPanel" style="display:none;background:#fff;border-bottom:.5px solid #e0e0e0;padding:18px 24px 14px;max-width:820px;margin:0 auto;width:100%">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:600;color:#1a1a1a">Saisir une action réalisée</div>
+      <button onclick="closeSaisieActionPanel()" style="background:none;border:none;cursor:pointer;font-size:18px;color:#bbb;padding:0 4px">×</button>
+    </div>
+    <div class="toast" id="saisieToast" style="margin-bottom:10px">Action enregistrée !</div>
+    <div class="f-field">
+      <label class="f-label">Nom de l'action <span class="req">*</span></label>
+      <input type="text" id="saNom" style="width:100%" placeholder="Ex : Forum Bioéco 2025, atelier formation…">
+    </div>
+    <div class="f-row2">
+      <div class="f-field">
+        <label class="f-label">Date <span class="req">*</span></label>
+        <input type="date" id="saDate" style="width:100%">
+      </div>
+      <div class="f-field">
+        <label class="f-label">Responsable <span class="req">*</span></label>
+        <select id="saResp" style="width:100%"><option value="">— Choisir —</option></select>
+      </div>
+    </div>
+    <div class="cascade-divider">Associer à une sous-action (optionnel)</div>
+    <div class="cascade-step">
+      <div class="step-num" id="saStepNum1">1</div>
+      <div class="cascade-step-body f-field">
+        <label class="f-label">WP / Axe</label>
+        <select id="saWP" onchange="onSaWpChange()" style="width:100%"><option value="">— Choisir —</option></select>
+      </div>
+    </div>
+    <div class="cascade-step">
+      <div class="step-num inactive" id="saStepNum2">2</div>
+      <div class="cascade-step-body f-field">
+        <label class="f-label">Action</label>
+        <select id="saAction" onchange="onSaActionChange()" disabled style="width:100%"><option value="">— Choisir d'abord un WP/Axe —</option></select>
+      </div>
+    </div>
+    <div class="cascade-step">
+      <div class="step-num inactive" id="saStepNum3">3</div>
+      <div class="cascade-step-body f-field">
+        <label class="f-label">Sous-action</label>
+        <select id="saSousAction" onchange="onSaSousActionChange()" disabled style="width:100%"><option value="">— Choisir d'abord une action —</option></select>
+      </div>
+    </div>
+    <div id="saIndicZone" style="display:none"></div>
+    <div class="partner-section f-field">
+      <label class="f-label">Établissements partenaires</label>
+      <div class="partner-search-wrap">
+        <input type="text" class="partner-search-input" id="saEtabSearch"
+          placeholder="Rechercher par nom, code postal…"
+          oninput="onSaEtabSearch(this.value)"
+          onfocus="onSaEtabSearchFocus()"
+          onblur="setTimeout(()=>document.getElementById('saPartnerResults').classList.remove('open'),220)">
+        <div class="partner-results" id="saPartnerResults"></div>
+      </div>
+      <div class="partner-chips" id="saPartnerChips"></div>
+    </div>
+    <div class="f-field" style="margin-top:8px">
+      <label class="f-label">Commentaire</label>
+      <textarea id="saComment" style="width:100%;min-height:55px" placeholder="Notes, contexte…"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-ghost" onclick="closeSaisieActionPanel()">Annuler</button>
+      <button class="btn btn-primary" style="flex:1;padding:10px;font-size:13px" onclick="submitSaisieAction()">Enregistrer l'action</button>
     </div>
   </div>
   <div class="obj-body" id="objBody">
@@ -1111,22 +1177,17 @@ function renderHub(proj){
   const nbAct=actnProj?(window._ALL_ACTIONS||[]).filter(a=>a.projet_ref===actnProj.id).length:0;
   document.getElementById('hubSubDesc').textContent=`${totalT} tâche${totalT!==1?'s':''} · ${pct}% réalisé · ${nbAct} action${nbAct!==1?'s':''} enregistrée${nbAct!==1?'s':''}`;
   const hc=document.getElementById('hubChoices');
-  hc.style.gridTemplateColumns='repeat(3,1fr)';
+  hc.style.gridTemplateColumns='repeat(2,1fr)';
   hc.innerHTML=`
+    <div class="hub-card" onclick="openIndicateursPage()" style="border-left-color:${accent}">
+      <div class="hub-card-title">Indicateurs & Actions</div>
+      <div class="hub-card-desc">Saisir les actions réalisées, renseigner les indicateurs, suivre la progression par rapport aux objectifs</div>
+      <div class="hub-card-stat">${nbAct} action${nbAct!==1?'s':''} · <span id="hubObjStat">—</span></div>
+    </div>
     <div class="hub-card" onclick="openTaches()" style="border-left-color:${accent}">
-      <div class="hub-card-title">Suivi des tâches</div>
+      <div class="hub-card-title">Suivi de projet</div>
       <div class="hub-card-desc">Kanban, liste groupée, Gantt, calendrier, réunion hebdomadaire, tableau de bord</div>
       <div class="hub-card-stat">${totalT} tâche${totalT!==1?'s':''} · ${lateT>0?`<span style="color:var(--c600)">${lateT} en retard</span>`:'aucun retard'}</div>
-    </div>
-    <div class="hub-card" onclick="openActionsPage()" style="border-left-color:${accent}">
-      <div class="hub-card-title">Actions réalisées</div>
-      <div class="hub-card-desc">Saisir les actions effectuées et renseigner les indicateurs (participants touchés, formations colorées…)</div>
-      <div class="hub-card-stat">${nbAct} action${nbAct!==1?'s':''} enregistrée${nbAct!==1?'s':''}</div>
-    </div>
-    <div class="hub-card" onclick="openObjectifsPage()" style="border-left-color:${accent}">
-      <div class="hub-card-title">Objectifs & Suivi</div>
-      <div class="hub-card-desc">Définissez vos objectifs annuels par indicateur et suivez la progression en temps réel</div>
-      <div class="hub-card-stat" id="hubObjStat">—</div>
     </div>`;
   // Stat objectifs
   const targets=getIndicTargets(proj.code||'');const nbTargets=Object.keys(targets).length;
@@ -1220,7 +1281,11 @@ function renderActHistory(proj,actnProj){
 /* ══════════════════════════════════════════════
    PAGE OBJECTIFS
 ══════════════════════════════════════════════ */
-function openObjectifsPage(){
+function openObjectifsPage(){openIndicateursPage()}
+
+function goActions(){openIndicateursPage();setTimeout(()=>openSaisieActionPanel(),100)}
+
+function openIndicateursPage(){
   const proj=PROJETS.find(p=>p.id===currentProjetId);if(!proj)return;
   const accent=proj.couleur||'#534AB7';
   const badge=proj.badge||proj.code||proj.nom;
@@ -1228,8 +1293,198 @@ function openObjectifsPage(){
   document.getElementById('objBadge').style.background=accent;
   document.getElementById('objSub').textContent=proj.nom;
   document.documentElement.style.setProperty('--accent',accent);
+  // Préparer le formulaire de saisie
+  initSaisieActionPanel();
+  closeSaisieActionPanel();
   renderObjectifs();
   showPage('objectifs');
+}
+
+function initSaisieActionPanel(){
+  const proj=PROJETS.find(p=>p.id===currentProjetId);if(!proj)return;
+  // Date par défaut
+  document.getElementById('saDate').value=new Date().toISOString().split('T')[0];
+  // Responsables
+  const sr=document.getElementById('saResp');
+  sr.innerHTML='<option value="">— Choisir —</option>';
+  getMembresActionsListe().forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.nom;sr.appendChild(o)});
+  // WP/Axes
+  const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj.code);
+  const sw=document.getElementById('saWP');
+  sw.innerHTML='<option value="">— Choisir —</option>';
+  if(actnProj)ACTN_AXES.filter(a=>a.projet_ref===actnProj.id).forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=a.id_wp_axe_calc||`${a.cod_wp_axe} - ${a.lib_wp_axe}`;sw.appendChild(o)});
+  // Reset cascade
+  document.getElementById('saAction').innerHTML='<option value="">— Choisir d\'abord un WP/Axe —</option>';
+  document.getElementById('saAction').disabled=true;
+  document.getElementById('saSousAction').innerHTML='<option value="">— Choisir d\'abord une action —</option>';
+  document.getElementById('saSousAction').disabled=true;
+  document.getElementById('saIndicZone').style.display='none';
+  document.getElementById('saIndicZone').innerHTML='';
+  document.getElementById('saNom').value='';
+  document.getElementById('saComment').value='';
+  resetSaPartnerSection();
+  ['saStepNum1','saStepNum2','saStepNum3'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.className='step-num'+(i>0?' inactive':'')});
+}
+
+function openSaisieActionPanel(){
+  initSaisieActionPanel();
+  document.getElementById('saisieActionPanel').style.display='block';
+  document.getElementById('saNom').focus();
+}
+
+function closeSaisieActionPanel(){
+  document.getElementById('saisieActionPanel').style.display='none';
+}
+
+function onSaWpChange(){
+  const wid=parseInt(document.getElementById('saWP').value)||0;
+  const as=document.getElementById('saAction');
+  as.innerHTML='<option value="">— Choisir une action —</option>';as.disabled=!wid;
+  if(wid){
+    const actions=ACTN_ACTIONS.filter(a=>a.wp_axe_ref===wid);
+    if(actions.length===0){
+      as.innerHTML='<option value="" disabled>Aucune action configurée pour cet axe</option>';as.disabled=true;
+    }else{
+      actions.forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=a.id_action_calc||a.lib_action;as.appendChild(o)});
+    }
+  }
+  document.getElementById('saSousAction').innerHTML='<option value="">— Choisir d\'abord une action —</option>';
+  document.getElementById('saSousAction').disabled=true;
+  document.getElementById('saIndicZone').style.display='none';document.getElementById('saIndicZone').innerHTML='';
+  const s2=document.getElementById('saStepNum2'),s3=document.getElementById('saStepNum3');
+  if(s2)s2.className='step-num'+(wid?'':' inactive');
+  if(s3)s3.className='step-num inactive';
+}
+
+function onSaActionChange(){
+  const aid=parseInt(document.getElementById('saAction').value)||0;
+  const ss=document.getElementById('saSousAction');
+  ss.innerHTML='<option value="">— Choisir une sous-action —</option>';ss.disabled=!aid;
+  if(aid)ACTN_SOUS_ACTIONS.filter(s=>s.action_ref===aid).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.id_sous_action_calc||s.lib_sous_action;ss.appendChild(o)});
+  document.getElementById('saIndicZone').style.display='none';document.getElementById('saIndicZone').innerHTML='';
+  const s3=document.getElementById('saStepNum3');
+  if(s3)s3.className='step-num'+(aid?'':' inactive');
+}
+
+function onSaSousActionChange(){
+  const sid=parseInt(document.getElementById('saSousAction').value)||0;
+  const zone=document.getElementById('saIndicZone');
+  if(!sid){zone.style.display='none';zone.innerHTML='';return}
+  const indics=ALL_INDIC_CONFIG.filter(c=>c.type_sous_action===sid);
+  if(!indics.length){zone.style.display='none';return}
+  zone.style.display='block';
+  zone.innerHTML=`<div class="indic-zone">
+    <div class="indic-zone-hd">Indicateurs à renseigner</div>
+    ${indics.map(ind=>`<div class="indic-row">
+      <div class="indic-row-lbl">${ind.obligatoire?'<span class="indic-row-req">*</span>':''}${esc(ind.libelle_indicateurs)}</div>
+      ${ind.type_valeur==='booleen'
+        ?`<select id="sa_${ind.id}" class="indic-row-input" style="width:110px"><option value="">—</option><option value="1">Oui</option><option value="0">Non</option></select>`
+        :`<input type="number" id="sa_${ind.id}" class="indic-row-input" min="0" placeholder="0">`}
+    </div>`).join('')}
+  </div>`;
+}
+
+async function submitSaisieAction(){
+  const nom=document.getElementById('saNom').value.trim();
+  const date=document.getElementById('saDate').value;
+  const resp=document.getElementById('saResp').value;
+  if(!nom||!date||!resp){showToast('Nom, date et responsable sont obligatoires.','error');return}
+  const proj=PROJETS.find(p=>p.id===currentProjetId);
+  const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj?.code);
+  const sid=parseInt(document.getElementById('saSousAction').value)||0;
+  const record={
+    nom_suivi_action:nom,date_suivi_action:toTs(date),
+    responsable_suivi_action_ref:parseInt(resp)||0,projet_ref:actnProj?.id||0,
+    wp_axe_ref:parseInt(document.getElementById('saWP').value)||0,
+    action_ref:parseInt(document.getElementById('saAction').value)||0,
+    sous_action_ref:sid,Commentaires:document.getElementById('saComment').value,Cree_par:'widget'
+  };
+  try{
+    const res=await grist.docApi.applyUserActions([['AddRecord','SAISIE_actions_realisees',null,record]]);
+    const newId=res?.retValues?.[0]??null;
+    if(sid&&newId){
+      for(const ind of ALL_INDIC_CONFIG.filter(c=>c.type_sous_action===sid)){
+        const el=document.getElementById('sa_'+ind.id);const val=el?parseFloat(el.value):NaN;
+        try{await grist.docApi.applyUserActions([['AddRecord','SUIVI_indicateurs',null,{action_ref:newId,indicateur_ref:ind.id,valeur:isNaN(val)?0:val,valeur_bool:ind.type_valeur==='booleen'&&el?.value==='1',Cree_par:'widget',date_creation:toTs(date)}]])}catch(e2){console.warn(e2)}
+      }
+    }
+    if(newId&&_saPartnerSelected.length){
+      for(const p of _saPartnerSelected){
+        try{await grist.docApi.applyUserActions([['AddRecord','SAISIE_etablissements_participants_par_action',null,{
+          ACTION_CONCERNEE:newId,ETABLISSEMENT_PARTICIPANT:p.id,
+          FILTRE_REGION:p.region_ref||0,FILTRE_DEPARTEMENT:p.dept_ref||0,FILTRE_TYPE_ETABLISSEMENT:p.type_etab_ref||0
+        }]])}catch(e3){console.warn(e3)}
+      }
+      const freshParts=await grist.docApi.fetchTable('SAISIE_etablissements_participants_par_action');
+      window._ALL_ETAB_PARTS=tableToRows(freshParts);
+    }
+    const fresh=await grist.docApi.fetchTable('SAISIE_actions_realisees');
+    window._ALL_ACTIONS=tableToRows(fresh);
+    const t=document.getElementById('saisieToast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);
+    initSaisieActionPanel();
+    // Actualiser les valeurs affichées
+    const freshVal=await grist.docApi.fetchTable('SUIVI_indicateurs');
+    ALL_INDIC_VAL=tableToRows(freshVal);
+    renderObjectifs();
+  }catch(e){showToast(e.message,'error')}
+}
+
+/* Recherche établissements dans le panneau de saisie */
+let _saPartnerSelected=[];
+
+function resetSaPartnerSection(){
+  _saPartnerSelected=[];
+  const inp=document.getElementById('saEtabSearch');if(inp)inp.value='';
+  const res=document.getElementById('saPartnerResults');if(res){res.innerHTML='';res.classList.remove('open')}
+  renderSaPartnerChips();
+}
+
+async function onSaEtabSearchFocus(){
+  if(!window._ALL_ETABLISSEMENTS){
+    const res=document.getElementById('saPartnerResults');
+    res.innerHTML='<div class="partner-msg">Chargement de la base établissements…</div>';
+    res.classList.add('open');
+    await loadEtablissements();
+    const q=document.getElementById('saEtabSearch')?.value||'';
+    onSaEtabSearch(q);
+  }
+}
+
+function onSaEtabSearch(q){
+  const res=document.getElementById('saPartnerResults');
+  if(!q||q.length<2){res.classList.remove('open');return}
+  const etabs=window._ALL_ETABLISSEMENTS;if(!etabs)return;
+  const lower=q.toLowerCase();
+  const found=etabs.filter(e=>e.nom_etablissement?.toLowerCase().includes(lower)||(e.code_postal_etablissement||'').startsWith(q)).slice(0,15);
+  if(!found.length){res.innerHTML='<div class="partner-msg">Aucun établissement trouvé</div>';res.classList.add('open');return}
+  res.innerHTML=found.map(e=>`<div class="partner-result-item" onmousedown="addSaEtabPartner(${e.id})">
+    <div class="partner-result-name">${esc(e.nom_etablissement)}</div>
+    <div class="partner-result-meta">${e.code_postal_etablissement||''} · ${esc(e.identifiant_etablissement||'')}</div>
+  </div>`).join('');
+  res.classList.add('open');
+}
+
+function addSaEtabPartner(id){
+  const etabs=window._ALL_ETABLISSEMENTS||[];
+  const e=etabs.find(x=>x.id===id);
+  if(!e||_saPartnerSelected.find(p=>p.id===id))return;
+  _saPartnerSelected.push({type:'etablissement',id:e.id,label:e.nom_etablissement,cp:e.code_postal_etablissement||'',region_ref:e.region_ref_calc||0,dept_ref:e.departement_ref_calc||0,type_etab_ref:e.type_etablissement_ref||0});
+  renderSaPartnerChips();
+  const inp=document.getElementById('saEtabSearch');if(inp)inp.value='';
+  const res=document.getElementById('saPartnerResults');if(res)res.classList.remove('open');
+}
+
+function removeSaPartner(id){
+  _saPartnerSelected=_saPartnerSelected.filter(p=>p.id!==id);
+  renderSaPartnerChips();
+}
+
+function renderSaPartnerChips(){
+  const el=document.getElementById('saPartnerChips');if(!el)return;
+  el.innerHTML=_saPartnerSelected.map(p=>`<div class="partner-chip">
+    <span>${esc(p.label)}${p.cp?` · ${p.cp}`:''}</span>
+    <span class="partner-chip-x" onclick="removeSaPartner(${p.id})">×</span>
+  </div>`).join('');
 }
 
 function renderObjectifs(){
@@ -1284,13 +1539,40 @@ function renderObjectifs(){
     </div>`;
   }).join('');
 
+  // Historique des actions récentes
+  const projActions=actnProj?[...(window._ALL_ACTIONS||[])].filter(a=>a.projet_ref===actnProj.id).sort((a,b)=>b.date_suivi_action-a.date_suivi_action).slice(0,8):[];
+  const histHTML=projActions.length?`
+    <div style="margin-top:28px">
+      <div class="obj-section-lbl">Actions récentes</div>
+      <div class="act-history">
+        ${projActions.map(a=>{
+          const rh=ALL_RH.find(m=>m.id===a.responsable_suivi_action_ref);
+          const wp=ACTN_AXES.find(w=>w.id===a.wp_axe_ref);
+          const sa=ACTN_SOUS_ACTIONS.find(s=>s.id===a.sous_action_ref);
+          const indics=getIndicForAction(a.id);
+          const path=[wp?.cod_wp_axe,sa?.cod_sous_action].filter(Boolean).join(' › ');
+          const chips=indics.map(iv=>{const cfg=ALL_INDIC_CONFIG.find(c=>c.id===iv.indicateur_ref);return cfg?`<span class="ah-chip">${esc(cfg.libelle_indicateurs)} <strong>${(iv.valeur||0).toLocaleString('fr-FR')}</strong></span>`:''}).filter(Boolean).join('');
+          const etabCnt=(window._ALL_ETAB_PARTS||[]).filter(p=>p.ACTION_CONCERNEE===a.id).length;
+          return`<div class="ah-item">
+            <div class="ah-top"><div class="ah-date">${fmtDateFull(a.date_suivi_action)}</div><div class="ah-name">${esc(a.nom_suivi_action||'(sans nom)')}</div></div>
+            <div class="ah-path">${esc(rh?.Membre||'')}${path?' · '+esc(path):''}${etabCnt?` · ${etabCnt} étab.`:''}</div>
+            ${chips?`<div class="ah-indics">${chips}</div>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`:
+    `<div style="margin-top:28px;text-align:center;padding:24px;background:#fff;border-radius:var(--r);border:.5px solid #e0e0e0;font-size:12px;color:#bbb">
+      Aucune action enregistrée — cliquez sur "Saisir une action" pour commencer.
+    </div>`;
+
   document.getElementById('objBody').innerHTML=
     `<div class="obj-section-lbl">Indicateurs — ${esc(proj?.nom||'')}</div>
     ${rows}
     <div style="margin-top:18px;display:flex;justify-content:flex-end;gap:8px">
       <button class="btn btn-ghost" onclick="renderObjectifs()">Annuler</button>
       <button class="btn btn-primary" onclick="saveAllTargets()">Enregistrer les objectifs</button>
-    </div>`;
+    </div>
+    ${histHTML}`;
 }
 
 function saveAllTargets(){

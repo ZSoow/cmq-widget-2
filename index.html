@@ -1090,21 +1090,26 @@ function tableToRows(t){
    CHARGEMENT DES DONNÉES
 ══════════════════════════════════════════════ */
 async function loadAll(){
+  // Timeout de 3s : si Grist ne répond pas, on passe en mode démo
+  const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),3000));
   try{
-    const [projets,taches,membres,axes,actnProjets,actnAxes,actnActions,actnSousActions,rh,indicConfig,indicVal,saisieActions,etabParts]=await Promise.all([
-      grist.docApi.fetchTable('CONFIG_PROJETS'),
-      grist.docApi.fetchTable('SUIVI_TACHES_ALL'),
-      grist.docApi.fetchTable('CONFIG_MEMBRES_ALL'),
-      grist.docApi.fetchTable('CONFIG_AXES_ALL'),
-      grist.docApi.fetchTable('PROJET_projet'),
-      grist.docApi.fetchTable('PROJET_axes'),
-      grist.docApi.fetchTable('PROJET_Actions'),
-      grist.docApi.fetchTable('PROJET_sous_actions'),
-      grist.docApi.fetchTable('CMQ_RH'),
-      grist.docApi.fetchTable('CONFIG_liste_des_indicateurs_par_action'),
-      grist.docApi.fetchTable('SUIVI_indicateurs'),
-      grist.docApi.fetchTable('SAISIE_actions_realisees'),
-      grist.docApi.fetchTable('SAISIE_etablissements_participants_par_action'),
+    const [projets,taches,membres,axes,actnProjets,actnAxes,actnActions,actnSousActions,rh,indicConfig,indicVal,saisieActions,etabParts]=await Promise.race([
+      Promise.all([
+        grist.docApi.fetchTable('CONFIG_PROJETS'),
+        grist.docApi.fetchTable('SUIVI_TACHES_ALL'),
+        grist.docApi.fetchTable('CONFIG_MEMBRES_ALL'),
+        grist.docApi.fetchTable('CONFIG_AXES_ALL'),
+        grist.docApi.fetchTable('PROJET_projet'),
+        grist.docApi.fetchTable('PROJET_axes'),
+        grist.docApi.fetchTable('PROJET_Actions'),
+        grist.docApi.fetchTable('PROJET_sous_actions'),
+        grist.docApi.fetchTable('CMQ_RH'),
+        grist.docApi.fetchTable('CONFIG_liste_des_indicateurs_par_action'),
+        grist.docApi.fetchTable('SUIVI_indicateurs'),
+        grist.docApi.fetchTable('SAISIE_actions_realisees'),
+        grist.docApi.fetchTable('SAISIE_etablissements_participants_par_action'),
+      ]),
+      timeout
     ]);
     PROJETS=tableToRows(projets);
     ALL_TACHES=tableToRows(taches);

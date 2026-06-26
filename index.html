@@ -914,7 +914,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     </div>
     <div class="stats-bar" id="statsBar"></div>
   </div>
-  <div class="tab-panel active" id="tab-kanban"><div id="kanbanAlert"></div><div class="kanban" id="kanbanBoard"></div></div>
+  <div class="tab-panel active" id="tab-kanban"><div id="kanbanAlert"></div><div class="kanban" id="kanbanBoard"></div><div id="kanbanArchives"></div></div>
   <div class="tab-panel" id="tab-liste"><div id="listeContent"></div></div>
   <div class="tab-panel" id="tab-calendrier"><div id="calendrierContent"></div></div>
   <div class="tab-panel" id="tab-gantt">
@@ -2154,15 +2154,6 @@ function renderObjectifs(){
       content+='<div style="text-align:center;padding:20px;background:#fff;border-radius:var(--r);border:.5px solid #e0e0e0;font-size:12px;color:#bbb">Aucune action ce mois-ci — cliquez sur "Saisir une action".</div>';
     }
 
-    if(archived.length){
-      content+='<div style="margin-top:12px">'
-        +'<button class="btn btn-ghost btn-sm" onclick="toggleArchives(this)" style="width:100%">'
-        +'Archives — '+archived.length+' action'+(archived.length>1?'s':'')+' (avant 30 jours)'
-        +'</button>'
-        +'<div id="archivesBlock" style="display:none;margin-top:6px">'
-        +'<div class="act-history">'+archived.map(function(a){return renderHistRow(a);}).join('')+'</div>'
-        +'</div></div>';
-    }
   }
 
   document.getElementById('objBody').innerHTML=tabBar+content;
@@ -2957,7 +2948,7 @@ function renderKanban(){
     ?`<div style="background:var(--c50);border:.5px solid var(--c200);border-radius:8px;padding:9px 14px;margin-bottom:10px;font-size:12px;color:var(--c800);display:flex;align-items:center;gap:8px">
         <strong>⚠ ${late.length} tâche${late.length>1?'s':''} en retard</strong>
         <button onclick="this.parentNode.remove()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:15px;color:var(--c600)">×</button></div>`:'' ;
-  document.getElementById('kanbanBoard').innerHTML=SO.map(statut=>{
+  document.getElementById('kanbanBoard').innerHTML=SO.filter(s=>s!=='Réalisé').map(statut=>{
     const cfg=SC[statut];
     const cards=filteredTaches.filter(t=>t.statut===statut);
     return`<div class="k-col ${cfg.cls}" data-statut="${statut}"
@@ -2988,6 +2979,34 @@ function renderKanban(){
       </div>
     </div>`;
   }).join('');
+  const done=filteredTaches.filter(t=>t.statut==='Réalisé');
+  document.getElementById('kanbanArchives').innerHTML=done.length?`
+    <div style="margin-top:16px;border:.5px solid var(--border);border-radius:var(--r);overflow:hidden">
+      <button onclick="toggleTachesArchives()" id="tachesArchivesBtn"
+        style="width:100%;background:var(--surf);border:none;padding:9px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-family:var(--font);font-size:12px;color:var(--sub)">
+        <span>Archives — ${done.length} tâche${done.length>1?'s':''} réalisée${done.length>1?'s':''}</span>
+        <span id="tachesArchivesIcon">▼</span>
+      </button>
+      <div id="tachesArchivesBlock" style="display:none">
+        ${done.sort((a,b)=>(getDeadlineTs(b)||0)-(getDeadlineTs(a)||0)).map(t=>`
+          <div onclick="openEditModal(${t.id})" style="display:flex;align-items:center;gap:8px;padding:7px 14px;border-top:.5px solid var(--border);cursor:pointer;font-size:12px"
+            onmouseover="this.style.background='var(--surf)'" onmouseout="this.style.background=''">
+            <span class="wp-group-badge" style="background:${wpBg(t.wp_code)};color:${wpCol(t.wp_code)};font-size:10px">${t.wp_code||'—'}</span>
+            <span style="flex:1;color:var(--txt)">${esc(t.tache)}</span>
+            <span style="color:var(--sub)">${t.qui||''}</span>
+            ${t.date_realisation?`<span style="font-size:11px;color:var(--faint)">${fmtDate(t.date_realisation)}</span>`:''}
+          </div>`).join('')}
+      </div>
+    </div>` : '';
+}
+
+function toggleTachesArchives(){
+  const b=document.getElementById('tachesArchivesBlock');
+  const ic=document.getElementById('tachesArchivesIcon');
+  if(!b)return;
+  const open=b.style.display==='none';
+  b.style.display=open?'block':'none';
+  if(ic)ic.textContent=open?'▲':'▼';
 }
 
 /* Drag & drop Kanban */
@@ -3018,12 +3037,33 @@ async function onColDrop(e,newStatut){
 ══════════════════════════════════════════════ */
 function renderListe(){
   const gs=wpGroupState[currentProjetId]||{};
-  const wpCodes=[...new Set(filteredTaches.map(t=>t.wp_code))].sort();
+  const activeTaches=filteredTaches.filter(t=>t.statut!=='Réalisé');
+  const doneTaches=filteredTaches.filter(t=>t.statut==='Réalisé');
+  const wpCodes=[...new Set(activeTaches.map(t=>t.wp_code))].sort();
   const exportBtn=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">
     <button class="btn btn-excel btn-sm" onclick="exportTachesExcel()">⬇ Exporter Excel</button>
   </div>`;
-  document.getElementById('listeContent').innerHTML=exportBtn+wpCodes.map(code=>{
-    const tasks=filteredTaches.filter(t=>t.wp_code===code)
+  const archivesHtml=doneTaches.length?`
+    <div style="margin-top:16px;border:.5px solid var(--border);border-radius:var(--r);overflow:hidden">
+      <button onclick="toggleListeArchives()" id="listeArchivesBtn"
+        style="width:100%;background:var(--surf);border:none;padding:9px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-family:var(--font);font-size:12px;color:var(--sub)">
+        <span>Archives — ${doneTaches.length} tâche${doneTaches.length>1?'s':''} réalisée${doneTaches.length>1?'s':''}</span>
+        <span id="listeArchivesIcon">▼</span>
+      </button>
+      <div id="listeArchivesBlock" style="display:none;padding:0 0 4px">
+        <table class="list-table"><thead><tr><th>Tâche</th><th>WP</th><th>Responsable</th><th>Date réalisation</th></tr></thead>
+        <tbody>${doneTaches.sort((a,b)=>(getDeadlineTs(b)||0)-(getDeadlineTs(a)||0)).map(t=>`
+          <tr onclick="openEditModal(${t.id})">
+            <td class="td-tache"><div>${esc(t.tache)}</div></td>
+            <td><span class="wp-group-badge" style="background:${wpBg(t.wp_code)};color:${wpCol(t.wp_code)}">${t.wp_code||'—'}</span></td>
+            <td>${esc(t.qui||'')}</td>
+            <td style="font-size:11px;color:var(--sub)">${t.date_realisation?fmtDate(t.date_realisation):'—'}</td>
+          </tr>`).join('')}
+        </tbody></table>
+      </div>
+    </div>` : '';
+  document.getElementById('listeContent').innerHTML=exportBtn+(wpCodes.length?wpCodes.map(code=>{
+    const tasks=activeTaches.filter(t=>t.wp_code===code)
       .sort((a,b)=>(SO.indexOf(a.statut)-SO.indexOf(b.statut))||((getDeadlineTs(a)||9e9)-(getDeadlineTs(b)||9e9)));
     const done=tasks.filter(t=>t.statut==='Réalisé').length;
     const late=tasks.filter(isLate).length;
@@ -3060,7 +3100,15 @@ function renderListe(){
         </table>
       </div>
     </div>`;
-  }).join('')||'<div style="padding:28px;text-align:center;color:#bbb;font-size:13px">Aucune tâche correspond aux filtres</div>';
+  }).join(''):'<div style="padding:28px;text-align:center;color:#bbb;font-size:13px">Aucune tâche active</div>')+archivesHtml;
+}
+function toggleListeArchives(){
+  const b=document.getElementById('listeArchivesBlock');
+  const ic=document.getElementById('listeArchivesIcon');
+  if(!b)return;
+  const open=b.style.display==='none';
+  b.style.display=open?'block':'none';
+  if(ic)ic.textContent=open?'▲':'▼';
 }
 function toggleWpGroup(code){
   if(!wpGroupState[currentProjetId])wpGroupState[currentProjetId]={};

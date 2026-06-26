@@ -6,6 +6,8 @@
 <title>CMQ Bioéco — Tableau de bord</title>
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -343,6 +345,15 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 /* ══ RAPPORT ══ */
 #pageRapport{display:none;flex-direction:column;min-height:100vh}
 .rapport-body{padding:20px 24px;max-width:1000px;margin:0 auto;width:100%}
+/* ══ CARTE ══ */
+#pageCarte{display:none;flex-direction:column;min-height:100vh}
+#mapContainer{flex:1;min-height:400px}
+.map-toolbar{padding:12px 20px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:.5px solid #ebebeb;background:#fafafa}
+.map-chip{padding:5px 12px;border-radius:20px;border:.5px solid #d0d0d0;background:#fff;font-size:11px;cursor:pointer;font-family:var(--font);color:#666;transition:all .15s}
+.map-chip.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.map-legend{padding:6px 20px;font-size:11px;color:#999;display:flex;gap:14px;align-items:center;background:#fafafa;border-bottom:.5px solid #ebebeb}
+.map-legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px}
+.map-stats{padding:8px 20px;font-size:12px;color:#666;background:#fafafa;border-bottom:.5px solid #ebebeb}
 .rapport-filters{background:#fff;border:.5px solid #e0e0e0;border-radius:var(--r);padding:14px 18px;margin-bottom:18px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
 .rf-grp{display:flex;flex-direction:column;gap:4px}
 .rf-label{font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.04em}
@@ -878,6 +889,33 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
   </div>
 </div>
 
+<!-- ══ PAGE CARTE ══ -->
+<div id="pageCarte">
+  <div class="hdr">
+    <div class="hdr-left">
+      <button class="btn-back" onclick="goHub()">← Hub</button>
+      <span class="proj-badge" id="carteBadge"></span>
+      <div>
+        <div class="hdr-title" id="carteTitre">Carte & Territoire</div>
+        <div class="hdr-sub" id="carteSub"></div>
+      </div>
+    </div>
+  </div>
+  <div class="map-toolbar">
+    <button class="map-chip active" id="chipEtab" onclick="setMapLayer('etab')">Établissements</button>
+    <button class="map-chip" id="chipPart" onclick="setMapLayer('part')">Partenaires</button>
+    <button class="map-chip" id="chipAll" onclick="setMapLayer('all')">Tout</button>
+    <span style="margin-left:8px;font-size:11px;color:#bbb">|</span>
+    <button class="map-chip" id="chipProjet" onclick="toggleMapProjet()" title="Filtrer par projet actif">Projet actif seulement</button>
+  </div>
+  <div class="map-stats" id="mapStats">—</div>
+  <div class="map-legend">
+    <span id="legendEtab"><span class="map-legend-dot" style="background:#4A90D9"></span>Établissements</span>
+    <span id="legendPart"><span class="map-legend-dot" style="background:#E8873A"></span>Partenaires</span>
+  </div>
+  <div id="mapContainer"></div>
+</div>
+
 <!-- MODALE ADMIN INDICATEURS -->
 <div class="overlay" id="adminOverlay">
 <div class="modal" style="width:700px;max-width:96vw">
@@ -1043,6 +1081,16 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
         <input type="tel" id="ptTel" style="width:100%" placeholder="06 …">
       </div>
     </div>
+    <div class="f-row2">
+      <div class="f-field">
+        <label class="f-label">Code postal</label>
+        <input type="text" id="ptCP" style="width:100%" placeholder="34000" maxlength="5">
+      </div>
+      <div class="f-field">
+        <label class="f-label">Ville</label>
+        <input type="text" id="ptVille" style="width:100%" placeholder="Montpellier">
+      </div>
+    </div>
     <div id="ptError" style="display:none;color:var(--c600);font-size:11px;margin-top:6px"></div>
     <div style="display:flex;gap:8px;margin-top:14px">
       <button class="btn btn-ghost" onclick="closeModalNewPartenaire()">Annuler</button>
@@ -1108,6 +1156,8 @@ let PROJETS=[], ALL_TACHES=[], ALL_MEMBRES=[], ALL_AXES=[];
 let indicActiveTab='suivi';
 let ACTN_PROJETS=[], ACTN_AXES=[], ACTN_ACTIONS=[], ACTN_SOUS_ACTIONS=[];
 let ALL_RH=[], ALL_INDIC_CONFIG=[], ALL_INDIC_VAL=[];
+let ALL_OBJECTIFS=[];
+let _mapLayer='etab', _mapProjetOnly=false, _leafletMap=null, _mapMarkers=[];
 let currentProjetId=null;
 let TACHES=[], MEMBRES=[], WPS=[];
 let filteredTaches=[], activeStatut='';
@@ -1223,9 +1273,9 @@ function tableToRows(t){
 ══════════════════════════════════════════════ */
 async function loadAll(){
   // Timeout de 3s : si Grist ne répond pas, on passe en mode démo
-  const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),3000));
+  const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),5000));
   try{
-    const [projets,taches,membres,axes,actnProjets,actnAxes,actnActions,actnSousActions,rh,indicConfig,indicVal,saisieActions,etabParts]=await Promise.race([
+    const [projets,taches,membres,axes,actnProjets,actnAxes,actnActions,actnSousActions,rh,indicConfig,indicVal,saisieActions,etabParts,entParts,objectifs,partenaires]=await Promise.race([
       Promise.all([
         grist.docApi.fetchTable('CONFIG_PROJETS'),
         grist.docApi.fetchTable('SUIVI_TACHES_ALL'),
@@ -1240,6 +1290,9 @@ async function loadAll(){
         grist.docApi.fetchTable('SUIVI_indicateurs'),
         grist.docApi.fetchTable('SAISIE_actions_realisees'),
         grist.docApi.fetchTable('SAISIE_etablissements_participants_par_action'),
+        grist.docApi.fetchTable('SAISIE_entreprises_par_action'),
+        grist.docApi.fetchTable('CONFIG_objectifs_indicateurs'),
+        grist.docApi.fetchTable('CONFIG_entreprises_partenaires'),
       ]),
       timeout
     ]);
@@ -1256,6 +1309,9 @@ async function loadAll(){
     ALL_INDIC_VAL=tableToRows(indicVal);
     window._ALL_ACTIONS=tableToRows(saisieActions);
     window._ALL_ETAB_PARTS=tableToRows(etabParts);
+    window._ALL_ENT_PARTS=tableToRows(entParts);
+    ALL_OBJECTIFS=tableToRows(objectifs);
+    _ALL_PARTENAIRES=tableToRows(partenaires);
     renderAccueil();
   }catch(e){
     console.warn('Mode démo:',e.message);
@@ -1267,7 +1323,7 @@ async function loadAll(){
    NAVIGATION
 ══════════════════════════════════════════════ */
 function showPage(page){
-  ['accueil','hub','projet','actions','objectifs','rapport'].forEach(p=>{
+  ['accueil','hub','projet','actions','objectifs','rapport','carte'].forEach(p=>{
     const el=document.getElementById('page'+p.charAt(0).toUpperCase()+p.slice(1));
     if(!el)return;
     el.style.display=p===page?'flex':'none';
@@ -1314,7 +1370,9 @@ function renderHub(proj){
   const nbAct=actnProj?(window._ALL_ACTIONS||[]).filter(a=>a.projet_ref===actnProj.id).length:0;
   document.getElementById('hubSubDesc').textContent=`${totalT} tâche${totalT!==1?'s':''} · ${pct}% réalisé · ${nbAct} action${nbAct!==1?'s':''} enregistrée${nbAct!==1?'s':''}`;
   const hc=document.getElementById('hubChoices');
-  hc.style.gridTemplateColumns='repeat(2,1fr)';
+  hc.style.gridTemplateColumns='repeat(3,1fr)';
+  const nbEtab=(window._ALL_ETAB_PARTS||[]).length;
+  const nbPart=(window._ALL_ENT_PARTS||[]).length;
   hc.innerHTML=`
     <div class="hub-card" onclick="openIndicateursPage()" style="border-left-color:${accent}">
       <div class="hub-card-title">Indicateurs & Actions</div>
@@ -1325,6 +1383,11 @@ function renderHub(proj){
       <div class="hub-card-title">Suivi de projet</div>
       <div class="hub-card-desc">Kanban, liste groupée, Gantt, calendrier, réunion hebdomadaire, tableau de bord</div>
       <div class="hub-card-stat">${totalT} tâche${totalT!==1?'s':''} · ${lateT>0?`<span style="color:var(--c600)">${lateT} en retard</span>`:'aucun retard'}</div>
+    </div>
+    <div class="hub-card" onclick="openCartePage()" style="border-left-color:${accent}">
+      <div class="hub-card-title">Carte & Territoire</div>
+      <div class="hub-card-desc">Visualisation géographique des établissements touchés et des partenaires impliqués par le projet</div>
+      <div class="hub-card-stat">${nbEtab} établissement${nbEtab!==1?'s':''} · ${nbPart} partenaire${nbPart!==1?'s':''}</div>
     </div>`;
   // Stat objectifs
   const targets=getIndicTargets(proj.code||'');const nbTargets=Object.keys(targets).length;
@@ -1708,7 +1771,7 @@ function renderSaPartenaireChips(){
 
 /* ── Modal nouveau partenaire ── */
 function openModalNewPartenaire(){
-  ['ptNom','ptContact','ptEmail','ptTel'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  ['ptNom','ptContact','ptEmail','ptTel','ptCP','ptVille'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   ['ptType','ptSecteur'].forEach(function(id){var el=document.getElementById(id);if(el)el.selectedIndex=0;});
   var err=document.getElementById('ptError');if(err){err.style.display='none';err.textContent='';}
   document.getElementById('modalNewPartenaire').classList.add('open');
@@ -1724,6 +1787,8 @@ async function submitNewPartenaire(){
   var err=document.getElementById('ptError');
   if(!nom){err.textContent='Le nom est obligatoire.';err.style.display='block';return;}
   err.style.display='none';
+  var cp=(document.getElementById('ptCP').value||'').trim();
+  var ville=(document.getElementById('ptVille').value||'').trim();
   var record={
     nom_entreprise:nom,
     type_partenaire:document.getElementById('ptType').value||'',
@@ -1731,10 +1796,23 @@ async function submitNewPartenaire(){
     contact_nom:document.getElementById('ptContact').value||'',
     contact_email:document.getElementById('ptEmail').value||'',
     contact_tel:document.getElementById('ptTel').value||'',
+    code_postal:cp,ville:ville,
     partenaire_actif:true,
     Cree_par:'widget',
     date_creation:Math.floor(Date.now()/1000)
   };
+  // Géocodage via api-adresse.data.gouv.fr si CP ou ville renseigné
+  if(cp||ville){
+    try{
+      var q=encodeURIComponent((ville+' '+cp).trim());
+      var geo=await fetch('https://api-adresse.data.gouv.fr/search/?q='+q+(cp?'&postcode='+cp:'')+'&limit=1');
+      var gj=await geo.json();
+      if(gj.features&&gj.features.length){
+        record.longitude=gj.features[0].geometry.coordinates[0];
+        record.latitude=gj.features[0].geometry.coordinates[1];
+      }
+    }catch(ge){console.warn('Géocodage:',ge.message);}
+  }
   try{
     var res=await grist.docApi.applyUserActions([['AddRecord','CONFIG_entreprises_partenaires',null,record]]);
     var newId=res&&res.retValues&&res.retValues[0]||null;
@@ -1901,6 +1979,136 @@ function renderObjectifs(){
   document.getElementById('objBody').innerHTML=tabBar+content;
 }
 
+/* ══════════════════════════════════════════════
+   CARTE & TERRITOIRE
+══════════════════════════════════════════════ */
+function openCartePage(){
+  var proj=PROJETS.find(function(p){return p.id===currentProjetId;});if(!proj)return;
+  var accent=proj.couleur||'#534AB7';
+  var badge=proj.badge||proj.code||proj.nom;
+  document.getElementById('carteBadge').textContent=badge;
+  document.getElementById('carteBadge').style.background=accent;
+  document.getElementById('carteSub').textContent=proj.nom;
+  _mapLayer='etab';_mapProjetOnly=true;
+  showPage('carte');
+  setTimeout(renderMap,100);
+}
+
+function setMapLayer(layer){
+  _mapLayer=layer;
+  ['etab','part','all'].forEach(function(l){
+    var el=document.getElementById('chip'+l.charAt(0).toUpperCase()+l.slice(1));
+    if(el)el.classList.toggle('active',l===layer);
+  });
+  renderMap();
+}
+
+function toggleMapProjet(){
+  _mapProjetOnly=!_mapProjetOnly;
+  var btn=document.getElementById('chipProjet');
+  if(btn)btn.classList.toggle('active',_mapProjetOnly);
+  renderMap();
+}
+
+function renderMap(){
+  var container=document.getElementById('mapContainer');
+  if(!container)return;
+
+  // Init Leaflet une seule fois
+  if(!_leafletMap){
+    _leafletMap=L.map('mapContainer',{zoomControl:true}).setView([46.5,2.3],6);
+    L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',{
+      attribution:'&copy; OpenStreetMap',maxZoom:19
+    }).addTo(_leafletMap);
+  }
+
+  // Vider les marqueurs précédents
+  _mapMarkers.forEach(function(m){_leafletMap.removeLayer(m);});
+  _mapMarkers=[];
+
+  var proj=PROJETS.find(function(p){return p.id===currentProjetId;});
+  var actnProj=proj&&ACTN_PROJETS.find(function(ap){return ap.cod_projet===proj.code;});
+  var projActionIds=new Set();
+  if(actnProj){
+    (window._ALL_ACTIONS||[]).filter(function(a){return a.projet_ref===actnProj.id;}).forEach(function(a){projActionIds.add(a.id);});
+  }
+
+  var bounds=[];
+  var etabCount=0,partCount=0;
+
+  // ── Marqueurs établissements ──
+  if(_mapLayer==='etab'||_mapLayer==='all'){
+    // IDs d'établissements liés aux actions du projet (ou tous si pas de filtre projet)
+    var etabIds=new Set();
+    (window._ALL_ETAB_PARTS||[]).forEach(function(ep){
+      if(!_mapProjetOnly||projActionIds.has(ep.ACTION_CONCERNEE)){
+        etabIds.add(ep.ETABLISSEMENT_PARTICIPANT);
+      }
+    });
+    var etabs=(window._ALL_ETABLISSEMENTS||[]).filter(function(e){
+      return etabIds.has(e.id)&&e.latitude_etablissement_EN&&e.longitude_etablissement_EN;
+    });
+    etabs.forEach(function(e){
+      var lat=parseFloat(e.latitude_etablissement_EN);
+      var lng=parseFloat(e.longitude_etablissement_EN);
+      if(isNaN(lat)||isNaN(lng))return;
+      var icon=L.divIcon({className:'',html:'<div style="width:12px;height:12px;border-radius:50%;background:#4A90D9;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>',iconSize:[12,12],iconAnchor:[6,6]});
+      var m=L.marker([lat,lng],{icon:icon}).addTo(_leafletMap);
+      m.bindPopup('<strong>'+esc(e.nom_etablissement||'')+'</strong>'+(e.libelle_commune?'<br>'+esc(e.libelle_commune):'')+(e.code_postal_etablissement?'  ('+e.code_postal_etablissement+')':''));
+      _mapMarkers.push(m);
+      bounds.push([lat,lng]);
+      etabCount++;
+    });
+  }
+
+  // ── Marqueurs partenaires ──
+  if(_mapLayer==='part'||_mapLayer==='all'){
+    var partIds=new Set();
+    (window._ALL_ENT_PARTS||[]).forEach(function(ep){
+      if(!_mapProjetOnly||projActionIds.has(ep.action_ref)){
+        partIds.add(ep.entreprise_ref);
+      }
+    });
+    (_ALL_PARTENAIRES||[]).filter(function(p){
+      return partIds.has(p.id)&&p.latitude&&p.longitude;
+    }).forEach(function(p){
+      var lat=parseFloat(p.latitude),lng=parseFloat(p.longitude);
+      if(isNaN(lat)||isNaN(lng))return;
+      var icon=L.divIcon({className:'',html:'<div style="width:12px;height:12px;border-radius:50%;background:#E8873A;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>',iconSize:[12,12],iconAnchor:[6,6]});
+      var m=L.marker([lat,lng],{icon:icon}).addTo(_leafletMap);
+      m.bindPopup('<strong>'+esc(p.nom_entreprise||'')+'</strong>'+(p.type_partenaire?'<br><em>'+esc(p.type_partenaire)+'</em>':'')+(p.ville?'<br>'+esc(p.ville)+(p.code_postal?' ('+p.code_postal+')':''):''));
+      _mapMarkers.push(m);
+      bounds.push([lat,lng]);
+      partCount++;
+    });
+  }
+
+  // Ajuster la vue
+  if(bounds.length>1){
+    _leafletMap.fitBounds(bounds,{padding:[30,30]});
+  }else if(bounds.length===1){
+    _leafletMap.setView(bounds[0],12);
+  }
+
+  // Stats
+  var stats=document.getElementById('mapStats');
+  if(stats){
+    var parts=[];
+    if(_mapLayer==='etab'||_mapLayer==='all')parts.push(etabCount+' établissement'+(etabCount!==1?'s':''));
+    if(_mapLayer==='part'||_mapLayer==='all')parts.push(partCount+' partenaire'+(partCount!==1?'s':''));
+    stats.textContent=parts.join(' · ')||'Aucun point à afficher';
+  }
+
+  // Légende
+  var legEtab=document.getElementById('legendEtab');
+  var legPart=document.getElementById('legendPart');
+  if(legEtab)legEtab.style.display=(_mapLayer==='etab'||_mapLayer==='all')?'':'none';
+  if(legPart)legPart.style.display=(_mapLayer==='part'||_mapLayer==='all')?'':'none';
+
+  // Forcer le recalcul Leaflet (nécessaire si le div était caché)
+  setTimeout(function(){if(_leafletMap)_leafletMap.invalidateSize();},150);
+}
+
 function toggleArchives(btn){
   var block=document.getElementById('archivesBlock');
   if(!block)return;
@@ -1922,9 +2130,11 @@ function renderHistRow(a){
     return'<span class="ah-chip">'+esc(cfg.libelle_indicateurs)+' <strong>'+(iv.valeur||0).toLocaleString('fr-FR')+'</strong></span>';
   }).filter(Boolean).join('');
   var etabCnt=(window._ALL_ETAB_PARTS||[]).filter(function(p){return p.ACTION_CONCERNEE===a.id;}).length;
+  var partCnt=(window._ALL_ENT_PARTS||[]).filter(function(p){return p.action_ref===a.id;}).length;
   var pathLine=esc(rh&&rh.Membre||'');
   if(path)pathLine+=(pathLine?' · ':'')+esc(path);
   if(etabCnt)pathLine+=(pathLine?' · ':'')+etabCnt+' étab.';
+  if(partCnt)pathLine+=(pathLine?' · ':'')+partCnt+' partenaire'+(partCnt>1?'s':'');
   return'<div class="ah-item">'
     +'<div class="ah-top"><div class="ah-date">'+fmtDateFull(a.date_suivi_action)+'</div><div class="ah-name">'+esc(a.nom_suivi_action||'(sans nom)')+'</div></div>'
     +'<div class="ah-path">'+pathLine+'</div>'
@@ -1932,20 +2142,20 @@ function renderHistRow(a){
     +'</div>';
 }
 
-function saveAllTargets(){
+async function saveAllTargets(){
   const proj=PROJETS.find(p=>p.id===currentProjetId);if(!proj)return;
-  const targets=getIndicTargets(proj.code||'');
+  const targets={};
   document.querySelectorAll('.obj-target-input').forEach(input=>{
     const code=input.id.replace('obj_','');
     const val=parseFloat(input.value);
     if(!isNaN(val)&&val>0)targets[code]=val;
-    else delete targets[code];
   });
-  saveIndicTargets(proj.code||'',targets);
-  showToast('Objectifs enregistrés','success');
+  try{
+    await saveIndicTargets(proj.code||'',targets);
+    showToast('Objectifs enregistrés','success');
+  }catch(e){showToast('Erreur : '+e.message,'error');}
   indicActiveTab='suivi';
   renderObjectifs();
-  // Rafraîchir le stat sur le hub si besoin
   const ostat=document.getElementById('hubObjStat');
   if(ostat){const n=Object.keys(targets).length;ostat.textContent=n?`${n} objectif${n>1?'s':''} défini${n>1?'s':''}` : 'Aucun objectif défini'}
 }
@@ -2892,9 +3102,32 @@ function buildIndicTargetRows(proj,accent){
 }
 
 function getIndicTargets(projCode){
-  try{return JSON.parse(localStorage.getItem('cmq_targets_'+projCode)||'{}')}catch{return{}}
+  var result={};
+  (ALL_OBJECTIFS||[]).filter(function(o){return o.projet_code===projCode;}).forEach(function(o){
+    if(o.valeur_objectif>0)result[o.code_indicateur]=o.valeur_objectif;
+  });
+  return result;
 }
-function saveIndicTargets(projCode,targets){localStorage.setItem('cmq_targets_'+projCode,JSON.stringify(targets))}
+async function saveIndicTargets(projCode,targets){
+  var existing=(ALL_OBJECTIFS||[]).filter(function(o){return o.projet_code===projCode;});
+  var allCodes=new Set(Object.keys(targets).concat(existing.map(function(o){return o.code_indicateur;})));
+  for(var code of allCodes){
+    var rec=existing.find(function(o){return o.code_indicateur===code;});
+    var val=parseFloat(targets[code])||0;
+    try{
+      if(rec){
+        if(rec.valeur_objectif!==val){
+          await grist.docApi.applyUserActions([['UpdateRecord','CONFIG_objectifs_indicateurs',rec.id,{valeur_objectif:val}]]);
+          rec.valeur_objectif=val;
+        }
+      }else if(val>0){
+        var res=await grist.docApi.applyUserActions([['AddRecord','CONFIG_objectifs_indicateurs',null,{projet_code:projCode,code_indicateur:code,valeur_objectif:val}]]);
+        var newId=res&&res.retValues&&res.retValues[0];
+        ALL_OBJECTIFS.push({id:newId,projet_code:projCode,code_indicateur:code,valeur_objectif:val});
+      }
+    }catch(e){console.warn('saveIndicTargets:',e.message);}
+  }
+}
 
 function openIndicTargetModal(){
   const proj=PROJETS.find(p=>p.id===currentProjetId);

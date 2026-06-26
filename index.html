@@ -17,15 +17,28 @@
   --c50:#FAECE7;--c200:#F0997B;--c600:#993C1D;--c800:#712B13;
   --b50:#E6F1FB;--b200:#85B7EB;--b600:#185FA5;--b800:#0C447C;
   --accent:var(--p600);
-  --r:10px;--rsm:6px;
-  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  --shadow:0 2px 12px rgba(0,0,0,.08);
-  --shadow-lg:0 8px 32px rgba(0,0,0,.14);
+  --r:6px;--rsm:4px;
+  --font:'Avenir Next',Avenir,'Century Gothic','Trebuchet MS',system-ui,sans-serif;
+  --shadow:0 1px 3px rgba(0,0,0,.06);
+  --shadow-lg:0 4px 16px rgba(0,0,0,.1);
+  --bg:#ffffff;--surf:#fafafa;--surf2:#f4f4f5;--border:#e4e4e7;
+  --txt:#09090b;--sub:#71717a;--faint:#a1a1aa;
 }
-body{font-family:var(--font);background:#f4f3f0;color:#1a1a1a;min-height:100vh;font-size:14px}
+body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:100vh;font-size:13px}
 
+/* ══ BUREAU LAYOUT ══ */
+.sb{width:220px;flex-shrink:0;background:var(--surf);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:200}
+.sb-brand{padding:15px 16px;font-size:13px;font-weight:600;color:var(--txt);border-bottom:1px solid var(--border);flex-shrink:0;letter-spacing:.01em}
+.sb-brand em{color:var(--accent);font-style:normal}
+.sb-sec-lbl{padding:14px 8px 3px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:500}
+.sb-item{display:flex;align-items:center;gap:8px;padding:7px 8px;margin:1px 4px;border-radius:5px;font-size:13px;color:var(--sub);cursor:pointer;transition:background .1s,color .1s;user-select:none}
+.sb-item:hover{background:var(--surf2);color:var(--txt)}
+.sb-item.sb-active{font-weight:500}
+.sb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sb-sep{height:1px;background:var(--border);margin:8px 12px}
+.main-wrap{margin-left:220px;min-height:100vh;display:flex;flex-direction:column}
 /* ══ HEADER ══ */
-.hdr{background:#fff;border-bottom:.5px solid #e0e0e0;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.hdr{background:var(--bg);border-bottom:1px solid var(--border);padding:0 20px;height:48px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .hdr-left{display:flex;align-items:center;gap:10px}
 .logo{width:34px;height:34px;border-radius:9px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;font-weight:800;flex-shrink:0;transition:background .3s}
 .hdr-title{font-size:15px;font-weight:700;color:#1a1a1a}
@@ -562,6 +575,26 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 </style>
 </head>
 <body>
+
+<!-- ══ SIDEBAR ══ -->
+<div class="sb" id="sidebar">
+  <div class="sb-brand">CMQ <em>·</em> Pilotage</div>
+  <div class="sb-sec-lbl">Projets</div>
+  <div id="sbProjects"><div style="padding:8px 12px;font-size:12px;color:var(--faint)">Chargement…</div></div>
+  <div class="sb-sep" id="sbNavSep" style="display:none"></div>
+  <div id="sbNav" style="display:none">
+    <div class="sb-sec-lbl">Navigation</div>
+    <div class="sb-item" id="sbn-hub" onclick="goHub()">Vue d'ensemble</div>
+    <div class="sb-item" id="sbn-taches" onclick="openTaches()">Tâches</div>
+    <div class="sb-item" id="sbn-actions" onclick="openIndicateursPage()">Actions & Objectifs</div>
+    <div class="sb-item" id="sbn-rapport" onclick="showRapport()">Rapport</div>
+    <div class="sb-item" id="sbn-annuaire" onclick="openAnnuairePage()">Annuaire</div>
+    <div class="sb-item" id="sbn-carte" onclick="openCartePage()">Carte</div>
+  </div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div class="main-wrap">
 
 <!-- ══ PAGE ACCUEIL ══ -->
 <div id="pageAccueil">
@@ -1419,6 +1452,40 @@ function showPage(page){
     el.style.display=p===page?'flex':'none';
     if(p===page)el.style.flexDirection='column';
   });
+  updateSbNav(page);
+}
+function updateSbNav(page){
+  const map={hub:'hub',projet:'taches',actions:'actions',objectifs:'actions',rapport:'rapport',annuaire:'annuaire',carte:'carte'};
+  ['hub','taches','actions','rapport','annuaire','carte'].forEach(id=>{
+    const el=document.getElementById('sbn-'+id);
+    if(el){el.classList.remove('sb-active');el.style.background='';el.style.color=''}
+  });
+  const id=map[page];
+  if(id){
+    const el=document.getElementById('sbn-'+id);
+    if(el){
+      el.classList.add('sb-active');
+      const accent=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#534AB7';
+      el.style.background=accent+'18';el.style.color=accent;
+    }
+  }
+}
+function renderSbProjects(){
+  const el=document.getElementById('sbProjects');if(!el)return;
+  if(!PROJETS.length){el.innerHTML='<div style="padding:8px 12px;font-size:12px;color:var(--faint)">Aucun projet</div>';return;}
+  el.innerHTML=PROJETS.filter(p=>p.actif!==0).map(p=>`
+    <div class="sb-item" id="sbp-${p.id}" onclick="openProjet(${p.id})">
+      <div class="sb-dot" style="background:${p.couleur||'#534AB7'}"></div>
+      ${esc(p.code||p.nom)}
+    </div>`).join('');
+}
+function updateSbProjects(projetId){
+  document.querySelectorAll('[id^="sbp-"]').forEach(el=>{el.classList.remove('sb-active');el.style.background='';el.style.color='';el.style.fontWeight=''});
+  const el=document.getElementById('sbp-'+projetId);
+  if(!el)return;
+  const proj=PROJETS.find(p=>p.id===projetId);
+  const c=proj?.couleur||'#534AB7';
+  el.style.background=c+'18';el.style.color=c;el.style.fontWeight='500';
 }
 
 function goAccueil(){
@@ -1445,6 +1512,9 @@ function openProjet(projetId){
   document.getElementById('accLogo').style.background=accent;
   renderHub(proj);
   showPage('hub');
+  document.getElementById('sbNavSep').style.display='';
+  document.getElementById('sbNav').style.display='';
+  updateSbProjects(projetId);
 }
 
 function renderHub(proj){
@@ -2664,6 +2734,7 @@ function renderAccueil(){
   const jours=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   document.getElementById('accDate').textContent=
     `${jours[now.getDay()]} ${now.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}`;
+  renderSbProjects();
 
   // Liste des projets
   document.getElementById('projetsGrid').innerHTML=
@@ -4184,5 +4255,7 @@ showPage('accueil');
 try { grist.ready({requiredAccess:'full'}); } catch(e) { console.warn('Hors Grist:', e.message); }
 loadAll();
 </script>
+
+</div><!-- /main-wrap -->
 </body>
 </html>

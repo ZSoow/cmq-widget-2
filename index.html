@@ -480,6 +480,10 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 
 /* ══ PARTENAIRES / RECHERCHE ÉTABLISSEMENT ══ */
 .partner-section{margin-top:12px}
+.partner-section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.btn-add-partner{background:none;border:.5px solid #d0d0d0;border-radius:var(--rsm);padding:3px 9px;font-size:11px;cursor:pointer;color:#666;font-family:var(--font);transition:border-color .15s,color .15s}
+.btn-add-partner:hover{border-color:var(--accent);color:var(--accent)}
+.partner-chip.type-partenaire{background:#fff4e5;border-color:#f5c07a;color:#8a5500}
 .partner-search-wrap{position:relative}
 .partner-search-input{width:100%;padding:8px 12px 8px 32px;border:.5px solid #ddd;border-radius:var(--rsm);font-size:12px;font-family:var(--font);background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23bbb' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center}
 .partner-search-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--p50)}
@@ -711,7 +715,10 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     </div>
     <div id="saIndicZone" style="display:none"></div>
     <div class="partner-section f-field">
-      <label class="f-label">Établissements partenaires</label>
+      <div class="partner-section-hd">
+        <label class="f-label" style="margin:0">Établissements partenaires</label>
+        <button class="btn-add-partner" onclick="openModalNewEtab()" type="button">+ Nouveau</button>
+      </div>
       <div class="partner-search-wrap">
         <input type="text" class="partner-search-input" id="saEtabSearch"
           placeholder="Rechercher par nom, code postal…"
@@ -721,6 +728,21 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
         <div class="partner-results" id="saPartnerResults"></div>
       </div>
       <div class="partner-chips" id="saPartnerChips"></div>
+    </div>
+    <div class="partner-section f-field" style="margin-top:10px">
+      <div class="partner-section-hd">
+        <label class="f-label" style="margin:0">Partenaires</label>
+        <button class="btn-add-partner" onclick="openModalNewPartenaire()" type="button">+ Nouveau</button>
+      </div>
+      <div class="partner-search-wrap">
+        <input type="text" class="partner-search-input" id="saPartenaireSearch"
+          placeholder="Rechercher un partenaire…"
+          oninput="onSaPartenaireSearch(this.value)"
+          onfocus="onSaPartenaireSearchFocus()"
+          onblur="setTimeout(()=>document.getElementById('saPartenaireResults').classList.remove('open'),220)">
+        <div class="partner-results" id="saPartenaireResults"></div>
+      </div>
+      <div class="partner-chips" id="saPartenaireChips"></div>
     </div>
     <div class="f-field" style="margin-top:8px">
       <label class="f-label">Commentaire</label>
@@ -962,6 +984,115 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
   <div class="modal-ft">
     <button class="btn btn-ghost" onclick="closeActionModal()">Annuler</button>
     <button class="btn btn-primary" id="btnActionSubmit" onclick="submitAction()">Enregistrer</button>
+  </div>
+</div>
+</div>
+
+<!-- MODALE NOUVEAU PARTENAIRE -->
+<div class="overlay" id="modalNewPartenaire" onclick="if(event.target===this)closeModalNewPartenaire()">
+<div class="modal modal-sm">
+  <div class="modal-hd">
+    <span class="modal-title">Nouveau partenaire</span>
+    <button class="btn-x" onclick="closeModalNewPartenaire()">×</button>
+  </div>
+  <div style="padding:16px 20px">
+    <div class="f-field">
+      <label class="f-label">Nom <span class="req">*</span></label>
+      <input type="text" id="ptNom" style="width:100%" placeholder="Nom de l'entité">
+    </div>
+    <div class="f-row2">
+      <div class="f-field">
+        <label class="f-label">Type</label>
+        <select id="ptType" style="width:100%">
+          <option value="">— Choisir —</option>
+          <option>Entreprise privée</option>
+          <option>Association</option>
+          <option>Collectivité</option>
+          <option>Laboratoire / Recherche</option>
+          <option>Établissement de formation</option>
+          <option>Autre</option>
+        </select>
+      </div>
+      <div class="f-field">
+        <label class="f-label">Secteur</label>
+        <select id="ptSecteur" style="width:100%">
+          <option value="">— Choisir —</option>
+          <option>Agroalimentaire</option>
+          <option>Bioraffinerie</option>
+          <option>Chimie verte</option>
+          <option>Agriculture</option>
+          <option>Industrie bioéconomie</option>
+          <option>Recherche / Labo</option>
+          <option>Formation</option>
+          <option>Conseil</option>
+          <option>Autre</option>
+        </select>
+      </div>
+    </div>
+    <div class="f-field">
+      <label class="f-label">Contact (nom)</label>
+      <input type="text" id="ptContact" style="width:100%" placeholder="Prénom Nom">
+    </div>
+    <div class="f-row2">
+      <div class="f-field">
+        <label class="f-label">Email</label>
+        <input type="email" id="ptEmail" style="width:100%" placeholder="contact@example.fr">
+      </div>
+      <div class="f-field">
+        <label class="f-label">Téléphone</label>
+        <input type="tel" id="ptTel" style="width:100%" placeholder="06 …">
+      </div>
+    </div>
+    <div id="ptError" style="display:none;color:var(--c600);font-size:11px;margin-top:6px"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-ghost" onclick="closeModalNewPartenaire()">Annuler</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitNewPartenaire()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- MODALE NOUVEL ÉTABLISSEMENT -->
+<div class="overlay" id="modalNewEtab" onclick="if(event.target===this)closeModalNewEtab()">
+<div class="modal modal-sm">
+  <div class="modal-hd">
+    <span class="modal-title">Nouvel établissement</span>
+    <button class="btn-x" onclick="closeModalNewEtab()">×</button>
+  </div>
+  <div style="padding:16px 20px">
+    <div class="f-field">
+      <label class="f-label">Nom <span class="req">*</span></label>
+      <input type="text" id="etNom" style="width:100%" placeholder="Nom de l'établissement">
+    </div>
+    <div class="f-row2">
+      <div class="f-field">
+        <label class="f-label">Type</label>
+        <select id="etType" style="width:100%">
+          <option value="">— Choisir —</option>
+          <option>Lycée</option>
+          <option>Université</option>
+          <option>IUT</option>
+          <option>CFA</option>
+          <option>École d'ingénieurs</option>
+          <option>Grande école</option>
+          <option>Lycée agricole</option>
+          <option>Autre</option>
+        </select>
+      </div>
+      <div class="f-field">
+        <label class="f-label">Code postal</label>
+        <input type="text" id="etCP" style="width:100%" placeholder="Ex : 75001" maxlength="5">
+      </div>
+    </div>
+    <div class="f-field">
+      <label class="f-label">Commune</label>
+      <input type="text" id="etCommune" style="width:100%" placeholder="Nom de la commune">
+    </div>
+    <div id="etError" style="display:none;color:var(--c600);font-size:11px;margin-top:6px"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-ghost" onclick="closeModalNewEtab()">Annuler</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitNewEtab()">Enregistrer</button>
+    </div>
   </div>
 </div>
 </div>
@@ -1329,6 +1460,7 @@ function initSaisieActionPanel(){
   document.getElementById('saNom').value='';
   document.getElementById('saComment').value='';
   resetSaPartnerSection();
+  resetSaPartenaireSection();
   ['saStepNum1','saStepNum2','saStepNum3'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.className='step-num'+(i>0?' inactive':'')});
 }
 
@@ -1424,6 +1556,13 @@ async function submitSaisieAction(){
       const freshParts=await grist.docApi.fetchTable('SAISIE_etablissements_participants_par_action');
       window._ALL_ETAB_PARTS=tableToRows(freshParts);
     }
+    if(newId&&_saPartenairesSelected.length){
+      for(const p of _saPartenairesSelected){
+        try{await grist.docApi.applyUserActions([['AddRecord','SAISIE_entreprises_par_action',null,{
+          action_ref:newId,entreprise_ref:p.id,role_entreprise:'',nb_participants:0,notes:''
+        }]])}catch(e4){console.warn(e4)}
+      }
+    }
     const fresh=await grist.docApi.fetchTable('SAISIE_actions_realisees');
     window._ALL_ACTIONS=tableToRows(fresh);
     const t=document.getElementById('saisieToast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);
@@ -1491,6 +1630,167 @@ function renderSaPartnerChips(){
     <span>${esc(p.label)}${p.cp?` · ${p.cp}`:''}</span>
     <span class="partner-chip-x" onclick="removeSaPartner(${p.id})">×</span>
   </div>`).join('');
+}
+
+/* ══ PARTENAIRES (entreprises/entités) ══ */
+let _saPartenairesSelected=[];
+let _ALL_PARTENAIRES=null;
+
+async function loadPartenaires(){
+  if(_ALL_PARTENAIRES)return;
+  try{
+    const t=await grist.docApi.fetchTable('CONFIG_entreprises_partenaires');
+    _ALL_PARTENAIRES=tableToRows(t);
+  }catch(e){
+    _ALL_PARTENAIRES=[];
+    console.warn('Partenaires non chargés:',e.message);
+  }
+}
+
+function resetSaPartenaireSection(){
+  _saPartenairesSelected=[];
+  const inp=document.getElementById('saPartenaireSearch');if(inp)inp.value='';
+  const res=document.getElementById('saPartenaireResults');if(res){res.innerHTML='';res.classList.remove('open')}
+  renderSaPartenaireChips();
+}
+
+async function onSaPartenaireSearchFocus(){
+  if(!_ALL_PARTENAIRES){
+    const res=document.getElementById('saPartenaireResults');
+    res.innerHTML='<div class="partner-msg">Chargement…</div>';
+    res.classList.add('open');
+    await loadPartenaires();
+  }
+  const q=document.getElementById('saPartenaireSearch')?.value||'';
+  onSaPartenaireSearch(q);
+}
+
+function onSaPartenaireSearch(q){
+  const res=document.getElementById('saPartenaireResults');if(!res)return;
+  const list=_ALL_PARTENAIRES||[];
+  const qn=q.toLowerCase().trim();
+  const matches=qn?list.filter(p=>p.nom_entreprise&&p.nom_entreprise.toLowerCase().includes(qn)):list.slice(0,40);
+  if(!matches.length){res.innerHTML='<div class="partner-msg">Aucun résultat</div>';res.classList.add('open');return}
+  res.innerHTML=matches.map(function(p){
+    var alreadySel=_saPartenairesSelected.find(function(s){return s.id===p.id;});
+    var typeLabel=p.type_partenaire?(' · '+p.type_partenaire):'';
+    return'<div class="partner-result'+(alreadySel?' partner-result-selected':'')+'" onclick="addSaPartenaire('+p.id+')">'
+      +'<div class="partner-result-name">'+esc(p.nom_entreprise||'')+'</div>'
+      +'<div class="partner-result-meta">'+esc(p.secteur_activite||'')+typeLabel+'</div>'
+      +'</div>';
+  }).join('');
+  res.classList.add('open');
+}
+
+function addSaPartenaire(id){
+  const p=(_ALL_PARTENAIRES||[]).find(function(x){return x.id===id;});
+  if(!p||_saPartenairesSelected.find(function(s){return s.id===id;}))return;
+  _saPartenairesSelected.push({id:p.id,label:p.nom_entreprise,type:p.type_partenaire||''});
+  renderSaPartenaireChips();
+  const inp=document.getElementById('saPartenaireSearch');if(inp)inp.value='';
+  const res=document.getElementById('saPartenaireResults');if(res)res.classList.remove('open');
+}
+
+function removeSaPartenaire(id){
+  _saPartenairesSelected=_saPartenairesSelected.filter(function(p){return p.id!==id;});
+  renderSaPartenaireChips();
+}
+
+function renderSaPartenaireChips(){
+  const el=document.getElementById('saPartenaireChips');if(!el)return;
+  el.innerHTML=_saPartenairesSelected.map(function(p){
+    return'<div class="partner-chip type-partenaire">'
+      +'<span>'+esc(p.label)+(p.type?' · '+esc(p.type):'')+'</span>'
+      +'<span class="partner-chip-x" onclick="removeSaPartenaire('+p.id+')">×</span>'
+      +'</div>';
+  }).join('');
+}
+
+/* ── Modal nouveau partenaire ── */
+function openModalNewPartenaire(){
+  ['ptNom','ptContact','ptEmail','ptTel'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  ['ptType','ptSecteur'].forEach(function(id){var el=document.getElementById(id);if(el)el.selectedIndex=0;});
+  var err=document.getElementById('ptError');if(err){err.style.display='none';err.textContent='';}
+  document.getElementById('modalNewPartenaire').classList.add('open');
+  setTimeout(function(){var el=document.getElementById('ptNom');if(el)el.focus();},50);
+}
+
+function closeModalNewPartenaire(){
+  document.getElementById('modalNewPartenaire').classList.remove('open');
+}
+
+async function submitNewPartenaire(){
+  var nom=(document.getElementById('ptNom').value||'').trim();
+  var err=document.getElementById('ptError');
+  if(!nom){err.textContent='Le nom est obligatoire.';err.style.display='block';return;}
+  err.style.display='none';
+  var record={
+    nom_entreprise:nom,
+    type_partenaire:document.getElementById('ptType').value||'',
+    secteur_activite:document.getElementById('ptSecteur').value||'',
+    contact_nom:document.getElementById('ptContact').value||'',
+    contact_email:document.getElementById('ptEmail').value||'',
+    contact_tel:document.getElementById('ptTel').value||'',
+    partenaire_actif:true,
+    Cree_par:'widget',
+    date_creation:Math.floor(Date.now()/1000)
+  };
+  try{
+    var res=await grist.docApi.applyUserActions([['AddRecord','CONFIG_entreprises_partenaires',null,record]]);
+    var newId=res&&res.retValues&&res.retValues[0]||null;
+    var newP=Object.assign({id:newId},record);
+    if(!_ALL_PARTENAIRES)_ALL_PARTENAIRES=[];
+    _ALL_PARTENAIRES.push(newP);
+    if(newId)addSaPartenaire(newId);
+    closeModalNewPartenaire();
+    showToast('Partenaire ajouté','success');
+  }catch(e){
+    err.textContent='Erreur : '+e.message;err.style.display='block';
+  }
+}
+
+/* ── Modal nouvel établissement ── */
+function openModalNewEtab(){
+  ['etNom','etCP','etCommune'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  var etType=document.getElementById('etType');if(etType)etType.selectedIndex=0;
+  var err=document.getElementById('etError');if(err){err.style.display='none';err.textContent='';}
+  document.getElementById('modalNewEtab').classList.add('open');
+  setTimeout(function(){var el=document.getElementById('etNom');if(el)el.focus();},50);
+}
+
+function closeModalNewEtab(){
+  document.getElementById('modalNewEtab').classList.remove('open');
+}
+
+async function submitNewEtab(){
+  var nom=(document.getElementById('etNom').value||'').trim();
+  var err=document.getElementById('etError');
+  if(!nom){err.textContent='Le nom est obligatoire.';err.style.display='block';return;}
+  err.style.display='none';
+  var cp=document.getElementById('etCP').value||'';
+  var commune=(document.getElementById('etCommune').value||'').trim();
+  var record={
+    nom_etablissement:nom,
+    code_postal_etablissement:cp,
+    libelle_commune:commune,
+    statut_public_prive_etablissement:document.getElementById('etType').value||'',
+    participation_CMQ_YN:true
+  };
+  try{
+    var res=await grist.docApi.applyUserActions([['AddRecord','CONFIG_liste_des_etablissements_RGE',null,record]]);
+    var newId=res&&res.retValues&&res.retValues[0]||null;
+    var newE=Object.assign({id:newId},record);
+    if(!window._ALL_ETABLISSEMENTS)window._ALL_ETABLISSEMENTS=[];
+    window._ALL_ETABLISSEMENTS.push(newE);
+    if(newId){
+      _saPartnerSelected.push({type:'etablissement',id:newE.id,label:newE.nom_etablissement,cp:cp,region_ref:0,dept_ref:0,type_etab_ref:0});
+      renderSaPartnerChips();
+    }
+    closeModalNewEtab();
+    showToast('Établissement ajouté','success');
+  }catch(e){
+    err.textContent='Erreur : '+e.message;err.style.display='block';
+  }
 }
 
 function renderObjectifs(){

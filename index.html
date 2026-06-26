@@ -2059,7 +2059,7 @@ async function submitNewEtab(){
 
 function renderObjectifs(){
   const proj=PROJETS.find(p=>p.id===currentProjetId);
-  const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj&&proj.code);
+  const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj?.code);
   const accent=proj&&proj.couleur||'#534AB7';
   const targets=getIndicTargets(proj&&proj.code||'');
 
@@ -2093,7 +2093,7 @@ function renderObjectifs(){
   var content='';
 
   if(indicActiveTab==='calendrier'){
-    content=renderCalendrier(allProjActions,accent);
+    content=renderCalendrierActions(allProjActions,accent);
   } else if(indicActiveTab==='objectifs'){
     // ── Onglet Objectifs : cards avec inputs éditables ──
     var rows=projIndics.map(function(ind){
@@ -2173,7 +2173,7 @@ function renderObjectifs(){
 ══════════════════════════════════════════════ */
 var _calYear=new Date().getFullYear(), _calMonth=new Date().getMonth();
 
-function renderCalendrier(actions, accent){
+function renderCalendrierActions(actions, accent){
   var today=new Date();
   var y=_calYear, m=_calMonth;
   var firstDay=new Date(y,m,1);
@@ -3504,18 +3504,16 @@ async function saveIndicTargets(projCode,targets){
   for(var code of allCodes){
     var rec=existing.find(function(o){return o.code_indicateur===code;});
     var val=parseFloat(targets[code])||0;
-    try{
-      if(rec){
-        if(rec.valeur_objectif!==val){
-          await grist.docApi.applyUserActions([['UpdateRecord','CONFIG_objectifs_indicateurs',rec.id,{valeur_objectif:val}]]);
-          rec.valeur_objectif=val;
-        }
-      }else if(val>0){
-        var res=await grist.docApi.applyUserActions([['AddRecord','CONFIG_objectifs_indicateurs',null,{projet_code:projCode,code_indicateur:code,valeur_objectif:val}]]);
-        var newId=res&&res.retValues&&res.retValues[0];
-        ALL_OBJECTIFS.push({id:newId,projet_code:projCode,code_indicateur:code,valeur_objectif:val});
+    if(rec){
+      if(rec.valeur_objectif!==val){
+        await grist.docApi.applyUserActions([['UpdateRecord','CONFIG_objectifs_indicateurs',rec.id,{valeur_objectif:val}]]);
+        rec.valeur_objectif=val;
       }
-    }catch(e){console.warn('saveIndicTargets:',e.message);}
+    }else if(val>0){
+      var res=await grist.docApi.applyUserActions([['AddRecord','CONFIG_objectifs_indicateurs',null,{projet_code:projCode,code_indicateur:code,valeur_objectif:val}]]);
+      var newId=res&&res.retValues&&res.retValues[0];
+      ALL_OBJECTIFS.push({id:newId,projet_code:projCode,code_indicateur:code,valeur_objectif:val});
+    }
   }
 }
 
@@ -3544,7 +3542,7 @@ function openIndicTargetModal(){
   // Réutiliser le modal indicateur existant
   const ov=document.getElementById('indicOverlay');
   ov.querySelector('.modal-title').textContent='Objectifs des indicateurs';
-  ov.querySelector('p').innerHTML='Définissez les objectifs annuels pour chaque indicateur. Laissez vide pour ne pas afficher de barre d\'objectif.<br><span style="color:var(--a600);font-size:11px;font-weight:600">⚠ Ces valeurs sont enregistrées dans ce navigateur uniquement. Elles ne sont pas partagées avec l\'équipe.</span>';
+  ov.querySelector('p').innerHTML='Définissez les objectifs annuels pour chaque indicateur. Laissez vide pour ne pas afficher de barre d\'objectif.';
   document.getElementById('allIndicChips').innerHTML=fields;
   const ft=ov.querySelector('.modal-ft');
   window._indicTargetProjCode=projCode;
@@ -3658,11 +3656,13 @@ async function saveTask(){
 
 async function deleteTask(){
   if(!editingId||!confirm('Supprimer cette tâche ?'))return;
-  try{await grist.docApi.applyUserActions([['RemoveRecord','SUIVI_TACHES_ALL',editingId]])}catch(e){console.warn(e)}
-  ALL_TACHES=ALL_TACHES.filter(t=>t.id!==editingId);
-  TACHES=ALL_TACHES.filter(t=>t.projet_id===currentProjetId);
-  closeModal();applyFilters();
-  showToast('Tâche supprimée','info');
+  try{
+    await grist.docApi.applyUserActions([['RemoveRecord','SUIVI_TACHES_ALL',editingId]]);
+    ALL_TACHES=ALL_TACHES.filter(t=>t.id!==editingId);
+    TACHES=ALL_TACHES.filter(t=>t.projet_id===currentProjetId);
+    closeModal();applyFilters();
+    showToast('Tâche supprimée','info');
+  }catch(e){showToast('Erreur suppression : '+e.message,'error')}
 }
 
 /* ══════════════════════════════════════════════
@@ -3688,8 +3688,7 @@ async function saveNewProjet(){
     await grist.docApi.applyUserActions([['AddRecord','CONFIG_PROJETS',null,record]]);
     await loadAll();closeNewProjet();
   }catch(e){
-    PROJETS.push({id:Date.now(),...record});
-    closeNewProjet();renderAccueil();
+    showToast('Erreur Grist : '+e.message,'error');
   }
 }
 

@@ -527,6 +527,13 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 .btn-add-partner{background:none;border:.5px solid #d0d0d0;border-radius:var(--rsm);padding:3px 9px;font-size:11px;cursor:pointer;color:#666;font-family:var(--font);transition:border-color .15s,color .15s}
 .btn-add-partner:hover{border-color:var(--accent);color:var(--accent)}
 .partner-chip.type-partenaire{background:#fff4e5;border-color:#f5c07a;color:#8a5500}
+.heures-table{width:100%;margin-top:10px;border:.5px solid #ebebeb;border-radius:var(--rsm);overflow:hidden;font-size:12px}
+.heures-table-hd{display:grid;grid-template-columns:1fr 110px;background:#fafafa;padding:6px 10px;color:#888;font-size:11px;border-bottom:.5px solid #ebebeb}
+.heures-row{display:grid;grid-template-columns:1fr 110px;padding:6px 10px;border-bottom:.5px solid #f5f5f5;align-items:center}
+.heures-row:last-child{border-bottom:none}
+.heures-row-name{color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.heures-input{width:90px;padding:4px 8px;border:.5px solid #ddd;border-radius:var(--rsm);font-size:12px;font-family:var(--font);text-align:right}
+.heures-input:focus{outline:none;border-color:var(--accent)}
 .partner-search-wrap{position:relative}
 .partner-search-input{width:100%;padding:8px 12px 8px 32px;border:.5px solid #ddd;border-radius:var(--rsm);font-size:12px;font-family:var(--font);background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23bbb' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center}
 .partner-search-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--p50)}
@@ -775,18 +782,19 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     </div>
     <div class="partner-section f-field" style="margin-top:10px">
       <div class="partner-section-hd">
-        <label class="f-label" style="margin:0">Partenaires</label>
+        <label class="f-label" style="margin:0">Partenaires <span style="font-weight:400;color:#bbb;font-size:10px">(plusieurs possibles)</span></label>
         <button class="btn-add-partner" onclick="openModalNewPartenaire()" type="button">+ Nouveau</button>
       </div>
       <div class="partner-search-wrap">
         <input type="text" class="partner-search-input" id="saPartenaireSearch"
-          placeholder="Rechercher un partenaire…"
+          placeholder="Rechercher et ajouter un partenaire…"
           oninput="onSaPartenaireSearch(this.value)"
           onfocus="onSaPartenaireSearchFocus()"
           onblur="setTimeout(()=>document.getElementById('saPartenaireResults').classList.remove('open'),220)">
         <div class="partner-results" id="saPartenaireResults"></div>
       </div>
       <div class="partner-chips" id="saPartenaireChips"></div>
+      <div id="saPartenaireHeures"></div>
     </div>
     <div class="f-field" style="margin-top:8px">
       <label class="f-label">Commentaire</label>
@@ -1195,6 +1203,33 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     <div style="display:flex;gap:8px;margin-top:14px">
       <button class="btn btn-ghost" onclick="closeModalNewEtab()">Annuler</button>
       <button class="btn btn-primary" style="flex:1" onclick="submitNewEtab()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- MODALE EXPORT PARTENAIRES -->
+<div class="overlay" id="modalExportPart" onclick="if(event.target===this)closeExportPartModal()">
+<div class="modal modal-sm">
+  <div class="modal-hd">
+    <span class="modal-title">Exporter les heures partenaires</span>
+    <button class="btn-x" onclick="closeExportPartModal()">×</button>
+  </div>
+  <div style="padding:16px 20px">
+    <div class="f-row2">
+      <div class="f-field">
+        <label class="f-label">Du</label>
+        <input type="date" id="expFrom" style="width:100%">
+      </div>
+      <div class="f-field">
+        <label class="f-label">Au</label>
+        <input type="date" id="expTo" style="width:100%">
+      </div>
+    </div>
+    <p style="font-size:11px;color:#bbb;margin-top:8px">Laisser vide pour exporter toutes les périodes</p>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-ghost" onclick="closeExportPartModal()">Annuler</button>
+      <button class="btn btn-primary" style="flex:1" onclick="exportPartenaireExcel()">Télécharger Excel</button>
     </div>
   </div>
 </div>
@@ -1685,10 +1720,14 @@ async function submitSaisieAction(){
     }
     if(newId&&_saPartenairesSelected.length){
       for(const p of _saPartenairesSelected){
+        const hInput=document.getElementById('saH_'+p.id);
+        const heures=hInput?parseFloat(hInput.value)||0:0;
         try{await grist.docApi.applyUserActions([['AddRecord','SAISIE_entreprises_par_action',null,{
-          action_ref:newId,entreprise_ref:p.id,role_entreprise:'',nb_participants:0,notes:''
+          action_ref:newId,entreprise_ref:p.id,role_entreprise:'',nb_participants:0,nb_heures:heures,notes:''
         }]])}catch(e4){console.warn(e4)}
       }
+      // Rafraîchir le cache local
+      try{const freshEP=await grist.docApi.fetchTable('SAISIE_entreprises_par_action');window._ALL_ENT_PARTS=tableToRows(freshEP);}catch(e5){console.warn(e5)}
     }
     const fresh=await grist.docApi.fetchTable('SAISIE_actions_realisees');
     window._ALL_ACTIONS=tableToRows(fresh);
@@ -1776,8 +1815,9 @@ async function loadPartenaires(){
 
 function resetSaPartenaireSection(){
   _saPartenairesSelected=[];
-  const inp=document.getElementById('saPartenaireSearch');if(inp)inp.value='';
-  const res=document.getElementById('saPartenaireResults');if(res){res.innerHTML='';res.classList.remove('open')}
+  var inp=document.getElementById('saPartenaireSearch');if(inp)inp.value='';
+  var res=document.getElementById('saPartenaireResults');if(res){res.innerHTML='';res.classList.remove('open')}
+  var hz=document.getElementById('saPartenaireHeures');if(hz)hz.innerHTML='';
   renderSaPartenaireChips();
 }
 
@@ -1824,13 +1864,25 @@ function removeSaPartenaire(id){
 }
 
 function renderSaPartenaireChips(){
-  const el=document.getElementById('saPartenaireChips');if(!el)return;
+  var el=document.getElementById('saPartenaireChips');if(!el)return;
   el.innerHTML=_saPartenairesSelected.map(function(p){
     return'<div class="partner-chip type-partenaire">'
       +'<span>'+esc(p.label)+(p.type?' · '+esc(p.type):'')+'</span>'
       +'<span class="partner-chip-x" onclick="removeSaPartenaire('+p.id+')">×</span>'
       +'</div>';
   }).join('');
+  // Table des heures
+  var hz=document.getElementById('saPartenaireHeures');if(!hz)return;
+  if(!_saPartenairesSelected.length){hz.innerHTML='';return;}
+  var rows=_saPartenairesSelected.map(function(p){
+    return'<div class="heures-row">'
+      +'<div class="heures-row-name">'+esc(p.label)+'</div>'
+      +'<input type="number" class="heures-input" id="saH_'+p.id+'" min="0" step="0.5" placeholder="0 h">'
+      +'</div>';
+  }).join('');
+  hz.innerHTML='<div class="heures-table">'
+    +'<div class="heures-table-hd"><span>Partenaire</span><span style="text-align:right">Heures mobilisées</span></div>'
+    +rows+'</div>';
 }
 
 /* ── Modal nouveau partenaire ── */
@@ -2166,13 +2218,13 @@ function renderAnnuaire(){
     body.innerHTML='<div style="margin-bottom:12px;font-size:12px;color:#888">'+etabs.length+' établissement'+(etabs.length>1?'s':'')+'</div><div class="ann-grid">'+cards+'</div>';
 
   } else {
-    // Partenaires
-    var partUse={};
+    // Partenaires — heures et actions (toutes)
+    var partUse={},partHeures={};
     (window._ALL_ENT_PARTS||[]).forEach(function(ep){
-      if(!_annTab||projActionIds.has(ep.action_ref)){
-        if(!partUse[ep.entreprise_ref])partUse[ep.entreprise_ref]=0;
-        partUse[ep.entreprise_ref]++;
-      }
+      if(!partUse[ep.entreprise_ref])partUse[ep.entreprise_ref]=0;
+      if(!partHeures[ep.entreprise_ref])partHeures[ep.entreprise_ref]=0;
+      partUse[ep.entreprise_ref]++;
+      partHeures[ep.entreprise_ref]+=(ep.nb_heures||0);
     });
     var parts=(_ALL_PARTENAIRES||[]);
     if(q)parts=parts.filter(function(p){
@@ -2182,22 +2234,28 @@ function renderAnnuaire(){
       body.innerHTML='<div style="padding:40px;text-align:center;font-size:12px;color:#bbb">'+(q?'Aucun résultat':'Aucun partenaire enregistré.')+'</div>';
       return;
     }
-    parts.sort(function(a,b){return(partUse[b.id]||0)-(partUse[a.id]||0);});
+    parts.sort(function(a,b){return(partHeures[b.id]||0)-(partHeures[a.id]||0);});
+    var totalH=parts.reduce(function(s,p){return s+(partHeures[p.id]||0);},0);
     var cards=parts.map(function(p){
-      var n=partUse[p.id]||0;
+      var n=partUse[p.id]||0,h=partHeures[p.id]||0;
       var tags='';
       if(p.type_partenaire)tags+='<span class="ann-tag">'+esc(p.type_partenaire)+'</span>';
       if(p.secteur_activite)tags+='<span class="ann-tag">'+esc(p.secteur_activite)+'</span>';
       var contact=p.contact_nom?('<div style="font-size:11px;color:#999;margin-top:4px">'+esc(p.contact_nom)+(p.contact_email?' · '+esc(p.contact_email):'')+'</div>'):'';
+      var heuresLine=h>0
+        ?'<div style="margin-top:8px;padding-top:8px;border-top:.5px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;color:#999">'+n+' action'+(n>1?'s':'')+'</span><span style="font-size:13px;font-weight:600;color:var(--accent)">'+h.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:1})+' h</span></div>'
+        :'<div class="ann-card-stat">'+(n>0?n+' action'+(n>1?'s':''):'Pas encore impliqué')+'</div>';
       return'<div class="ann-card">'
         +'<div class="ann-card-name">'+esc(p.nom_entreprise||'')+'</div>'
         +'<div class="ann-card-sub">'+(p.ville||'')+(p.code_postal?' ('+p.code_postal+')':'')+'</div>'
-        +(tags?'<div class="ann-card-tags">'+tags+'</div>':'')
-        +contact
-        +'<div class="ann-card-stat">'+(n>0?n+' action'+(n>1?'s':'')+' ce projet':'Pas encore utilisé ce projet')+'</div>'
-        +'</div>';
+        +(tags?'<div class="ann-card-tags" style="margin-top:5px">'+tags+'</div>':'')
+        +contact+heuresLine+'</div>';
     }).join('');
-    body.innerHTML='<div style="margin-bottom:12px;font-size:12px;color:#888">'+parts.length+' partenaire'+(parts.length>1?'s':'')+'</div><div class="ann-grid">'+cards+'</div>';
+    var topBar='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+      +'<span style="font-size:12px;color:#888">'+parts.length+' partenaire'+(parts.length>1?'s':'')+(totalH>0?' · <strong>'+totalH.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:1})+'h</strong> mobilisées au total':'')+'</span>'
+      +'<button class="btn btn-ghost btn-sm" onclick="openExportPartModal()">Exporter Excel</button>'
+      +'</div>';
+    body.innerHTML=topBar+'<div class="ann-grid">'+cards+'</div>';
   }
 }
 

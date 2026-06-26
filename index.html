@@ -345,6 +345,38 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 /* ══ RAPPORT ══ */
 #pageRapport{display:none;flex-direction:column;min-height:100vh}
 .rapport-body{padding:20px 24px;max-width:1000px;margin:0 auto;width:100%}
+/* ══ ANNUAIRE ══ */
+#pageAnnuaire{display:none;flex-direction:column;min-height:100vh}
+.ann-tab{padding:10px 18px;border:none;background:none;cursor:pointer;font-size:12px;font-family:var(--font);color:#888;border-bottom:2px solid transparent;transition:all .15s}
+.ann-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:500}
+.ann-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.ann-card{background:#fff;border:.5px solid #e0e0e0;border-radius:var(--r);padding:14px 16px;transition:box-shadow .15s;cursor:pointer}
+.ann-card:hover{box-shadow:0 2px 10px rgba(0,0,0,.07);border-color:#ccc}
+.ann-card-name{font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ann-card-sub{font-size:11px;color:#999;margin-bottom:8px}
+.ann-card-tags{display:flex;flex-wrap:wrap;gap:4px}
+.ann-tag{padding:2px 7px;border-radius:10px;font-size:10px;font-weight:500;background:#f5f5f5;color:#666}
+.ann-card-stat{margin-top:10px;padding-top:8px;border-top:.5px solid #f0f0f0;font-size:11px;color:#999}
+/* ══ NOTIFS HUB ══ */
+.hub-notifs{margin-top:14px;display:flex;flex-direction:column;gap:6px}
+.hub-notif{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:var(--r);background:#fff;border:.5px solid #e0e0e0;font-size:12px;cursor:pointer;transition:background .1s}
+.hub-notif:hover{background:#fafafa}
+.hub-notif-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.hub-notif-body{flex:1;color:#555}
+.hub-notif-action{font-size:11px;color:#bbb;flex-shrink:0}
+/* ══ CALENDRIER ACTIONS ══ */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 0 14px}
+.cal-nav-title{font-size:13px;font-weight:600;color:#1a1a1a}
+.cal-nav button{background:none;border:.5px solid #e0e0e0;border-radius:var(--rsm);padding:4px 10px;cursor:pointer;font-family:var(--font);font-size:12px;color:#666}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:#ebebeb;border:.5px solid #ebebeb;border-radius:var(--r);overflow:hidden}
+.cal-day-hd{background:#fafafa;text-align:center;padding:6px 0;font-size:10px;color:#bbb;font-weight:500;text-transform:uppercase}
+.cal-day{background:#fff;min-height:72px;padding:5px;position:relative}
+.cal-day.other-month{background:#fafafa}
+.cal-day.today{background:#f5f3ff}
+.cal-day-num{font-size:10px;color:#bbb;margin-bottom:3px}
+.cal-day.today .cal-day-num{color:var(--accent);font-weight:700}
+.cal-event{padding:2px 5px;border-radius:4px;font-size:10px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:opacity .1s}
+.cal-event:hover{opacity:.8}
 /* ══ CARTE ══ */
 #pageCarte{display:none;flex-direction:column;min-height:100vh}
 #mapContainer{flex:1;min-height:400px}
@@ -575,6 +607,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     <div class="hub-proj-sub" id="hubSubDesc"></div>
     <div class="hub-choices" id="hubChoices"></div>
     <div id="hubAlerts"></div>
+    <div id="hubNotifs"></div>
   </div>
 </div>
 
@@ -880,13 +913,35 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
   </div>
   <div class="rapport-body">
     <div class="rapport-filters">
-      <div class="rf-grp"><span class="rf-label">Année</span><select id="rYear" onchange="genRapport()"><option value="">Toutes</option></select></div>
-      <div class="rf-grp"><span class="rf-label">Période</span><div class="rf-row"><input type="date" id="rFrom" onchange="genRapport()"><span style="color:#bbb">→</span><input type="date" id="rTo" onchange="genRapport()"></div></div>
+      <div class="rf-grp"><span class="rf-label">Année</span><select id="rYear" onchange="onRYearChange()"><option value="">Toutes</option></select></div>
+      <div class="rf-grp"><span class="rf-label">Semestre / Trimestre</span><select id="rPeriod" onchange="genRapport()"><option value="">Toute l'année</option><option value="S1">S1 (Jan–Juin)</option><option value="S2">S2 (Juil–Déc)</option><option value="T1">T1 (Jan–Mar)</option><option value="T2">T2 (Avr–Juin)</option><option value="T3">T3 (Juil–Sep)</option><option value="T4">T4 (Oct–Déc)</option></select></div>
       <div class="rf-grp"><span class="rf-label">Projet</span><select id="rProjet" onchange="genRapport()"><option value="">Tous</option></select></div>
       <div class="rf-grp"><span class="rf-label">Responsable</span><select id="rResp" onchange="genRapport()"><option value="">Tous</option></select></div>
     </div>
     <div id="rapportZone"><div style="padding:40px;text-align:center;color:#bbb;font-size:13px">Configurez les filtres pour générer le rapport</div></div>
   </div>
+</div>
+
+<!-- ══ PAGE ANNUAIRE ══ -->
+<div id="pageAnnuaire">
+  <div class="hdr">
+    <div class="hdr-left">
+      <button class="btn-back" onclick="goHub()">← Hub</button>
+      <span class="proj-badge" id="annBadge"></span>
+      <div>
+        <div class="hdr-title">Annuaire</div>
+        <div class="hdr-sub" id="annSub"></div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <input type="text" id="annSearch" style="padding:6px 10px;border:.5px solid #ddd;border-radius:var(--rsm);font-size:12px;width:200px;font-family:var(--font)" placeholder="Rechercher…" oninput="renderAnnuaire()">
+    </div>
+  </div>
+  <div style="padding:0 20px;border-bottom:.5px solid #ebebeb;background:#fafafa;display:flex;gap:0">
+    <button class="ann-tab active" id="annTabEtab" onclick="setAnnTab('etab')">Établissements</button>
+    <button class="ann-tab" id="annTabPart" onclick="setAnnTab('part')">Partenaires</button>
+  </div>
+  <div id="annuaireBody" style="padding:20px;overflow-y:auto"></div>
 </div>
 
 <!-- ══ PAGE CARTE ══ -->
@@ -1323,7 +1378,7 @@ async function loadAll(){
    NAVIGATION
 ══════════════════════════════════════════════ */
 function showPage(page){
-  ['accueil','hub','projet','actions','objectifs','rapport','carte'].forEach(p=>{
+  ['accueil','hub','projet','actions','objectifs','rapport','carte','annuaire'].forEach(p=>{
     const el=document.getElementById('page'+p.charAt(0).toUpperCase()+p.slice(1));
     if(!el)return;
     el.style.display=p===page?'flex':'none';
@@ -1370,9 +1425,12 @@ function renderHub(proj){
   const nbAct=actnProj?(window._ALL_ACTIONS||[]).filter(a=>a.projet_ref===actnProj.id).length:0;
   document.getElementById('hubSubDesc').textContent=`${totalT} tâche${totalT!==1?'s':''} · ${pct}% réalisé · ${nbAct} action${nbAct!==1?'s':''} enregistrée${nbAct!==1?'s':''}`;
   const hc=document.getElementById('hubChoices');
-  hc.style.gridTemplateColumns='repeat(3,1fr)';
-  const nbEtab=(window._ALL_ETAB_PARTS||[]).length;
-  const nbPart=(window._ALL_ENT_PARTS||[]).length;
+  hc.style.gridTemplateColumns='repeat(2,1fr)';
+  const actnProjEtab=ACTN_PROJETS.find(ap=>ap.cod_projet===proj.code);
+  const projActionIds=new Set(actnProjEtab?(window._ALL_ACTIONS||[]).filter(a=>a.projet_ref===actnProjEtab.id).map(a=>a.id):[]);
+  const nbEtab=new Set((window._ALL_ETAB_PARTS||[]).filter(ep=>projActionIds.has(ep.ACTION_CONCERNEE)).map(ep=>ep.ETABLISSEMENT_PARTICIPANT)).size;
+  const nbPart=new Set((window._ALL_ENT_PARTS||[]).filter(ep=>projActionIds.has(ep.action_ref)).map(ep=>ep.entreprise_ref)).size;
+  const nbPartTot=(_ALL_PARTENAIRES||[]).length;
   hc.innerHTML=`
     <div class="hub-card" onclick="openIndicateursPage()" style="border-left-color:${accent}">
       <div class="hub-card-title">Indicateurs & Actions</div>
@@ -1384,10 +1442,15 @@ function renderHub(proj){
       <div class="hub-card-desc">Kanban, liste groupée, Gantt, calendrier, réunion hebdomadaire, tableau de bord</div>
       <div class="hub-card-stat">${totalT} tâche${totalT!==1?'s':''} · ${lateT>0?`<span style="color:var(--c600)">${lateT} en retard</span>`:'aucun retard'}</div>
     </div>
+    <div class="hub-card" onclick="openAnnuairePage()" style="border-left-color:${accent}">
+      <div class="hub-card-title">Annuaire</div>
+      <div class="hub-card-desc">Liste des établissements et partenaires impliqués. Fiches détail, recherche, filtres par type et secteur</div>
+      <div class="hub-card-stat">${nbEtab} étab. ce projet · ${nbPartTot} partenaire${nbPartTot!==1?'s':''} total</div>
+    </div>
     <div class="hub-card" onclick="openCartePage()" style="border-left-color:${accent}">
       <div class="hub-card-title">Carte & Territoire</div>
-      <div class="hub-card-desc">Visualisation géographique des établissements touchés et des partenaires impliqués par le projet</div>
-      <div class="hub-card-stat">${nbEtab} établissement${nbEtab!==1?'s':''} · ${nbPart} partenaire${nbPart!==1?'s':''}</div>
+      <div class="hub-card-desc">Carte interactive des établissements et partenaires. Filtrez par couche et visualisez la couverture géographique</div>
+      <div class="hub-card-stat">${nbEtab} établissement${nbEtab!==1?'s':''} · ${nbPart} partenaire${nbPart!==1?'s':''} ce projet</div>
     </div>`;
   // Stat objectifs
   const targets=getIndicTargets(proj.code||'');const nbTargets=Object.keys(targets).length;
@@ -1407,6 +1470,7 @@ function renderHub(proj){
       </div>`).join('')}
     </div>`;
   }else{ad.innerHTML=''}
+  renderHubNotifs(proj,accent);
 }
 
 function openTaches(){
@@ -1901,11 +1965,14 @@ function renderObjectifs(){
   var tabBar='<div class="subtab-bar" style="padding:0 0 14px;border-bottom:.5px solid #ebebeb;margin-bottom:16px">'
     +'<button class="subtab'+(indicActiveTab==='suivi'?' active':'')+'" onclick="indicActiveTab=\'suivi\';renderObjectifs()">Suivi</button>'
     +'<button class="subtab'+(indicActiveTab==='objectifs'?' active':'')+'" onclick="indicActiveTab=\'objectifs\';renderObjectifs()">Objectifs</button>'
+    +'<button class="subtab'+(indicActiveTab==='calendrier'?' active':'')+'" onclick="indicActiveTab=\'calendrier\';renderObjectifs()">Calendrier</button>'
     +'</div>';
 
   var content='';
 
-  if(indicActiveTab==='objectifs'){
+  if(indicActiveTab==='calendrier'){
+    content=renderCalendrier(allProjActions,accent);
+  } else if(indicActiveTab==='objectifs'){
     // ── Onglet Objectifs : cards avec inputs éditables ──
     var rows=projIndics.map(function(ind){
       var code=ind.Code_indicateur;
@@ -1977,6 +2044,200 @@ function renderObjectifs(){
   }
 
   document.getElementById('objBody').innerHTML=tabBar+content;
+}
+
+/* ══════════════════════════════════════════════
+   CALENDRIER DES ACTIONS
+══════════════════════════════════════════════ */
+var _calYear=new Date().getFullYear(), _calMonth=new Date().getMonth();
+
+function renderCalendrier(actions, accent){
+  var today=new Date();
+  var y=_calYear, m=_calMonth;
+  var firstDay=new Date(y,m,1);
+  var lastDay=new Date(y,m+1,0);
+  var startDow=(firstDay.getDay()+6)%7; // lundi=0
+  var JOURS=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  var MOIS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+  // Index actions par jour
+  var byDay={};
+  actions.forEach(function(a){
+    if(!a.date_suivi_action)return;
+    var d=new Date(a.date_suivi_action*1000);
+    if(d.getFullYear()===y&&d.getMonth()===m){
+      var k=d.getDate();
+      if(!byDay[k])byDay[k]=[];
+      byDay[k].push(a);
+    }
+  });
+
+  var hdCells=JOURS.map(function(j){return'<div class="cal-day-hd">'+j+'</div>';}).join('');
+  var cells='';
+  // Cellules vides avant le 1er
+  for(var i=0;i<startDow;i++)cells+='<div class="cal-day other-month"></div>';
+  // Jours du mois
+  for(var d=1;d<=lastDay.getDate();d++){
+    var isToday=d===today.getDate()&&m===today.getMonth()&&y===today.getFullYear();
+    var dayActs=byDay[d]||[];
+    var evts=dayActs.slice(0,3).map(function(a){
+      var rh=ALL_RH.find(function(r){return r.id===a.responsable_suivi_action_ref;});
+      return'<div class="cal-event" style="background:'+accent+'22;color:'+accent+'" title="'+esc(a.nom_suivi_action)+' — '+(rh?esc(rh.Membre):'')+'">'+esc(a.nom_suivi_action)+'</div>';
+    }).join('');
+    if(dayActs.length>3)evts+='<div style="font-size:9px;color:#bbb">+'+( dayActs.length-3)+' autres</div>';
+    cells+='<div class="cal-day'+(isToday?' today':'')+'"><div class="cal-day-num">'+d+'</div>'+evts+'</div>';
+  }
+  // Compléter la grille (multiple de 7)
+  var total=startDow+lastDay.getDate();
+  var remainder=total%7;
+  if(remainder>0){for(var i=remainder;i<7;i++)cells+='<div class="cal-day other-month"></div>';}
+
+  return'<div class="cal-nav">'
+    +'<button onclick="_calMonth--;if(_calMonth<0){_calMonth=11;_calYear--;}renderObjectifs()">← Mois préc.</button>'
+    +'<span class="cal-nav-title">'+MOIS[m]+' '+y+'</span>'
+    +'<button onclick="_calMonth++;if(_calMonth>11){_calMonth=0;_calYear++;}renderObjectifs()">Mois suiv. →</button>'
+    +'</div>'
+    +'<div class="cal-grid">'+hdCells+cells+'</div>';
+}
+
+/* ══════════════════════════════════════════════
+   ANNUAIRE
+══════════════════════════════════════════════ */
+var _annTab='etab';
+
+function setAnnTab(tab){
+  _annTab=tab;
+  document.getElementById('annTabEtab').classList.toggle('active',tab==='etab');
+  document.getElementById('annTabPart').classList.toggle('active',tab==='part');
+  renderAnnuaire();
+}
+
+function openAnnuairePage(){
+  var proj=PROJETS.find(function(p){return p.id===currentProjetId;});if(!proj)return;
+  var accent=proj.couleur||'#534AB7';
+  var badge=proj.badge||proj.code||proj.nom;
+  document.getElementById('annBadge').textContent=badge;
+  document.getElementById('annBadge').style.background=accent;
+  document.getElementById('annSub').textContent=proj.nom;
+  document.documentElement.style.setProperty('--accent',accent);
+  _annTab='etab';
+  document.getElementById('annTabEtab').classList.add('active');
+  document.getElementById('annTabPart').classList.remove('active');
+  var inp=document.getElementById('annSearch');if(inp)inp.value='';
+  showPage('annuaire');
+  renderAnnuaire();
+}
+
+function renderAnnuaire(){
+  var q=(document.getElementById('annSearch')?.value||'').toLowerCase().trim();
+  var body=document.getElementById('annuaireBody');if(!body)return;
+  var proj=PROJETS.find(function(p){return p.id===currentProjetId;});
+  var actnProj=proj&&ACTN_PROJETS.find(function(ap){return ap.cod_projet===proj.code;});
+  var projActionIds=new Set(actnProj?(window._ALL_ACTIONS||[]).filter(function(a){return a.projet_ref===actnProj.id;}).map(function(a){return a.id;}):[]);
+
+  if(_annTab==='etab'){
+    // Établissements liés aux actions du projet
+    var etabUse={};
+    (window._ALL_ETAB_PARTS||[]).forEach(function(ep){
+      if(projActionIds.has(ep.ACTION_CONCERNEE)){
+        if(!etabUse[ep.ETABLISSEMENT_PARTICIPANT])etabUse[ep.ETABLISSEMENT_PARTICIPANT]=0;
+        etabUse[ep.ETABLISSEMENT_PARTICIPANT]++;
+      }
+    });
+    var etabIds=Object.keys(etabUse).map(Number);
+    var etabs=(window._ALL_ETABLISSEMENTS||[]).filter(function(e){return etabIds.indexOf(e.id)>=0;});
+    if(q)etabs=etabs.filter(function(e){
+      return(e.nom_etablissement||'').toLowerCase().includes(q)||(e.libelle_commune||'').toLowerCase().includes(q)||(e.code_postal_etablissement||'').includes(q);
+    });
+    if(!etabs.length){
+      body.innerHTML='<div style="padding:40px;text-align:center;font-size:12px;color:#bbb">'+(q?'Aucun résultat pour "'+esc(q)+'"':'Aucun établissement lié à ce projet — saisissez des actions avec des établissements.')+'</div>';
+      return;
+    }
+    etabs.sort(function(a,b){return(etabUse[b.id]||0)-(etabUse[a.id]||0);});
+    var cards=etabs.map(function(e){
+      var n=etabUse[e.id]||0;
+      return'<div class="ann-card">'
+        +'<div class="ann-card-name">'+esc(e.nom_etablissement||'')+'</div>'
+        +'<div class="ann-card-sub">'+(e.libelle_commune||'')+(e.code_postal_etablissement?' ('+e.code_postal_etablissement+')':'')+'</div>'
+        +'<div class="ann-card-tags">'+(e.code_departement_calc?'<span class="ann-tag">Dép. '+esc(e.code_departement_calc)+'</span>':'')+'</div>'
+        +'<div class="ann-card-stat">Impliqué dans '+n+' action'+(n>1?'s':'')+' ce projet</div>'
+        +'</div>';
+    }).join('');
+    body.innerHTML='<div style="margin-bottom:12px;font-size:12px;color:#888">'+etabs.length+' établissement'+(etabs.length>1?'s':'')+'</div><div class="ann-grid">'+cards+'</div>';
+
+  } else {
+    // Partenaires
+    var partUse={};
+    (window._ALL_ENT_PARTS||[]).forEach(function(ep){
+      if(!_annTab||projActionIds.has(ep.action_ref)){
+        if(!partUse[ep.entreprise_ref])partUse[ep.entreprise_ref]=0;
+        partUse[ep.entreprise_ref]++;
+      }
+    });
+    var parts=(_ALL_PARTENAIRES||[]);
+    if(q)parts=parts.filter(function(p){
+      return(p.nom_entreprise||'').toLowerCase().includes(q)||(p.ville||'').toLowerCase().includes(q)||(p.secteur_activite||'').toLowerCase().includes(q)||(p.type_partenaire||'').toLowerCase().includes(q);
+    });
+    if(!parts.length){
+      body.innerHTML='<div style="padding:40px;text-align:center;font-size:12px;color:#bbb">'+(q?'Aucun résultat':'Aucun partenaire enregistré.')+'</div>';
+      return;
+    }
+    parts.sort(function(a,b){return(partUse[b.id]||0)-(partUse[a.id]||0);});
+    var cards=parts.map(function(p){
+      var n=partUse[p.id]||0;
+      var tags='';
+      if(p.type_partenaire)tags+='<span class="ann-tag">'+esc(p.type_partenaire)+'</span>';
+      if(p.secteur_activite)tags+='<span class="ann-tag">'+esc(p.secteur_activite)+'</span>';
+      var contact=p.contact_nom?('<div style="font-size:11px;color:#999;margin-top:4px">'+esc(p.contact_nom)+(p.contact_email?' · '+esc(p.contact_email):'')+'</div>'):'';
+      return'<div class="ann-card">'
+        +'<div class="ann-card-name">'+esc(p.nom_entreprise||'')+'</div>'
+        +'<div class="ann-card-sub">'+(p.ville||'')+(p.code_postal?' ('+p.code_postal+')':'')+'</div>'
+        +(tags?'<div class="ann-card-tags">'+tags+'</div>':'')
+        +contact
+        +'<div class="ann-card-stat">'+(n>0?n+' action'+(n>1?'s':'')+' ce projet':'Pas encore utilisé ce projet')+'</div>'
+        +'</div>';
+    }).join('');
+    body.innerHTML='<div style="margin-bottom:12px;font-size:12px;color:#888">'+parts.length+' partenaire'+(parts.length>1?'s':'')+'</div><div class="ann-grid">'+cards+'</div>';
+  }
+}
+
+/* ══════════════════════════════════════════════
+   NOTIFICATIONS HUB
+══════════════════════════════════════════════ */
+function renderHubNotifs(proj,accent){
+  var nd=document.getElementById('hubNotifs');if(!nd)return;
+  var notifs=[];
+  var actnProj=ACTN_PROJETS.find(function(ap){return ap.cod_projet===proj.code;});
+  var now=Math.floor(Date.now()/1000);
+  var thirtyDaysAgo=now-30*86400;
+
+  // Actions ce mois ?
+  var recentActs=actnProj?(window._ALL_ACTIONS||[]).filter(function(a){return a.projet_ref===actnProj.id&&a.date_suivi_action>=thirtyDaysAgo;}):[];
+  if(!recentActs.length&&actnProj){
+    notifs.push({color:'var(--a600)',msg:'Aucune action saisie ce mois-ci',action:'Saisir une action',onclick:"openIndicateursPage();setTimeout(openSaisieActionPanel,200)"});
+  }
+
+  // Objectifs manquants
+  var targets=getIndicTargets(proj.code||'');
+  var projAxeIds=new Set(ACTN_AXES.filter(function(a){return a.projet_ref===(actnProj&&actnProj.id);}).map(function(a){return a.id;}));
+  var projActIds=new Set(ACTN_ACTIONS.filter(function(a){return projAxeIds.has(a.wp_axe_ref);}).map(function(a){return a.id;}));
+  var projSaIds=new Set(ACTN_SOUS_ACTIONS.filter(function(sa){return projActIds.has(sa.action_ref);}).map(function(sa){return sa.id;}));
+  var projIndics=ALL_INDIC_CONFIG.filter(function(c){return projSaIds.has(c.type_sous_action);});
+  var missingTargets=projIndics.filter(function(ind){return!targets[ind.Code_indicateur];});
+  if(missingTargets.length){
+    notifs.push({color:'#999',msg:missingTargets.length+' indicateur'+(missingTargets.length>1?'s sans':'  sans')+' objectif défini',action:'Définir les objectifs',onclick:"indicActiveTab='objectifs';openIndicateursPage()"});
+  }
+
+  if(!notifs.length){nd.innerHTML='';return;}
+  nd.innerHTML='<div class="hub-notifs">'
+    +notifs.map(function(n){
+      return'<div class="hub-notif" onclick="'+n.onclick+'">'
+        +'<span class="hub-notif-dot" style="background:'+n.color+'"></span>'
+        +'<span class="hub-notif-body">'+n.msg+'</span>'
+        +'<span class="hub-notif-action">'+n.action+' →</span>'
+        +'</div>';
+    }).join('')
+    +'</div>';
 }
 
 /* ══════════════════════════════════════════════
@@ -3371,18 +3632,28 @@ function initRapportFilters(){
   getMembresActionsListe().forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.nom;rSel.appendChild(o)});
 }
 
+function onRYearChange(){
+  const yr=document.getElementById('rYear')?.value;
+  const per=document.getElementById('rPeriod');
+  if(per)per.disabled=!yr;
+  genRapport();
+}
+
 function getFilteredActions(){
   const allActions=window._ALL_ACTIONS||[];
   const year=document.getElementById('rYear')?.value;
-  const from=document.getElementById('rFrom')?.value;
-  const to=document.getElementById('rTo')?.value;
+  const period=document.getElementById('rPeriod')?.value;
   const projet=document.getElementById('rProjet')?.value;
   const resp=document.getElementById('rResp')?.value;
+  // Période → bornes de mois
+  const periodMonths={S1:[0,5],S2:[6,11],T1:[0,2],T2:[3,5],T3:[6,8],T4:[9,11]};
   return allActions.filter(a=>{
     const d=new Date(a.date_suivi_action*1000);
     if(year&&d.getFullYear()!==parseInt(year))return false;
-    if(from&&d<new Date(from))return false;
-    if(to&&d>new Date(to+'T23:59:59'))return false;
+    if(period&&periodMonths[period]){
+      const [mMin,mMax]=periodMonths[period];
+      if(d.getMonth()<mMin||d.getMonth()>mMax)return false;
+    }
     if(projet&&String(a.projet_ref)!==String(projet))return false;
     if(resp&&String(a.responsable_suivi_action_ref)!==String(resp))return false;
     return true;
@@ -3435,7 +3706,14 @@ function genRapport(){
     section1+=`<div><div class="rap-proj-hd"><span class="rap-proj-badge" style="${badgeStyle}">${proj.cod_projet}</span><span class="rap-proj-title">${esc(proj.lib_projet)}</span><span class="rap-proj-count">${actionsProj.length} action${actionsProj.length>1?'s':''}</span></div>${wpBlocs}</div>`;
   });
 
-  const recapRows=Object.entries(recapMap).sort((a,b)=>b[1].total-a[1].total).map(([code,d])=>`<tr><td>${esc(d.label)}</td><td style="color:#999;font-size:11px">${code}</td><td style="text-align:center;color:#999">${d.nb}</td><td class="rap-recap-val">${d.total.toLocaleString('fr-FR')}</td></tr>`).join('');
+  const projetCodeForTargets=projetF?ACTN_PROJETS.find(p=>String(p.id)===projetF)?.cod_projet||'':'';
+  const targets=projetCodeForTargets?getIndicTargets(projetCodeForTargets):{};
+  const recapRows=Object.entries(recapMap).sort((a,b)=>b[1].total-a[1].total).map(([code,d])=>{
+    const target=targets[code]||0;
+    const pct=target>0?Math.min(100,Math.round(d.total/target*100)):null;
+    const bar=target>0?`<div style="height:4px;background:#f0f0f0;border-radius:2px;margin-top:4px"><div style="height:4px;background:${pct>=100?'var(--t600)':pct>=50?'var(--accent)':'var(--a600)'};border-radius:2px;width:${pct}%"></div></div><div style="font-size:10px;color:#bbb;margin-top:2px">${pct}% de l'objectif (${target.toLocaleString('fr-FR')})</div>`:'';
+    return`<tr><td><div>${esc(d.label)}</div>${bar}</td><td style="color:#999;font-size:11px">${code}</td><td style="text-align:center;color:#999">${d.nb}</td><td class="rap-recap-val">${d.total.toLocaleString('fr-FR')}</td></tr>`;
+  }).join('');
   const kpiTop=Object.entries(recapMap).slice(0,4).map(([,d])=>`<div class="rap-kpi"><div class="rap-kpi-val">${d.total.toLocaleString('fr-FR')}</div><div class="rap-kpi-lbl">${esc(d.label)}</div></div>`).join('');
 
   zone.innerHTML=`<div class="rapport-doc" id="printZone">
@@ -3453,7 +3731,7 @@ function genRapport(){
     <div class="rap-kpis">${kpiTop||'<div class="rap-kpi"><div class="rap-kpi-val">—</div><div class="rap-kpi-lbl">Aucun indicateur</div></div>'}</div>
     ${section1}
     <div><div class="rap-recap-title">Récapitulatif des indicateurs</div>
-    <table class="rap-recap-table"><thead><tr><th>Indicateur</th><th>Code</th><th style="text-align:center">Saisies</th><th style="text-align:right">Total</th></tr></thead>
+    <table class="rap-recap-table"><thead><tr><th>Indicateur</th><th>Code</th><th style="text-align:center">Saisies</th><th style="text-align:right">Total réalisé</th></tr></thead>
     <tbody>${recapRows||'<tr><td colspan="4" style="text-align:center;color:#bbb;padding:16px">Aucun indicateur saisi</td></tr>'}</tbody></table></div>
   </div>`;
 }

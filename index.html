@@ -2244,7 +2244,7 @@ function setAnnTab(tab){
   renderAnnuaire();
 }
 
-function openAnnuairePage(){
+async function openAnnuairePage(){
   var proj=PROJETS.find(function(p){return p.id===currentProjetId;});if(!proj)return;
   var accent=proj.couleur||'#534AB7';
   var badge=proj.badge||proj.code||proj.nom;
@@ -2257,6 +2257,7 @@ function openAnnuairePage(){
   document.getElementById('annTabPart').classList.remove('active');
   var inp=document.getElementById('annSearch');if(inp)inp.value='';
   showPage('annuaire');
+  await loadEtablissements();
   renderAnnuaire();
 }
 

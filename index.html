@@ -1300,6 +1300,18 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 </div>
 </div>
 
+<!-- FICHE ÉTABLISSEMENT -->
+<div class="overlay" id="etabDetailOverlay" onclick="if(event.target===this)closeEtabDetail()">
+<div class="modal" style="max-width:620px;max-height:85vh;display:flex;flex-direction:column;padding:0">
+  <div class="modal-hd"><span class="modal-title" id="edTitle">Fiche établissement</span><button class="btn-x" onclick="closeEtabDetail()">×</button></div>
+  <div id="edBody" style="padding:16px 20px;overflow-y:auto;flex:1"></div>
+  <div class="modal-ft">
+    <button class="btn btn-ghost" onclick="closeEtabDetail()">Fermer</button>
+    <button class="btn btn-primary" onclick="exportOneEtabExcel()">Exporter cette fiche</button>
+  </div>
+</div>
+</div>
+
 <!-- FICHE PARTENAIRE -->
 <div class="overlay" id="partDetailOverlay" onclick="if(event.target===this)closePartDetail()">
 <div class="modal" style="max-width:640px;max-height:85vh;display:flex;flex-direction:column;padding:0">
@@ -2299,21 +2311,27 @@ function renderAnnuaire(){
     if(q)etabs=etabs.filter(function(e){
       return(e.nom_etablissement||'').toLowerCase().includes(q)||(e.libelle_commune||'').toLowerCase().includes(q)||(e.code_postal_etablissement||'').includes(q);
     });
+    var etabTopBar='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+      +'<span style="font-size:12px;color:#888">'+etabs.length+' établissement'+(etabs.length>1?'s':'')+' lié'+(etabs.length>1?'s':'')+' à ce projet</span>'
+      +'<button class="btn btn-ghost btn-sm" onclick="exportEtabExcel()">Exporter Excel</button>'
+      +'</div>';
     if(!etabs.length){
-      body.innerHTML='<div style="padding:40px;text-align:center;font-size:12px;color:#bbb">'+(q?'Aucun résultat pour "'+esc(q)+'"':'Aucun établissement lié à ce projet — saisissez des actions avec des établissements.')+'</div>';
+      body.innerHTML=etabTopBar+'<div style="padding:40px;text-align:center;font-size:12px;color:#bbb">'+(q?'Aucun résultat pour "'+esc(q)+'"':'Aucun établissement lié à ce projet — saisissez des actions avec des établissements.')+'</div>';
       return;
     }
     etabs.sort(function(a,b){return(etabUse[b.id]||0)-(etabUse[a.id]||0);});
     var cards=etabs.map(function(e){
       var n=etabUse[e.id]||0;
-      return'<div class="ann-card">'
+      var etags='';
+      if(e.code_departement_calc)etags+='<span class="ann-tag">Dép. '+esc(e.code_departement_calc)+'</span>';
+      return'<div class="ann-card" onclick="openEtabDetail('+e.id+')" title="Voir la fiche">'
         +'<div class="ann-card-name">'+esc(e.nom_etablissement||'')+'</div>'
         +'<div class="ann-card-sub">'+(e.libelle_commune||'')+(e.code_postal_etablissement?' ('+e.code_postal_etablissement+')':'')+'</div>'
-        +'<div class="ann-card-tags">'+(e.code_departement_calc?'<span class="ann-tag">Dép. '+esc(e.code_departement_calc)+'</span>':'')+'</div>'
-        +'<div class="ann-card-stat">Impliqué dans '+n+' action'+(n>1?'s':'')+' ce projet</div>'
+        +(etags?'<div class="ann-card-tags">'+etags+'</div>':'')
+        +'<div class="ann-card-stat">'+n+' action'+(n>1?'s':'')+' sur ce projet</div>'
         +'</div>';
     }).join('');
-    body.innerHTML='<div style="margin-bottom:12px;font-size:12px;color:#888">'+etabs.length+' établissement'+(etabs.length>1?'s':'')+'</div><div class="ann-grid">'+cards+'</div>';
+    body.innerHTML=etabTopBar+'<div class="ann-grid">'+cards+'</div>';
 
   } else {
     // Partenaires — heures et actions (toutes)
@@ -2328,8 +2346,12 @@ function renderAnnuaire(){
     if(q)parts=parts.filter(function(p){
       return(p.nom_entreprise||'').toLowerCase().includes(q)||(p.ville||'').toLowerCase().includes(q)||(p.secteur_activite||'').toLowerCase().includes(q)||(p.type_partenaire||'').toLowerCase().includes(q);
     });
+    var topBar='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+      +'<span style="font-size:12px;color:#888">'+parts.length+' partenaire'+(parts.length>1?'s':'')+'</span>'
+      +'<button class="btn btn-ghost btn-sm" onclick="openExportPartModal()">Exporter Excel</button>'
+      +'</div>';
     if(!parts.length){
-      body.innerHTML='<div style="padding:40px;text-align:center;font-size:12px;color:#bbb">'+(q?'Aucun résultat':'Aucun partenaire enregistré.')+'</div>';
+      body.innerHTML=topBar+'<div style="padding:40px;text-align:center;font-size:12px;color:#bbb">'+(q?'Aucun résultat pour "'+esc(q)+'"':'Aucun partenaire enregistré. Ajoutez des partenaires via le formulaire d\'action.')+'</div>';
       return;
     }
     parts.sort(function(a,b){return(partHeures[b.id]||0)-(partHeures[a.id]||0);});
@@ -2343,13 +2365,13 @@ function renderAnnuaire(){
       var heuresLine=h>0
         ?'<div style="margin-top:8px;padding-top:8px;border-top:.5px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;color:#999">'+n+' action'+(n>1?'s':'')+'</span><span style="font-size:13px;font-weight:600;color:var(--accent)">'+h.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:1})+' h</span></div>'
         :'<div class="ann-card-stat">'+(n>0?n+' action'+(n>1?'s':''):'Pas encore impliqué')+'</div>';
-      return'<div class="ann-card" onclick="openPartDetail('+p.id+')">'
+      return'<div class="ann-card" onclick="openPartDetail('+p.id+')" title="Voir la fiche">'
         +'<div class="ann-card-name">'+esc(p.nom_entreprise||'')+'</div>'
         +'<div class="ann-card-sub">'+(p.ville||'')+(p.code_postal?' ('+p.code_postal+')':'')+'</div>'
         +(tags?'<div class="ann-card-tags" style="margin-top:5px">'+tags+'</div>':'')
         +contact+heuresLine+'</div>';
     }).join('');
-    var topBar='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+    topBar='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
       +'<span style="font-size:12px;color:#888">'+parts.length+' partenaire'+(parts.length>1?'s':'')+(totalH>0?' · <strong>'+totalH.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:1})+'h</strong> mobilisées au total':'')+'</span>'
       +'<button class="btn btn-ghost btn-sm" onclick="openExportPartModal()">Exporter Excel</button>'
       +'</div>';
@@ -4163,10 +4185,96 @@ function exportPartenaireExcel(){
   closeExportPartModal();
 }
 
+let _currentEtabDetail=null;
+function openEtabDetail(id){
+  const e=(window._ALL_ETABLISSEMENTS||[]).find(x=>x.id===id);
+  if(!e){showToast('Établissement introuvable (id='+id+')','error');return;}
+  _currentEtabDetail=e;
+  document.getElementById('edTitle').textContent=e.nom_etablissement||'Établissement';
+  const eps=(window._ALL_ETAB_PARTS||[]).filter(ep=>ep.ETABLISSEMENT_PARTICIPANT===id);
+  const events=eps.map(ep=>{
+    const a=(window._ALL_ACTIONS||[]).find(x=>x.id===ep.ACTION_CONCERNEE);
+    return a?{ep,a}:null;
+  }).filter(Boolean).sort((x,y)=>(y.a.date_suivi_action||0)-(x.a.date_suivi_action||0));
+  let html='<div style="margin-bottom:16px">';
+  html+='<div style="font-size:11px;color:#999">'+(e.libelle_commune||'')+(e.code_postal_etablissement?' ('+e.code_postal_etablissement+')':'')+'</div>';
+  const etags=[e.code_departement_calc?'Dép. '+e.code_departement_calc:null].filter(Boolean).map(t=>'<span class="ann-tag">'+esc(t)+'</span>').join('');
+  if(etags)html+='<div class="ann-card-tags" style="margin-top:6px">'+etags+'</div>';
+  if(e.identifiant_etablissement)html+='<div style="margin-top:6px;font-size:11px;color:#999">UAI : <strong>'+esc(e.identifiant_etablissement)+'</strong></div>';
+  html+='</div>';
+  html+='<div class="pd-kpis"><div class="pd-kpi"><div class="pd-kpi-val">'+events.length+'</div><div class="pd-kpi-lbl">action'+(events.length>1?'s':'')+' impliquées</div></div></div>';
+  if(events.length){
+    html+='<div style="font-size:12px;font-weight:600;color:#444;margin-bottom:10px">Actions auxquelles cet établissement a participé</div>';
+    html+=events.map(({a})=>{
+      const ap=ACTN_PROJETS.find(x=>x.id===a.projet_ref);
+      const dateStr=a.date_suivi_action?new Date(a.date_suivi_action*1000).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}):'';
+      return'<div class="pd-event">'
+        +'<div style="font-size:13px;font-weight:500;color:#1a1a1a">'+esc(a.nom_suivi_action||'')+'</div>'
+        +'<div style="font-size:11px;color:#999;margin-top:2px">'+dateStr+(ap?.cod_projet?' · '+esc(ap.cod_projet):'')+'</div>'
+        +'</div>';
+    }).join('');
+  }else{
+    html+='<div style="padding:24px;text-align:center;font-size:12px;color:#bbb">Aucune action enregistrée pour cet établissement.</div>';
+  }
+  document.getElementById('edBody').innerHTML=html;
+  document.getElementById('etabDetailOverlay').classList.add('open');
+}
+function closeEtabDetail(){
+  document.getElementById('etabDetailOverlay').classList.remove('open');
+  _currentEtabDetail=null;
+}
+function exportEtabExcel(){
+  if(typeof XLSX==='undefined'){alert('Librairie Excel non chargée.');return}
+  const proj=PROJETS.find(p=>p.id===currentProjetId);
+  const actnProj=proj&&ACTN_PROJETS.find(ap=>ap.cod_projet===proj.code);
+  const projActionIds=new Set(actnProj?(window._ALL_ACTIONS||[]).filter(a=>a.projet_ref===actnProj.id).map(a=>a.id):[]);
+  const etabUse={};
+  (window._ALL_ETAB_PARTS||[]).forEach(ep=>{if(projActionIds.has(ep.ACTION_CONCERNEE)){if(!etabUse[ep.ETABLISSEMENT_PARTICIPANT])etabUse[ep.ETABLISSEMENT_PARTICIPANT]=[];etabUse[ep.ETABLISSEMENT_PARTICIPANT].push(ep.ACTION_CONCERNEE);}});
+  const etabIds=Object.keys(etabUse).map(Number);
+  const etabs=(window._ALL_ETABLISSEMENTS||[]).filter(e=>etabIds.indexOf(e.id)>=0);
+  if(!etabs.length){showToast('Aucun établissement à exporter','error');return;}
+  const data=[['Établissement','Commune','CP','Département','UAI','Action','Date','Projet']];
+  etabs.forEach(e=>{
+    const actionIds=etabUse[e.id]||[];
+    if(!actionIds.length){
+      data.push([e.nom_etablissement||'',e.libelle_commune||'',e.code_postal_etablissement||'',e.code_departement_calc||'',e.identifiant_etablissement||'','','','']);
+    }else{
+      actionIds.forEach(aid=>{
+        const a=(window._ALL_ACTIONS||[]).find(x=>x.id===aid);
+        const ap=ACTN_PROJETS.find(x=>x.id===a?.projet_ref);
+        const dateStr=a?.date_suivi_action?new Date(a.date_suivi_action*1000).toLocaleDateString('fr-FR'):'';
+        data.push([e.nom_etablissement||'',e.libelle_commune||'',e.code_postal_etablissement||'',e.code_departement_calc||'',e.identifiant_etablissement||'',a?.nom_suivi_action||'',dateStr,ap?.cod_projet||'']);
+      });
+    }
+  });
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:36},{wch:18},{wch:7},{wch:12},{wch:12},{wch:36},{wch:12},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws,'Établissements');
+  XLSX.writeFile(wb,`${proj?.code||'CMQ'}_Etablissements.xlsx`);
+}
+function exportOneEtabExcel(){
+  if(!_currentEtabDetail||typeof XLSX==='undefined')return;
+  const e=_currentEtabDetail;
+  const eps=(window._ALL_ETAB_PARTS||[]).filter(ep=>ep.ETABLISSEMENT_PARTICIPANT===e.id);
+  const data=[['Établissement','Commune','CP','Département','UAI','Action','Date','Projet']];
+  eps.forEach(ep=>{
+    const a=(window._ALL_ACTIONS||[]).find(x=>x.id===ep.ACTION_CONCERNEE);
+    const ap=ACTN_PROJETS.find(x=>x.id===a?.projet_ref);
+    const dateStr=a?.date_suivi_action?new Date(a.date_suivi_action*1000).toLocaleDateString('fr-FR'):'';
+    data.push([e.nom_etablissement||'',e.libelle_commune||'',e.code_postal_etablissement||'',e.code_departement_calc||'',e.identifiant_etablissement||'',a?.nom_suivi_action||'',dateStr,ap?.cod_projet||'']);
+  });
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:36},{wch:18},{wch:7},{wch:12},{wch:12},{wch:36},{wch:12},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws,'Fiche établissement');
+  XLSX.writeFile(wb,`${(e.nom_etablissement||'etab').replace(/\s+/g,'_')}_fiche.xlsx`);
+}
+
 let _currentPartDetail=null;
 function openPartDetail(id){
   const p=(_ALL_PARTENAIRES||[]).find(x=>x.id===id);
-  if(!p)return;
+  if(!p){showToast('Partenaire introuvable (id='+id+')','error');return;}
   _currentPartDetail=p;
   document.getElementById('pdTitle').textContent=p.nom_entreprise||'Partenaire';
   const eps=(window._ALL_ENT_PARTS||[]).filter(ep=>ep.entreprise_ref===id);
@@ -4440,8 +4548,22 @@ function loadDemo(){
     {id:3,nom_suivi_action:'Forum des métiers',date_suivi_action:1773878400,responsable_suivi_action_ref:5,projet_ref:2,wp_axe_ref:6,action_ref:1,sous_action_ref:0,Commentaires:''},
   ];
   window._ALL_ETAB_PARTS=[
-    {id:1,ACTION_CONCERNEE:3,ETABLISSEMENT_PARTICIPANT:0,FILTRE_REGION:2,FILTRE_DEPARTEMENT:3,FILTRE_TYPE_ETABLISSEMENT:6,ETABLISSEMENT:'LYCEE VERLAINE - Charleville (08)'},
-    {id:2,ACTION_CONCERNEE:3,ETABLISSEMENT_PARTICIPANT:0,FILTRE_REGION:2,FILTRE_DEPARTEMENT:8,FILTRE_TYPE_ETABLISSEMENT:6,ETABLISSEMENT:'LYCEE JEAN ROSTAND - Strasbourg (67)'},
+    {id:1,ACTION_CONCERNEE:3,ETABLISSEMENT_PARTICIPANT:10,FILTRE_REGION:2,FILTRE_DEPARTEMENT:3,FILTRE_TYPE_ETABLISSEMENT:6},
+    {id:2,ACTION_CONCERNEE:3,ETABLISSEMENT_PARTICIPANT:11,FILTRE_REGION:2,FILTRE_DEPARTEMENT:8,FILTRE_TYPE_ETABLISSEMENT:6},
+    {id:3,ACTION_CONCERNEE:2,ETABLISSEMENT_PARTICIPANT:10,FILTRE_REGION:2,FILTRE_DEPARTEMENT:3,FILTRE_TYPE_ETABLISSEMENT:6},
+  ];
+  window._ALL_ETABLISSEMENTS=[
+    {id:10,nom_etablissement:'Lycée Verlaine',libelle_commune:'Charleville-Mézières',code_postal_etablissement:'08000',code_departement_calc:'08',identifiant_etablissement:'0080012A'},
+    {id:11,nom_etablissement:'Lycée Jean Rostand',libelle_commune:'Strasbourg',code_postal_etablissement:'67000',code_departement_calc:'67',identifiant_etablissement:'0670021B'},
+  ];
+  _ALL_PARTENAIRES=[
+    {id:1,nom_entreprise:'Agrial',ville:'Nancy',code_postal:'54000',type_partenaire:'Entreprise privée',secteur_activite:'Agroalimentaire',contact_nom:'Jean Dupont',contact_email:'j.dupont@agrial.fr'},
+    {id:2,nom_entreprise:'INRAE Grand Est',ville:'Colmar',code_postal:'68000',type_partenaire:'Laboratoire / Recherche',secteur_activite:'Recherche / Labo',contact_nom:'Marie Martin',contact_email:''},
+  ];
+  window._ALL_ENT_PARTS=[
+    {id:1,action_ref:2,entreprise_ref:1,nb_heures:4,role_entreprise:'Intervenant',notes:''},
+    {id:2,action_ref:3,entreprise_ref:1,nb_heures:6,role_entreprise:'Co-organisateur',notes:'Très impliqué'},
+    {id:3,action_ref:3,entreprise_ref:2,nb_heures:2,role_entreprise:'Conférencier',notes:''},
   ];
   renderAccueil();
 }

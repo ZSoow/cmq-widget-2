@@ -511,23 +511,25 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 .cal-nav button{padding:5px 10px;font-size:12px;background:#fff;border:.5px solid #ddd;border-radius:var(--rsm);cursor:pointer;color:#555}
 .cal-nav button:hover{background:#f8f8f8}
 .cal-month{font-size:13px;font-weight:600;min-width:160px;text-align:center}
-.cal-grid{background:#fff;border-radius:var(--r);border:.5px solid #e0e0e0;overflow:hidden}
-.cal-days-hdr{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid #e8e8e8;background:#fafafa}
-.cal-day-hdr{padding:9px 4px;text-align:center;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em}
-.cal-day-hdr.wknd{color:#bbb}
-.cal-cells{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:108px}
-.cal-cell{height:108px;box-sizing:border-box;border-right:.5px solid #f0f0f0;border-bottom:.5px solid #f0f0f0;padding:6px 6px 4px;overflow:hidden;background:#fff}
-.cal-cell:nth-child(7n){border-right:none}
+.cal-grid{background:#fff;border-radius:var(--r);border:1px solid #e8e8e8;overflow:hidden}
+.cal-days-hdr{display:table;width:100%;table-layout:fixed;border-bottom:1px solid #e8e8e8;background:#f7f7f7}
+.cal-day-hdr{display:table-cell;padding:8px 0;text-align:center;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;width:calc(100%/7)}
+.cal-day-hdr.wknd{color:#ccc}
+.cal-cells{display:table;width:100%;table-layout:fixed;border-collapse:collapse}
+.cal-week{display:table-row}
+.cal-cell{display:table-cell;width:calc(100%/7);height:100px;vertical-align:top;padding:6px 7px 4px;border-right:1px solid #f2f2f2;border-bottom:1px solid #f2f2f2;box-sizing:border-box;overflow:hidden}
+.cal-cell:last-child{border-right:none}
+.cal-week:last-child .cal-cell{border-bottom:none}
 .cal-cell.other-month{background:#fafafa}
 .cal-cell.other-month .cal-date{color:#ddd}
 .cal-cell.today{background:var(--p50)}
-.cal-cell.today .cal-date{background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px}
-.cal-date{font-size:11px;font-weight:600;color:#999;width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin-bottom:4px;border-radius:50%}
+.cal-cell.today .cal-date{background:var(--accent);color:#fff;border-radius:50%}
+.cal-date{font-size:11px;font-weight:600;color:#aaa;width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin-bottom:4px;border-radius:50%}
 .cal-task-pill{font-size:10px;padding:2px 7px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:opacity .12s;line-height:1.5}
 .cal-task-pill:hover{opacity:.72}
 .cal-more{font-size:9.5px;color:#bbb;padding:1px 4px;margin-top:1px}
 .cal-wknd{background:#f9f9f9}
-.cal-wknd .cal-date{color:#bbb}
+.cal-wknd .cal-date{color:#ccc}
 
 /* ══ TOAST GLOBAL ══ */
 .g-toast{position:fixed;bottom:20px;right:20px;padding:11px 18px;border-radius:var(--r);font-size:13px;font-weight:500;box-shadow:var(--shadow-lg);z-index:9999;display:none;align-items:center;gap:8px;max-width:320px;animation:slideUp .2s ease}
@@ -3349,7 +3351,7 @@ function renderCalendrier(){
     tasksByDate[k].push(t);
   });
 
-  const cellsHtml=cells.map(({date,otherMonth})=>{
+  const cellDivs=cells.map(({date,otherMonth})=>{
     const ds=date.toISOString().split('T')[0];
     const isToday=ds===todayStr;
     const dayN=date.getDay();
@@ -3362,12 +3364,14 @@ function renderCalendrier(){
       const bg=lighten(cfg.color);
       return`<div class="cal-task-pill" style="background:${bg};color:${cfg.color}" onclick="openEditModal(${t.id})" title="${esc(t.tache)}">${esc(t.tache.substring(0,20))}${t.tache.length>20?'…':''}</div>`;
     }).join('');
-    return`<div class="cal-cell${otherMonth?' other-month':''}${isWknd?' cal-wknd':''}${isToday?' today':''}">
-      <div class="cal-date">${date.getDate()}</div>
-      ${pillsHtml}
-      ${more>0?`<div class="cal-more">+${more} autre${more>1?'s':''}</div>`:''}
-    </div>`;
-  }).join('');
+    return`<div class="cal-cell${otherMonth?' other-month':''}${isWknd?' cal-wknd':''}${isToday?' today':''}"><div class="cal-date">${date.getDate()}</div>${pillsHtml}${more>0?`<div class="cal-more">+${more} autre${more>1?'s':''}</div>`:''}</div>`;
+  });
+  // Regrouper en semaines (lignes de 7)
+  let weeksHtml='';
+  for(let w=0;w<cellDivs.length;w+=7){
+    weeksHtml+=`<div class="cal-week">${cellDivs.slice(w,w+7).join('')}</div>`;
+  }
+  const cellsHtml=weeksHtml;
 
   document.getElementById('calendrierContent').innerHTML=`
     <div class="cal-nav">

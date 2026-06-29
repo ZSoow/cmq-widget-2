@@ -87,6 +87,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
 .acc-alert-name{font-size:12px;font-weight:500;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .acc-alert-meta{font-size:10px;color:#bbb}
 .acc-alert-dl{font-size:10px;color:var(--c800);font-weight:600;flex-shrink:0;white-space:nowrap}
+.acc-alerts-week-hd{padding:10px 16px;border-bottom:.5px solid #fef6e8;font-size:11px;font-weight:600;color:#854F0B;background:#fffcf5}
+.acc-alert-item.week .acc-alert-dl{color:#854F0B}
+.acc-alert-item.week:hover{background:#fffaf0}
+.acc-no-alerts{margin-top:20px;padding:11px 16px;background:#f5fdf8;border:.5px solid #c3e6cb;border-radius:var(--r);font-size:12px;color:#0F6E56;font-weight:500}
 
 /* Recherche globale */
 .global-search{position:relative}
@@ -101,6 +105,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:10
 .search-result-name{font-size:12px;font-weight:500;color:#222}
 .search-result-meta{font-size:10px;color:#999;margin-top:2px}
 .search-empty{padding:16px;text-align:center;font-size:12px;color:#bbb}
+.search-group-hd{padding:6px 14px 4px;font-size:9.5px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:.06em;background:#fafafa;border-bottom:.5px solid #f5f5f5}
+.search-group-hd:not(:first-child){border-top:.5px solid #f0f0f0}
 
 /* ══ HUB PROJET ══ */
 #pageHub{display:none;flex-direction:column;min-height:100vh}
@@ -645,7 +651,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     <div class="hdr-right">
       <div class="global-search">
         <span class="search-icon">↗</span>
-        <input type="text" id="globalSearch" placeholder="Rechercher une tâche…"
+        <input type="text" id="globalSearch" placeholder="Rechercher…"
           oninput="renderGlobalSearch(this.value)"
           onfocus="document.getElementById('searchResults').classList.add('open')"
           onblur="setTimeout(()=>document.getElementById('searchResults').classList.remove('open'),200)">
@@ -2873,48 +2879,92 @@ function renderAccueil(){
       <div class="proj-item-info"><div class="proj-item-name">+ Nouveau projet</div></div>
     </div>`;
 
-  // Alertes globales — seulement si retards
-  const alertes=ALL_TACHES.filter(isLate).sort((a,b)=>(getDeadlineTs(a)||0)-(getDeadlineTs(b)||0));
+  // Alertes globales
+  const nowTs=Date.now()/1000, week=nowTs+7*86400;
+  const late=ALL_TACHES.filter(t=>isLate(t)).sort((a,b)=>(getDeadlineTs(a)||0)-(getDeadlineTs(b)||0));
+  const soon=ALL_TACHES.filter(t=>{const ts=getDeadlineTs(t);return ts&&ts>=nowTs&&ts<=week&&t.statut!=='Réalisé';}).sort((a,b)=>(getDeadlineTs(a)||0)-(getDeadlineTs(b)||0));
   const ad=document.getElementById('accAlertes');
-  if(alertes.length){
-    ad.innerHTML=`<div class="acc-alerts">
-      <div class="acc-alerts-hd">Tâches en retard — ${alertes.length} alerte${alertes.length>1?'s':''}</div>
-      ${alertes.slice(0,6).map(t=>{
+  if(!late.length&&!soon.length){
+    ad.innerHTML=`<div class="acc-no-alerts">Tout est à jour — aucun retard ni deadline imminente</div>`;
+  }else{
+    let html=`<div class="acc-alerts">`;
+    if(late.length){
+      html+=`<div class="acc-alerts-hd">Tâches en retard — ${late.length} alerte${late.length>1?'s':''}</div>`;
+      html+=late.slice(0,5).map(t=>{
         const proj=PROJETS.find(p=>p.id===t.projet_id);
         return`<div class="acc-alert-item" onclick="openProjet(${t.projet_id});setTimeout(()=>{openTaches();setTimeout(()=>openEditModal(${t.id}),450)},100)">
-          <div style="flex:1;min-width:0">
-            <div class="acc-alert-name">${esc(t.tache)}</div>
-            <div class="acc-alert-meta">${esc(proj?.nom||'')} · ${esc(t.qui)}</div>
-          </div>
+          <div style="flex:1;min-width:0"><div class="acc-alert-name">${esc(t.tache)}</div><div class="acc-alert-meta">${esc(proj?.nom||'')} · ${esc(t.qui)}</div></div>
           <div class="acc-alert-dl">${dlLbl(t)}</div>
         </div>`;
-      }).join('')}
-      ${alertes.length>6?`<div style="padding:8px 16px;font-size:11px;color:#bbb">+${alertes.length-6} autres…</div>`:''}
-    </div>`;
-  }else{ad.innerHTML=''}
+      }).join('');
+      if(late.length>5)html+=`<div style="padding:7px 16px;font-size:11px;color:#bbb">+${late.length-5} autres…</div>`;
+    }
+    if(soon.length){
+      html+=`<div class="acc-alerts-week-hd">Cette semaine — ${soon.length} deadline${soon.length>1?'s':''}</div>`;
+      html+=soon.slice(0,4).map(t=>{
+        const proj=PROJETS.find(p=>p.id===t.projet_id);
+        return`<div class="acc-alert-item week" onclick="openProjet(${t.projet_id});setTimeout(()=>{openTaches();setTimeout(()=>openEditModal(${t.id}),450)},100)">
+          <div style="flex:1;min-width:0"><div class="acc-alert-name">${esc(t.tache)}</div><div class="acc-alert-meta">${esc(proj?.nom||'')} · ${esc(t.qui)}</div></div>
+          <div class="acc-alert-dl">${dlLbl(t)}</div>
+        </div>`;
+      }).join('');
+    }
+    html+=`</div>`;
+    ad.innerHTML=html;
+  }
 }
 
 /* Recherche globale */
 function renderGlobalSearch(q){
   const results=document.getElementById('searchResults');
-  if(!q||q.length<2){results.innerHTML='';results.classList.remove('open');return}
-  const lower=q.toLowerCase();
-  const found=ALL_TACHES.filter(t=>
-    t.tache?.toLowerCase().includes(lower)||
-    (t.commentaire||'').toLowerCase().includes(lower)||
-    t.qui?.toLowerCase().includes(lower)
-  ).slice(0,8);
-  if(!found.length){
-    results.innerHTML='<div class="search-empty">Aucune tâche trouvée</div>';
+  if(!q||q.length<2){results.innerHTML='';results.classList.remove('open');return;}
+  const low=q.toLowerCase();
+
+  const fT=ALL_TACHES.filter(t=>t.tache?.toLowerCase().includes(low)||(t.commentaire||'').toLowerCase().includes(low)||t.qui?.toLowerCase().includes(low)).slice(0,4);
+  const fA=(window._ALL_ACTIONS||[]).filter(a=>a.nom_suivi_action?.toLowerCase().includes(low)).slice(0,3);
+  const fE=(window._ALL_ETABLISSEMENTS||[]).filter(e=>e.nom_etablissement?.toLowerCase().includes(low)||e.libelle_commune?.toLowerCase().includes(low)||e.identifiant_etablissement?.toLowerCase().includes(low)).slice(0,3);
+  const fP=(_ALL_PARTENAIRES||[]).filter(p=>p.nom_entreprise?.toLowerCase().includes(low)||p.ville?.toLowerCase().includes(low)).slice(0,3);
+
+  if(!fT.length&&!fA.length&&!fE.length&&!fP.length){
+    results.innerHTML='<div class="search-empty">Aucun résultat</div>';
     results.classList.add('open');return;
   }
-  results.innerHTML=found.map(t=>{
-    const proj=PROJETS.find(p=>p.id===t.projet_id);
-    return`<div class="search-result" onmousedown="openProjet(${t.projet_id});setTimeout(()=>{openTaches();setTimeout(()=>openEditModal(${t.id}),400)},100)">
-      <div class="search-result-name">${esc(t.tache)}</div>
-      <div class="search-result-meta">${esc(proj?.nom||'')} · ${esc(t.wp_code)} · ${SC[t.statut]?.label||t.statut}</div>
-    </div>`;
-  }).join('');
+  let html='';
+  if(fT.length){
+    html+=`<div class="search-group-hd">Tâches</div>`;
+    html+=fT.map(t=>{
+      const proj=PROJETS.find(p=>p.id===t.projet_id);
+      return`<div class="search-result" onmousedown="openProjet(${t.projet_id});setTimeout(()=>{openTaches();setTimeout(()=>openEditModal(${t.id}),400)},100)">
+        <div class="search-result-name">${esc(t.tache)}</div>
+        <div class="search-result-meta">${esc(proj?.nom||'')} · ${esc(t.wp_code)} · ${SC[t.statut]?.label||t.statut}</div>
+      </div>`;
+    }).join('');
+  }
+  if(fA.length){
+    html+=`<div class="search-group-hd">Actions saisies</div>`;
+    html+=fA.map(a=>{
+      const d=a.date_suivi_action?new Date(a.date_suivi_action*1000).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'2-digit'}):'';
+      return`<div class="search-result" onmousedown="showRapport()">
+        <div class="search-result-name">${esc(a.nom_suivi_action||'—')}</div>
+        <div class="search-result-meta">Action · ${d}</div>
+      </div>`;
+    }).join('');
+  }
+  if(fE.length){
+    html+=`<div class="search-group-hd">Établissements</div>`;
+    html+=fE.map(e=>`<div class="search-result" onmousedown="openAnnuairePage();setTimeout(()=>openEtabDetail(${e.id}),700)">
+      <div class="search-result-name">${esc(e.nom_etablissement||'—')}</div>
+      <div class="search-result-meta">${esc(e.libelle_commune||'')}${e.code_departement_calc?' · Dép. '+esc(e.code_departement_calc):''}</div>
+    </div>`).join('');
+  }
+  if(fP.length){
+    html+=`<div class="search-group-hd">Partenaires</div>`;
+    html+=fP.map(p=>`<div class="search-result" onmousedown="openAnnuairePage();setTimeout(()=>openPartDetail(${p.id}),700)">
+      <div class="search-result-name">${esc(p.nom_entreprise||'—')}</div>
+      <div class="search-result-meta">${esc(p.type_partenaire||'')}${p.ville?' · '+esc(p.ville):''}</div>
+    </div>`).join('');
+  }
+  results.innerHTML=html;
   results.classList.add('open');
 }
 

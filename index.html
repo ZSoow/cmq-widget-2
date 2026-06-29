@@ -1042,6 +1042,9 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     <div class="map-panel">
       <div class="map-panel-hd">
         <input class="map-panel-search" id="mapSearch" type="text" placeholder="Rechercher un lieu…" oninput="filterMapPanel()">
+        <select id="mapDeptFilter" onchange="onMapDeptChange()" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:var(--rsm);font-size:11px;font-family:var(--font);margin-bottom:4px;color:var(--txt);background:var(--surf);outline:none">
+          <option value="">Tous les départements</option>
+        </select>
         <div class="map-panel-counts" id="mapPanelCounts">—</div>
       </div>
       <div class="map-panel-list" id="mapPanelList"><div class="map-panel-empty">Chargement…</div></div>
@@ -1341,7 +1344,7 @@ let indicActiveTab='suivi';
 let ACTN_PROJETS=[], ACTN_AXES=[], ACTN_ACTIONS=[], ACTN_SOUS_ACTIONS=[];
 let ALL_RH=[], ALL_INDIC_CONFIG=[], ALL_INDIC_VAL=[];
 let ALL_OBJECTIFS=[];
-let _mapLayer='etab', _mapProjetOnly=false, _leafletMap=null, _mapMarkers=[], _mapData=[];
+let _mapLayer='etab', _mapProjetOnly=false, _leafletMap=null, _mapMarkers=[], _mapData=[], _mapDeptFilter='';
 let currentProjetId=null;
 let TACHES=[], MEMBRES=[], WPS=[];
 let filteredTaches=[], activeStatut='';
@@ -2495,7 +2498,7 @@ function renderMap(){
         +'<span class="mpop-badge" style="background:#4A90D915;color:#4A90D9">Établissement</span>',{maxWidth:240});
       m.on('click',function(){highlightPanelItem(idx);});
       _mapMarkers.push(m);
-      _mapData.push({marker:m,lat:lat,lng:lng,type:'etab',entity:{name:e.nom_etablissement||'',city:e.libelle_commune||'',postal:e.code_postal_etablissement||''}});
+      _mapData.push({marker:m,lat:lat,lng:lng,type:'etab',entity:{name:e.nom_etablissement||'',city:e.libelle_commune||'',postal:e.code_postal_etablissement||'',dept:e.code_departement_calc||''}});
       bounds.push([lat,lng]);
     });
   }
@@ -2519,7 +2522,7 @@ function renderMap(){
         +'<span class="mpop-badge" style="background:#E8873A15;color:#E8873A">Partenaire</span>',{maxWidth:240});
       m.on('click',function(){highlightPanelItem(idx);});
       _mapMarkers.push(m);
-      _mapData.push({marker:m,lat:lat,lng:lng,type:'part',entity:{name:p.nom_entreprise||'',city:p.ville||'',postal:p.code_postal||'',subtype:p.type_partenaire||''}});
+      _mapData.push({marker:m,lat:lat,lng:lng,type:'part',entity:{name:p.nom_entreprise||'',city:p.ville||'',postal:p.code_postal||'',subtype:p.type_partenaire||'',dept:(p.code_postal||'').slice(0,2)||''}});
       bounds.push([lat,lng]);
     });
   }
@@ -2533,8 +2536,18 @@ function renderMap(){
 
 function renderMapPanel(){
   var q=(document.getElementById('mapSearch')?.value||'').toLowerCase();
+  // Alimenter le filtre département
+  var depts=[...new Set(_mapData.map(function(d){return d.entity.dept;}).filter(Boolean))].sort();
+  var deptSel=document.getElementById('mapDeptFilter');
+  if(deptSel){
+    var cur=deptSel.value;
+    deptSel.innerHTML='<option value="">Tous les départements</option>'+depts.map(function(d){return'<option value="'+esc(d)+'">Dép. '+esc(d)+'</option>';}).join('');
+    if(depts.indexOf(cur)>=0)deptSel.value=cur;
+  }
   var items=_mapData.map(function(d,i){return{d:d,i:i};}).filter(function(o){
-    return!q||o.d.entity.name.toLowerCase().includes(q)||(o.d.entity.city||'').toLowerCase().includes(q);
+    if(q&&!o.d.entity.name.toLowerCase().includes(q)&&!(o.d.entity.city||'').toLowerCase().includes(q))return false;
+    if(_mapDeptFilter&&o.d.entity.dept!==_mapDeptFilter)return false;
+    return true;
   });
   var etab=items.filter(function(o){return o.d.type==='etab';}).length;
   var part=items.filter(function(o){return o.d.type==='part';}).length;
@@ -2560,6 +2573,20 @@ function renderMapPanel(){
   }).join('')||'<div class="map-panel-empty">Aucun point à afficher</div>';
 }
 
+function onMapDeptChange(){
+  _mapDeptFilter=document.getElementById('mapDeptFilter').value;
+  applyMapFilter();
+  renderMapPanel();
+}
+function applyMapFilter(){
+  if(!_leafletMap)return;
+  _mapData.forEach(function(d){
+    var match=!_mapDeptFilter||d.entity.dept===_mapDeptFilter;
+    if(match){if(!_leafletMap.hasLayer(d.marker))d.marker.addTo(_leafletMap);}
+    else{if(_leafletMap.hasLayer(d.marker))_leafletMap.removeLayer(d.marker);}
+  });
+}
+function filterMapPanel(){applyMapFilter();renderMapPanel();}
 function flyToMarker(i){
   var d=_mapData[i];if(!d)return;
   _leafletMap.flyTo([d.lat,d.lng],14,{duration:0.8});
@@ -4124,6 +4151,47 @@ function exportPDF(){
       margin:{left:M,right:M},
       styles:{fontSize:8,cellPadding:2.5},
       headStyles:{fillColor:[83,74,183],textColor:255,fontStyle:'bold',fontSize:7.5},
+    });
+  }
+
+  // Établissements
+  const actionIds=new Set(actions.map(a=>a.id));
+  const etabUseMap={};
+  (window._ALL_ETAB_PARTS||[]).forEach(ep=>{if(actionIds.has(ep.ACTION_CONCERNEE))etabUseMap[ep.ETABLISSEMENT_PARTICIPANT]=(etabUseMap[ep.ETABLISSEMENT_PARTICIPANT]||0)+1;});
+  const etabList=(window._ALL_ETABLISSEMENTS||[]).filter(e=>etabUseMap[e.id]).sort((a,b)=>(etabUseMap[b.id]||0)-(etabUseMap[a.id]||0));
+  let lastY=doc.lastAutoTable?.finalY??70;
+  if(etabList.length){
+    lastY+=10;
+    doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(80,80,80);
+    doc.text('Établissements impliqués ('+etabList.length+')',M,lastY);
+    doc.autoTable({
+      head:[['Établissement','Commune','CP','Dép.','Actions']],
+      body:etabList.map(e=>[e.nom_etablissement||'',e.libelle_commune||'',e.code_postal_etablissement||'',e.code_departement_calc||'',String(etabUseMap[e.id]||0)]),
+      startY:lastY+4,margin:{left:M,right:M},
+      styles:{fontSize:7.5,cellPadding:2},
+      headStyles:{fillColor:[74,144,217],textColor:255,fontStyle:'bold',fontSize:7.5},
+      alternateRowStyles:{fillColor:[245,248,255]},
+      columnStyles:{0:{cellWidth:72},1:{cellWidth:40},2:{cellWidth:15},3:{cellWidth:12},4:{cellWidth:20}}
+    });
+    lastY=doc.lastAutoTable.finalY;
+  }
+
+  // Partenaires
+  const partNMap={},partHMap={};
+  (window._ALL_ENT_PARTS||[]).forEach(ep=>{if(actionIds.has(ep.action_ref)){partNMap[ep.entreprise_ref]=(partNMap[ep.entreprise_ref]||0)+1;partHMap[ep.entreprise_ref]=(partHMap[ep.entreprise_ref]||0)+(ep.nb_heures||0);}});
+  const partList=(_ALL_PARTENAIRES||[]).filter(p=>partHMap[p.id]||partNMap[p.id]).sort((a,b)=>(partHMap[b.id]||0)-(partHMap[a.id]||0));
+  if(partList.length){
+    lastY+=10;
+    doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(80,80,80);
+    doc.text('Partenaires mobilisés ('+partList.length+')',M,lastY);
+    doc.autoTable({
+      head:[['Partenaire','Type','Actions','Heures']],
+      body:partList.map(p=>[p.nom_entreprise||'',p.type_partenaire||'',String(partNMap[p.id]||0),(partHMap[p.id]||0).toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:1})+' h']),
+      startY:lastY+4,margin:{left:M,right:M},
+      styles:{fontSize:7.5,cellPadding:2},
+      headStyles:{fillColor:[232,135,58],textColor:255,fontStyle:'bold',fontSize:7.5},
+      alternateRowStyles:{fillColor:[255,250,245]},
+      columnStyles:{0:{cellWidth:80},1:{cellWidth:42},2:{cellWidth:20},3:{cellWidth:18}}
     });
   }
 

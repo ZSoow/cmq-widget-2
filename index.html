@@ -392,13 +392,32 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 .cal-event:hover{opacity:.8}
 /* ══ CARTE ══ */
 #pageCarte{display:none;flex-direction:column;min-height:100vh}
-#mapContainer{flex:1;min-height:400px}
-.map-toolbar{padding:12px 20px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:.5px solid #ebebeb;background:#fafafa}
+.map-layout{display:flex;flex:1;overflow:hidden;min-height:0}
+.map-area{position:relative;flex:1;min-height:0}
+#mapContainer{position:absolute;inset:0}
+.map-float-filters{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;gap:5px;align-items:center;background:rgba(255,255,255,.97);padding:5px 8px;border-radius:24px;box-shadow:0 2px 14px rgba(0,0,0,.14);white-space:nowrap}
 .map-chip{padding:5px 12px;border-radius:20px;border:.5px solid #d0d0d0;background:#fff;font-size:11px;cursor:pointer;font-family:var(--font);color:#666;transition:all .15s}
 .map-chip.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
-.map-legend{padding:6px 20px;font-size:11px;color:#999;display:flex;gap:14px;align-items:center;background:#fafafa;border-bottom:.5px solid #ebebeb}
-.map-legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px}
-.map-stats{padding:8px 20px;font-size:12px;color:#666;background:#fafafa;border-bottom:.5px solid #ebebeb}
+.map-chip:hover:not(.active){background:var(--surf2)}
+.map-panel{width:300px;border-left:1px solid var(--border);background:var(--bg);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.map-panel-hd{padding:10px 12px;border-bottom:.5px solid var(--border)}
+.map-panel-search{width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;font-family:var(--font);outline:none;color:var(--txt);background:var(--surf);margin-bottom:6px;transition:border-color .15s}
+.map-panel-search:focus{border-color:var(--accent)}
+.map-panel-counts{font-size:11px;color:var(--sub)}
+.map-panel-list{flex:1;overflow-y:auto}
+.map-panel-empty{padding:24px;text-align:center;color:var(--faint);font-size:12px}
+.map-panel-item{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;border-bottom:.5px solid var(--border);transition:background .1s}
+.map-panel-item:hover{background:var(--surf)}
+.map-panel-item.mp-active{background:rgba(83,74,183,.06);border-left:3px solid var(--accent)}
+.mp-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.mp-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mp-city{font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mp-badge{font-size:9px;font-weight:600;padding:2px 6px;border-radius:8px;flex-shrink:0}
+.leaflet-popup-content-wrapper{border-radius:8px!important;box-shadow:0 4px 20px rgba(0,0,0,.12)!important}
+.leaflet-popup-content{font-family:var(--font)!important;font-size:12px!important;margin:12px 14px!important;min-width:140px}
+.mpop-title{font-weight:600;font-size:13px;color:var(--txt);margin-bottom:3px}
+.mpop-sub{color:var(--sub);font-size:11px;margin-top:2px}
+.mpop-badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;margin-top:7px}
 .rapport-filters{background:#fff;border:.5px solid #e0e0e0;border-radius:var(--r);padding:14px 18px;margin-bottom:18px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
 .rf-grp{display:flex;flex-direction:column;gap:4px}
 .rf-label{font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.04em}
@@ -997,19 +1016,25 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
       </div>
     </div>
   </div>
-  <div class="map-toolbar">
-    <button class="map-chip active" id="chipEtab" onclick="setMapLayer('etab')">Établissements</button>
-    <button class="map-chip" id="chipPart" onclick="setMapLayer('part')">Partenaires</button>
-    <button class="map-chip" id="chipAll" onclick="setMapLayer('all')">Tout</button>
-    <span style="margin-left:8px;font-size:11px;color:#bbb">|</span>
-    <button class="map-chip" id="chipProjet" onclick="toggleMapProjet()" title="Filtrer par projet actif">Projet actif seulement</button>
+  <div class="map-layout">
+    <div class="map-area">
+      <div class="map-float-filters">
+        <button class="map-chip active" id="chipEtab" onclick="setMapLayer('etab')">Établissements</button>
+        <button class="map-chip" id="chipPart" onclick="setMapLayer('part')">Partenaires</button>
+        <button class="map-chip" id="chipAll" onclick="setMapLayer('all')">Tout</button>
+        <span style="width:1px;height:16px;background:var(--border);display:inline-block"></span>
+        <button class="map-chip" id="chipProjet" onclick="toggleMapProjet()">Ce projet</button>
+      </div>
+      <div id="mapContainer"></div>
+    </div>
+    <div class="map-panel">
+      <div class="map-panel-hd">
+        <input class="map-panel-search" id="mapSearch" type="text" placeholder="Rechercher un lieu…" oninput="filterMapPanel()">
+        <div class="map-panel-counts" id="mapPanelCounts">—</div>
+      </div>
+      <div class="map-panel-list" id="mapPanelList"><div class="map-panel-empty">Chargement…</div></div>
+    </div>
   </div>
-  <div class="map-stats" id="mapStats">—</div>
-  <div class="map-legend">
-    <span id="legendEtab"><span class="map-legend-dot" style="background:#4A90D9"></span>Établissements</span>
-    <span id="legendPart"><span class="map-legend-dot" style="background:#E8873A"></span>Partenaires</span>
-  </div>
-  <div id="mapContainer"></div>
 </div>
 
 <!-- MODALE ADMIN INDICATEURS -->
@@ -1280,7 +1305,7 @@ let indicActiveTab='suivi';
 let ACTN_PROJETS=[], ACTN_AXES=[], ACTN_ACTIONS=[], ACTN_SOUS_ACTIONS=[];
 let ALL_RH=[], ALL_INDIC_CONFIG=[], ALL_INDIC_VAL=[];
 let ALL_OBJECTIFS=[];
-let _mapLayer='etab', _mapProjetOnly=false, _leafletMap=null, _mapMarkers=[];
+let _mapLayer='etab', _mapProjetOnly=false, _leafletMap=null, _mapMarkers=[], _mapData=[];
 let currentProjetId=null;
 let TACHES=[], MEMBRES=[], WPS=[];
 let filteredTaches=[], activeStatut='';
@@ -2394,100 +2419,121 @@ function renderMap(){
   var container=document.getElementById('mapContainer');
   if(!container)return;
 
-  // Init Leaflet une seule fois
   if(!_leafletMap){
     _leafletMap=L.map('mapContainer',{zoomControl:true}).setView([46.5,2.3],6);
-    L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',{
-      attribution:'&copy; OpenStreetMap',maxZoom:19
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+      attribution:'&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> &copy; <a href="https://carto.com">CARTO</a>',
+      maxZoom:19
     }).addTo(_leafletMap);
   }
 
-  // Vider les marqueurs précédents
   _mapMarkers.forEach(function(m){_leafletMap.removeLayer(m);});
-  _mapMarkers=[];
+  _mapMarkers=[];_mapData=[];
 
   var proj=PROJETS.find(function(p){return p.id===currentProjetId;});
   var actnProj=proj&&ACTN_PROJETS.find(function(ap){return ap.cod_projet===proj.code;});
   var projActionIds=new Set();
-  if(actnProj){
-    (window._ALL_ACTIONS||[]).filter(function(a){return a.projet_ref===actnProj.id;}).forEach(function(a){projActionIds.add(a.id);});
-  }
+  if(actnProj)(window._ALL_ACTIONS||[]).filter(function(a){return a.projet_ref===actnProj.id;}).forEach(function(a){projActionIds.add(a.id);});
 
   var bounds=[];
-  var etabCount=0,partCount=0;
 
-  // ── Marqueurs établissements ──
   if(_mapLayer==='etab'||_mapLayer==='all'){
-    // IDs d'établissements liés aux actions du projet (ou tous si pas de filtre projet)
     var etabIds=new Set();
     (window._ALL_ETAB_PARTS||[]).forEach(function(ep){
-      if(!_mapProjetOnly||projActionIds.has(ep.ACTION_CONCERNEE)){
-        etabIds.add(ep.ETABLISSEMENT_PARTICIPANT);
-      }
+      if(!_mapProjetOnly||projActionIds.has(ep.ACTION_CONCERNEE))etabIds.add(ep.ETABLISSEMENT_PARTICIPANT);
     });
-    var etabs=(window._ALL_ETABLISSEMENTS||[]).filter(function(e){
+    (window._ALL_ETABLISSEMENTS||[]).filter(function(e){
       return etabIds.has(e.id)&&e.latitude_etablissement_EN&&e.longitude_etablissement_EN;
-    });
-    etabs.forEach(function(e){
-      var lat=parseFloat(e.latitude_etablissement_EN);
-      var lng=parseFloat(e.longitude_etablissement_EN);
+    }).forEach(function(e){
+      var lat=parseFloat(e.latitude_etablissement_EN),lng=parseFloat(e.longitude_etablissement_EN);
       if(isNaN(lat)||isNaN(lng))return;
-      var icon=L.divIcon({className:'',html:'<div style="width:12px;height:12px;border-radius:50%;background:#4A90D9;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>',iconSize:[12,12],iconAnchor:[6,6]});
+      var idx=_mapData.length;
+      var icon=L.divIcon({className:'',html:'<div style="width:14px;height:14px;border-radius:50%;background:#4A90D9;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(74,144,217,.45);cursor:pointer"></div>',iconSize:[14,14],iconAnchor:[7,7]});
       var m=L.marker([lat,lng],{icon:icon}).addTo(_leafletMap);
-      m.bindPopup('<strong>'+esc(e.nom_etablissement||'')+'</strong>'+(e.libelle_commune?'<br>'+esc(e.libelle_commune):'')+(e.code_postal_etablissement?'  ('+e.code_postal_etablissement+')':''));
+      m.bindPopup('<div class="mpop-title">'+esc(e.nom_etablissement||'')+'</div>'
+        +(e.libelle_commune?'<div class="mpop-sub">'+esc(e.libelle_commune+(e.code_postal_etablissement?' ('+e.code_postal_etablissement+')':''))+'</div>':'')
+        +'<span class="mpop-badge" style="background:#4A90D915;color:#4A90D9">Établissement</span>',{maxWidth:240});
+      m.on('click',function(){highlightPanelItem(idx);});
       _mapMarkers.push(m);
+      _mapData.push({marker:m,lat:lat,lng:lng,type:'etab',entity:{name:e.nom_etablissement||'',city:e.libelle_commune||'',postal:e.code_postal_etablissement||''}});
       bounds.push([lat,lng]);
-      etabCount++;
     });
   }
 
-  // ── Marqueurs partenaires ──
   if(_mapLayer==='part'||_mapLayer==='all'){
     var partIds=new Set();
     (window._ALL_ENT_PARTS||[]).forEach(function(ep){
-      if(!_mapProjetOnly||projActionIds.has(ep.action_ref)){
-        partIds.add(ep.entreprise_ref);
-      }
+      if(!_mapProjetOnly||projActionIds.has(ep.action_ref))partIds.add(ep.entreprise_ref);
     });
     (_ALL_PARTENAIRES||[]).filter(function(p){
       return partIds.has(p.id)&&p.latitude&&p.longitude;
     }).forEach(function(p){
       var lat=parseFloat(p.latitude),lng=parseFloat(p.longitude);
       if(isNaN(lat)||isNaN(lng))return;
-      var icon=L.divIcon({className:'',html:'<div style="width:12px;height:12px;border-radius:50%;background:#E8873A;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>',iconSize:[12,12],iconAnchor:[6,6]});
+      var idx=_mapData.length;
+      var icon=L.divIcon({className:'',html:'<div style="width:14px;height:14px;border-radius:50%;background:#E8873A;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(232,135,58,.45);cursor:pointer"></div>',iconSize:[14,14],iconAnchor:[7,7]});
       var m=L.marker([lat,lng],{icon:icon}).addTo(_leafletMap);
-      m.bindPopup('<strong>'+esc(p.nom_entreprise||'')+'</strong>'+(p.type_partenaire?'<br><em>'+esc(p.type_partenaire)+'</em>':'')+(p.ville?'<br>'+esc(p.ville)+(p.code_postal?' ('+p.code_postal+')':''):''));
+      m.bindPopup('<div class="mpop-title">'+esc(p.nom_entreprise||'')+'</div>'
+        +(p.type_partenaire?'<div class="mpop-sub">'+esc(p.type_partenaire)+'</div>':'')
+        +(p.ville?'<div class="mpop-sub">'+esc(p.ville+(p.code_postal?' ('+p.code_postal+')':''))+'</div>':'')
+        +'<span class="mpop-badge" style="background:#E8873A15;color:#E8873A">Partenaire</span>',{maxWidth:240});
+      m.on('click',function(){highlightPanelItem(idx);});
       _mapMarkers.push(m);
+      _mapData.push({marker:m,lat:lat,lng:lng,type:'part',entity:{name:p.nom_entreprise||'',city:p.ville||'',postal:p.code_postal||'',subtype:p.type_partenaire||''}});
       bounds.push([lat,lng]);
-      partCount++;
     });
   }
 
-  // Ajuster la vue
-  if(bounds.length>1){
-    _leafletMap.fitBounds(bounds,{padding:[30,30]});
-  }else if(bounds.length===1){
-    _leafletMap.setView(bounds[0],12);
-  }
+  if(bounds.length>1)_leafletMap.fitBounds(bounds,{padding:[40,40]});
+  else if(bounds.length===1)_leafletMap.setView(bounds[0],12);
 
-  // Stats
-  var stats=document.getElementById('mapStats');
-  if(stats){
-    var parts=[];
-    if(_mapLayer==='etab'||_mapLayer==='all')parts.push(etabCount+' établissement'+(etabCount!==1?'s':''));
-    if(_mapLayer==='part'||_mapLayer==='all')parts.push(partCount+' partenaire'+(partCount!==1?'s':''));
-    stats.textContent=parts.join(' · ')||'Aucun point à afficher';
-  }
-
-  // Légende
-  var legEtab=document.getElementById('legendEtab');
-  var legPart=document.getElementById('legendPart');
-  if(legEtab)legEtab.style.display=(_mapLayer==='etab'||_mapLayer==='all')?'':'none';
-  if(legPart)legPart.style.display=(_mapLayer==='part'||_mapLayer==='all')?'':'none';
-
-  // Forcer le recalcul Leaflet (nécessaire si le div était caché)
+  renderMapPanel();
   setTimeout(function(){if(_leafletMap)_leafletMap.invalidateSize();},150);
 }
+
+function renderMapPanel(){
+  var q=(document.getElementById('mapSearch')?.value||'').toLowerCase();
+  var items=_mapData.map(function(d,i){return{d:d,i:i};}).filter(function(o){
+    return!q||o.d.entity.name.toLowerCase().includes(q)||(o.d.entity.city||'').toLowerCase().includes(q);
+  });
+  var etab=items.filter(function(o){return o.d.type==='etab';}).length;
+  var part=items.filter(function(o){return o.d.type==='part';}).length;
+  var parts=[];
+  if(etab)parts.push(etab+' établissement'+(etab>1?'s':''));
+  if(part)parts.push(part+' partenaire'+(part>1?'s':''));
+  var cnt=document.getElementById('mapPanelCounts');
+  if(cnt)cnt.textContent=parts.join(' · ')||'Aucun résultat';
+  var list=document.getElementById('mapPanelList');
+  if(!list)return;
+  list.innerHTML=items.map(function(o){
+    var d=o.d,i=o.i;
+    var color=d.type==='etab'?'#4A90D9':'#E8873A';
+    var label=d.type==='etab'?'Étab.':'Part.';
+    return'<div class="map-panel-item" id="mpitem-'+i+'" onclick="flyToMarker('+i+')">'
+      +'<div class="mp-dot" style="background:'+color+'"></div>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div class="mp-name">'+esc(d.entity.name)+'</div>'
+      +((d.entity.city||d.entity.subtype)?'<div class="mp-city">'+esc((d.entity.subtype||d.entity.city)+(d.entity.city&&d.entity.subtype?' · '+d.entity.city:'')+(d.entity.postal?' ('+d.entity.postal+')':''))+'</div>':'')
+      +'</div>'
+      +'<span class="mp-badge" style="background:'+color+'18;color:'+color+'">'+label+'</span>'
+      +'</div>';
+  }).join('')||'<div class="map-panel-empty">Aucun point à afficher</div>';
+}
+
+function flyToMarker(i){
+  var d=_mapData[i];if(!d)return;
+  _leafletMap.flyTo([d.lat,d.lng],14,{duration:0.8});
+  setTimeout(function(){d.marker.openPopup();},900);
+  highlightPanelItem(i);
+}
+
+function highlightPanelItem(i){
+  document.querySelectorAll('.map-panel-item').forEach(function(el){el.classList.remove('mp-active');});
+  var el=document.getElementById('mpitem-'+i);
+  if(el){el.classList.add('mp-active');el.scrollIntoView({block:'nearest',behavior:'smooth'});}
+}
+
+function filterMapPanel(){renderMapPanel();}
 
 function toggleArchives(btn){
   var block=document.getElementById('archivesBlock');

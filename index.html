@@ -3329,7 +3329,7 @@ function renderHebdo(){
     <div class="hebdo-dot" style="background:${dot}"></div>
     <div class="hebdo-item-text">
       <div class="hebdo-item-name">${esc(t.tache)}</div>
-      <div class="hebdo-item-meta">${esc(t.qui.split(/[\s,&]+/)[0])} · <span style="font-size:10px;padding:1px 5px;border-radius:3px;background:${wpBg(t.wp_code)};color:${wpCol(t.wp_code)}">${t.wp_code}</span></div>
+      <div class="hebdo-item-meta">${esc((t.qui||'').split(/[\s,&]+/)[0])} · <span style="font-size:10px;padding:1px 5px;border-radius:3px;background:${wpBg(t.wp_code)};color:${wpCol(t.wp_code)}">${t.wp_code}</span></div>
     </div>
     ${dlLbl(t)?`<span class="hebdo-item-dl ${dlCls(t)}">${dlLbl(t)}</span>`:''}
   </div>`}
@@ -3642,7 +3642,7 @@ function openIndicTargetModal(){
   ov.classList.add('open');
 }
 
-function saveIndicTargetModal(){
+async function saveIndicTargetModal(){
   const projCode=window._indicTargetProjCode||'';
   const t={};
   document.querySelectorAll('[id^="it_"]').forEach(el=>{
@@ -3650,7 +3650,7 @@ function saveIndicTargetModal(){
     const val=parseFloat(el.value)||0;
     if(val>0)t[code]=val;
   });
-  saveIndicTargets(projCode,t);
+  await saveIndicTargets(projCode,t);
   document.getElementById('indicOverlay').classList.remove('open');
   renderDash();
 }
@@ -3791,7 +3791,7 @@ function onAWpChange(){
   const wid=parseInt(document.getElementById('aWP').value)||0;
   const as=document.getElementById('aAction');
   as.innerHTML='<option value="">— Choisir —</option>';as.disabled=!wid;
-  if(wid)ACTN_ACTIONS.filter(a=>a.wp_axe_ref===wid).forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=a.id_action_calc;as.appendChild(o)});
+  if(wid)ACTN_ACTIONS.filter(a=>a.wp_axe_ref===wid).forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=a.id_action_calc||a.lib_action||'Action '+a.id;as.appendChild(o)});
   document.getElementById('aSousAction').innerHTML='<option value="">—</option>';document.getElementById('aSousAction').disabled=true;
   clearAIndic();
 }
@@ -3866,6 +3866,7 @@ function getFilteredActions(){
   // Période → bornes de mois
   const periodMonths={S1:[0,5],S2:[6,11],T1:[0,2],T2:[3,5],T3:[6,8],T4:[9,11]};
   return allActions.filter(a=>{
+    if(!a.date_suivi_action)return false;
     const d=new Date(a.date_suivi_action*1000);
     if(year&&d.getFullYear()!==parseInt(year))return false;
     if(period&&periodMonths[period]){
@@ -4071,28 +4072,18 @@ async function saveIndicForm(){
     }
     closeIndicForm();
     renderAdminIndicList();
-  }catch(e){
-    // Mode démo : mise à jour locale uniquement
-    if(editingIndicId){
-      const i=ALL_INDIC_CONFIG.findIndex(c=>c.id===editingIndicId);
-      if(i>=0)Object.assign(ALL_INDIC_CONFIG[i],record);
-    }else{
-      ALL_INDIC_CONFIG.push({id:Date.now(),...record});
-    }
-    closeIndicForm();
-    renderAdminIndicList();
-  }
+  }catch(e){showToast('Erreur Grist : '+e.message,'error')}
 }
 
 async function deleteIndicConfirm(){
   if(!editingIndicId||!confirm('Supprimer cet indicateur ? Cette action supprimera également les valeurs saisies associées.'))return;
   try{
     await grist.docApi.applyUserActions([['RemoveRecord','CONFIG_liste_des_indicateurs_par_action',editingIndicId]]);
-  }catch(e){console.warn(e)}
-  ALL_INDIC_CONFIG=ALL_INDIC_CONFIG.filter(c=>c.id!==editingIndicId);
-  ALL_INDIC_VAL=ALL_INDIC_VAL.filter(v=>v.indicateur_ref!==editingIndicId);
-  closeIndicForm();
-  renderAdminIndicList();
+    ALL_INDIC_CONFIG=ALL_INDIC_CONFIG.filter(c=>c.id!==editingIndicId);
+    ALL_INDIC_VAL=ALL_INDIC_VAL.filter(v=>v.indicateur_ref!==editingIndicId);
+    closeIndicForm();
+    renderAdminIndicList();
+  }catch(e){showToast('Erreur suppression : '+e.message,'error')}
 }
 
 /* Export Excel tâches (vue Liste) */
@@ -4117,6 +4108,31 @@ function exportTachesExcel(){
   ws['!cols']=[{wch:36},{wch:25},{wch:18},{wch:22},{wch:14},{wch:14},{wch:16},{wch:10},{wch:40}];
   XLSX.utils.book_append_sheet(wb,ws,'Tâches');
   XLSX.writeFile(wb,`${proj?.code||'CMQ'}_Taches.xlsx`);
+}
+
+function openExportPartModal(){exportPartenaireExcel()}
+function closeExportPartModal(){}
+function exportPartenaireExcel(){
+  if(typeof XLSX==='undefined'){alert('Librairie Excel non chargée.');return}
+  const parts=_ALL_PARTENAIRES||[];
+  if(!parts.length){alert('Aucun partenaire à exporter.');return}
+  const partUse={},partHeures={};
+  (window._ALL_ENT_PARTS||[]).forEach(ep=>{
+    if(!partUse[ep.entreprise_ref])partUse[ep.entreprise_ref]=0;
+    if(!partHeures[ep.entreprise_ref])partHeures[ep.entreprise_ref]=0;
+    partUse[ep.entreprise_ref]++;
+    partHeures[ep.entreprise_ref]+=(ep.nb_heures||0);
+  });
+  const data=[['Partenaire','Ville','CP','Type','Secteur','Contact','Email','Nb actions','Heures mobilisées']];
+  parts.forEach(p=>{
+    data.push([p.nom_entreprise||'',p.ville||'',p.code_postal||'',p.type_partenaire||'',p.secteur_activite||'',p.contact_nom||'',p.contact_email||'',partUse[p.id]||0,partHeures[p.id]||0]);
+  });
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:30},{wch:18},{wch:8},{wch:18},{wch:20},{wch:20},{wch:28},{wch:12},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws,'Partenaires');
+  const proj=PROJETS.find(p=>p.id===currentProjetId);
+  XLSX.writeFile(wb,`${proj?.code||'CMQ'}_Partenaires.xlsx`);
 }
 
 /* ══════════════════════════════════════════════
@@ -4244,7 +4260,7 @@ async function duplicateTask(){
     const res=await grist.docApi.applyUserActions([['AddRecord','SUIVI_TACHES_ALL',null,record]]);
     const newId=res?.retValues?.[0]??ALL_TACHES.length+1;
     ALL_TACHES.push({id:newId,...record});
-  }catch(e){ALL_TACHES.push({id:Date.now(),...record})}
+  }catch(e){showToast('Erreur duplication : '+e.message,'error');return}
   TACHES=ALL_TACHES.filter(t=>t.projet_id===currentProjetId);
   closeModal();applyFilters();
   showToast('Tâche dupliquée');

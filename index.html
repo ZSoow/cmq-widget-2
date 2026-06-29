@@ -413,6 +413,8 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 .mp-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mp-city{font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mp-badge{font-size:9px;font-weight:600;padding:2px 6px;border-radius:8px;flex-shrink:0}
+.leaflet-container{user-select:none;-webkit-user-select:none;cursor:grab!important}
+.leaflet-dragging .leaflet-container{cursor:grabbing!important}
 .leaflet-popup-content-wrapper{border-radius:8px!important;box-shadow:0 4px 20px rgba(0,0,0,.12)!important}
 .leaflet-popup-content{font-family:var(--font)!important;font-size:12px!important;margin:12px 14px!important;min-width:140px}
 .mpop-title{font-weight:600;font-size:13px;color:var(--txt);margin-bottom:3px}
@@ -2387,7 +2389,7 @@ function renderHubNotifs(proj,accent){
 /* ══════════════════════════════════════════════
    CARTE & TERRITOIRE
 ══════════════════════════════════════════════ */
-function openCartePage(){
+async function openCartePage(){
   var proj=PROJETS.find(function(p){return p.id===currentProjetId;});if(!proj)return;
   var accent=proj.couleur||'#534AB7';
   var badge=proj.badge||proj.code||proj.nom;
@@ -2396,6 +2398,7 @@ function openCartePage(){
   document.getElementById('carteSub').textContent=proj.nom;
   _mapLayer='etab';_mapProjetOnly=true;
   showPage('carte');
+  await loadEtablissements();
   setTimeout(renderMap,100);
 }
 

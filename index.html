@@ -6,6 +6,8 @@
 <title>CMQ Bioéco — Tableau de bord</title>
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -453,6 +455,9 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 .rap-wp-count{font-size:11px;color:#bbb;margin-left:auto}
 .rap-action{padding:10px 20px 10px 32px;border-bottom:.5px solid #f8f8f8}
 .rap-action:last-child{border-bottom:none}
+.rap-charts{display:flex;gap:20px;padding:16px 20px;border-bottom:.5px solid #f0f0f0;flex-wrap:wrap}
+.rap-chart-block{flex:1;min-width:220px}
+.rap-chart-title{font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
 .rap-action-hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .rap-action-name{font-size:12px;font-weight:500}
 .rap-action-date{font-size:11px;color:#bbb}
@@ -3918,6 +3923,60 @@ function getFilteredActions(){
   });
 }
 
+function renderRapportCharts(actions){
+  // --- Graphique 1 : actions par mois ---
+  const mCounts={};
+  actions.forEach(a=>{
+    const d=new Date(a.date_suivi_action*1000);
+    const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    const lbl=d.toLocaleDateString('fr-FR',{month:'short',year:'2-digit'});
+    if(!mCounts[key])mCounts[key]={lbl,n:0};
+    mCounts[key].n++;
+  });
+  const mData=Object.keys(mCounts).sort().map(k=>mCounts[k]);
+  let svgMonth='<div style="font-size:11px;color:#bbb;text-align:center;padding:16px 0">Pas assez de données</div>';
+  if(mData.length>=2){
+    const max=Math.max(...mData.map(d=>d.n),1);
+    const bw=Math.max(16,Math.min(48,Math.floor(560/mData.length)-6));
+    const step=bw+6,totalW=mData.length*step+20,CH=90;
+    const bars=mData.map((d,i)=>{
+      const bh=Math.max(2,Math.round((d.n/max)*(CH-10)));
+      const x=10+i*step,y=CH-bh;
+      return`<rect x="${x}" y="${y}" width="${bw}" height="${bh}" fill="var(--accent)" rx="2" opacity=".82"/>
+        <text x="${x+bw/2}" y="${y-3}" text-anchor="middle" font-size="9" fill="#555">${d.n}</text>
+        <text x="${x+bw/2}" y="${CH+12}" text-anchor="middle" font-size="8.5" fill="#aaa">${d.lbl}</text>`;
+    }).join('');
+    svgMonth=`<svg viewBox="0 0 ${totalW} ${CH+18}" style="width:100%;max-height:108px">${bars}</svg>`;
+  }
+
+  // --- Graphique 2 : répartition par WP / Axe ---
+  const wpCounts={};
+  actions.forEach(a=>{
+    const wp=ACTN_AXES.find(w=>w.id===a.wp_axe_ref);
+    const lbl=wp?(wp.cod_wp_axe||'?'):'Non classé';
+    wpCounts[lbl]=(wpCounts[lbl]||0)+1;
+  });
+  const wpData=Object.entries(wpCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  let svgWp='<div style="font-size:11px;color:#bbb;text-align:center;padding:16px 0">Pas assez de données</div>';
+  if(wpData.length){
+    const maxW=Math.max(...wpData.map(d=>d[1]),1);
+    const rowH=20,labelW=68,barMaxW=200,totalW=labelW+barMaxW+32,totalH=wpData.length*rowH+6;
+    const rows=wpData.map(([lbl,n],i)=>{
+      const bw=Math.round((n/maxW)*barMaxW);
+      const y=i*rowH+3;
+      return`<text x="${labelW-4}" y="${y+13}" text-anchor="end" font-size="9.5" fill="#666">${esc(lbl)}</text>
+        <rect x="${labelW}" y="${y+4}" width="${bw}" height="${rowH-8}" fill="var(--accent)" rx="2" opacity=".82"/>
+        <text x="${labelW+bw+5}" y="${y+13}" font-size="9.5" fill="#555">${n}</text>`;
+    }).join('');
+    svgWp=`<svg viewBox="0 0 ${totalW} ${totalH}" style="width:100%;max-height:${totalH+4}px">${rows}</svg>`;
+  }
+
+  return`<div class="rap-charts">
+    <div class="rap-chart-block"><div class="rap-chart-title">Actions par mois</div>${svgMonth}</div>
+    <div class="rap-chart-block"><div class="rap-chart-title">Répartition par WP / Axe</div>${svgWp}</div>
+  </div>`;
+}
+
 function genRapport(){
   const actions=getFilteredActions();
   const zone=document.getElementById('rapportZone');
@@ -3987,6 +4046,7 @@ function genRapport(){
       </div>
     </div>
     <div class="rap-kpis">${kpiTop||'<div class="rap-kpi"><div class="rap-kpi-val">—</div><div class="rap-kpi-lbl">Aucun indicateur</div></div>'}</div>
+    ${renderRapportCharts(actions)}
     ${section1}
     <div><div class="rap-recap-title">Récapitulatif des indicateurs</div>
     <table class="rap-recap-table"><thead><tr><th>Indicateur</th><th>Code</th><th style="text-align:center">Saisies</th><th style="text-align:right">Total réalisé</th></tr></thead>
@@ -3996,7 +4056,87 @@ function genRapport(){
 
 function getIndicForAction(actionId){return(ALL_INDIC_VAL||[]).filter(iv=>iv.action_ref===actionId)}
 
-function exportPDF(){if(!document.getElementById('printZone')){alert("Générez d'abord le rapport.");return}window.print()}
+function exportPDF(){
+  const jsPDFCls=window.jspdf?.jsPDF;
+  if(!jsPDFCls){showToast('jsPDF non chargé — vérifiez la connexion internet','error');return;}
+  const actions=getFilteredActions();
+  if(!actions.length){showToast('Aucune action — ajustez les filtres','error');return;}
+  const year=document.getElementById('rYear')?.value;
+  const projetF=document.getElementById('rProjet')?.value;
+  const periodeLabel=year||'Toutes périodes';
+  const projetLabel=projetF?ACTN_PROJETS.find(p=>String(p.id)===projetF)?.lib_projet||'':'BEA + FIBI';
+
+  const doc=new jsPDFCls({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210,M=14;
+
+  // Bandeau cover
+  doc.setFillColor(83,74,183);
+  doc.rect(0,0,W,46,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(7.5);doc.setFont('helvetica','bold');
+  doc.text('CMQ BIOÉCO — RAPPORT D\'ACTIVITÉ',M,12);
+  doc.setFontSize(15);
+  doc.text('Suivi des actions et indicateurs',M,23);
+  doc.setFontSize(8.5);doc.setFont('helvetica','normal');
+  doc.text(projetLabel+' · '+periodeLabel+' · Généré le '+new Date().toLocaleDateString('fr-FR'),M,33);
+
+  // KPIs
+  const recapMap={};
+  actions.forEach(a=>getIndicForAction(a.id).forEach(iv=>{
+    const cfg=ALL_INDIC_CONFIG.find(c=>c.id===iv.indicateur_ref);if(!cfg)return;
+    if(!recapMap[cfg.Code_indicateur])recapMap[cfg.Code_indicateur]={label:cfg.libelle_indicateurs,total:0};
+    recapMap[cfg.Code_indicateur].total+=(iv.valeur||0);
+  }));
+  const kpis=[{label:'Actions',val:actions.length},{label:'Projets',val:new Set(actions.map(a=>a.projet_ref)).size},...Object.values(recapMap).slice(0,2).map(d=>({label:d.label,val:d.total.toLocaleString('fr-FR')}))];
+  const kpiW=(W-M*2)/kpis.length;
+  kpis.forEach((k,i)=>{
+    const x=M+i*kpiW;
+    doc.setFillColor(248,248,252);doc.roundedRect(x,49,kpiW-2,16,1.5,1.5,'F');
+    doc.setTextColor(83,74,183);doc.setFontSize(13);doc.setFont('helvetica','bold');
+    doc.text(String(k.val),x+3,58);
+    doc.setTextColor(160,160,160);doc.setFontSize(7.5);doc.setFont('helvetica','normal');
+    doc.text(k.label,x+3,63);
+  });
+
+  // Tableau des actions
+  const tData=actions.map(a=>{
+    const proj=ACTN_PROJETS.find(p=>p.id===a.projet_ref);
+    const wp=ACTN_AXES.find(w=>w.id===a.wp_axe_ref);
+    const resp=ALL_RH.find(m=>m.id===a.responsable_suivi_action_ref);
+    return[a.nom_suivi_action||'',a.date_suivi_action?new Date(a.date_suivi_action*1000).toLocaleDateString('fr-FR'):'',proj?.cod_projet||'',wp?.cod_wp_axe||'',resp?.Membre||''];
+  });
+  doc.autoTable({
+    head:[['Action','Date','Projet','WP/Axe','Responsable']],
+    body:tData,startY:70,margin:{left:M,right:M},
+    styles:{fontSize:8,cellPadding:2.5,overflow:'linebreak'},
+    headStyles:{fillColor:[83,74,183],textColor:255,fontStyle:'bold',fontSize:7.5},
+    alternateRowStyles:{fillColor:[248,248,252]},
+    columnStyles:{0:{cellWidth:72},1:{cellWidth:20},2:{cellWidth:16},3:{cellWidth:26},4:{cellWidth:28}}
+  });
+
+  // Tableau récapitulatif indicateurs
+  const recapRows=Object.entries(recapMap).map(([code,d])=>[d.label,code,d.total.toLocaleString('fr-FR')]);
+  if(recapRows.length){
+    doc.autoTable({
+      head:[['Indicateur','Code','Total réalisé']],
+      body:recapRows,
+      startY:doc.lastAutoTable.finalY+8,
+      margin:{left:M,right:M},
+      styles:{fontSize:8,cellPadding:2.5},
+      headStyles:{fillColor:[83,74,183],textColor:255,fontStyle:'bold',fontSize:7.5},
+    });
+  }
+
+  // Pied de page
+  const np=doc.getNumberOfPages();
+  for(let i=1;i<=np;i++){
+    doc.setPage(i);
+    doc.setFontSize(7);doc.setTextColor(190,190,190);
+    doc.text('Page '+i+'/'+np+' — CMQ Bioéco',W/2,291,{align:'center'});
+  }
+
+  doc.save('CMQ_Rapport_'+(year||new Date().getFullYear())+'.pdf');
+}
 
 function exportExcel(){
   if(typeof XLSX==='undefined'){alert('Librairie Excel non chargée.');return}

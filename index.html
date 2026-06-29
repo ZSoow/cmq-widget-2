@@ -460,27 +460,6 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 .rap-chart-title{font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
 .rap-heatmap{padding:14px 20px 16px;border-bottom:.5px solid #f0f0f0}
 .rap-heatmap-scroll{overflow-x:auto}
-/* Mode présentation */
-.pres-overlay{position:fixed;inset:0;background:#1a1628;z-index:9900;display:none;flex-direction:column;overflow-y:auto}
-.pres-overlay.open{display:flex}
-.pres-hd{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0}
-.pres-badge{font-size:9.5px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.35);text-transform:uppercase}
-.pres-title{font-size:14px;font-weight:600;color:#fff;margin-top:3px}
-.pres-close{background:rgba(255,255,255,.1);border:none;color:rgba(255,255,255,.7);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:background .15s}
-.pres-close:hover{background:rgba(255,255,255,.2)}
-.pres-body{flex:1;padding:28px 40px;max-width:960px;margin:0 auto;width:100%;box-sizing:border-box}
-.pres-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
-.pres-kpi{background:rgba(255,255,255,.06);border-radius:12px;padding:22px 16px;text-align:center;border:1px solid rgba(255,255,255,.08)}
-.pres-kpi-val{font-size:40px;font-weight:700;color:#fff;line-height:1;font-variant-numeric:tabular-nums}
-.pres-kpi-lbl{font-size:10px;color:rgba(255,255,255,.38);margin-top:8px;text-transform:uppercase;letter-spacing:.07em}
-.pres-section{background:rgba(255,255,255,.04);border-radius:12px;padding:18px 22px;margin-bottom:16px;border:1px solid rgba(255,255,255,.07)}
-.pres-section-title{font-size:9.5px;font-weight:700;color:rgba(255,255,255,.28);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px}
-.pres-heatmap-scroll{overflow-x:auto}
-.pres-recent-item{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)}
-.pres-recent-item:last-child{border-bottom:none}
-.pres-recent-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.pres-recent-date{font-size:10px;color:rgba(255,255,255,.28);min-width:68px;flex-shrink:0}
-.pres-recent-name{font-size:12px;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rap-action-hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .rap-action-name{font-size:12px;font-weight:500}
 .rap-action-date{font-size:11px;color:#bbb}
@@ -1005,8 +984,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
       </div>
     </div>
     <div class="hdr-right">
-      <button class="btn btn-primary btn-sm" onclick="openPresentation()" style="background:#1a1628;border-color:#1a1628">Présenter</button>
-      <button class="btn btn-ghost btn-sm" onclick="exportPDF()">Exporter PDF</button>
+<button class="btn btn-ghost btn-sm" onclick="exportPDF()">Exporter PDF</button>
       <button class="btn btn-excel btn-sm" onclick="exportExcel()">Exporter Excel</button>
     </div>
   </div>
@@ -1357,18 +1335,6 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     <button class="btn btn-primary" onclick="exportOnePartExcel()">Exporter cette fiche</button>
   </div>
 </div>
-</div>
-
-<!-- MODE PRÉSENTATION -->
-<div class="pres-overlay" id="presOverlay">
-  <div class="pres-hd">
-    <div>
-      <div class="pres-badge">CMQ Bioéco Grand Est — Rapport d'activité</div>
-      <div class="pres-title" id="presTitle">—</div>
-    </div>
-    <button class="pres-close" onclick="closePresentation()">×</button>
-  </div>
-  <div class="pres-body" id="presBody"></div>
 </div>
 
 <!-- TOAST GLOBAL -->
@@ -4031,7 +3997,7 @@ function renderHeatmapSvg(actions,yearStr,dark){
       }
     }
   }
-  const dLbls=DA.map((l,i)=>i%2===1?`<text x="${labelW-3}" y="${headerH+i*step+cs-1}" text-anchor="end" font-size="8.5" fill="${c.a}">${l}</text>`:'').join('');
+  const dLbls=DA.map((l,i)=>`<text x="${labelW-3}" y="${headerH+i*step+cs-1}" text-anchor="end" font-size="8.5" fill="${c.a}">${l}</text>`).join('');
   const ly=headerH+7*step+6;
   const lx=W-74;
   const legItems=[0,1,2,4].map((n,i)=>`<rect x="${lx+32+i*14}" y="${ly}" width="${cs}" height="${cs}" rx="2" fill="${col(n)}"/>`).join('');
@@ -4177,65 +4143,6 @@ function genRapport(){
 
 function getIndicForAction(actionId){return(ALL_INDIC_VAL||[]).filter(iv=>iv.action_ref===actionId)}
 
-let _presEscHandler=null;
-function openPresentation(){
-  const actions=getFilteredActions();
-  if(!actions.length){showToast('Aucune action à afficher — ajustez les filtres','error');return;}
-  const yearVal=document.getElementById('rYear')?.value||String(new Date().getFullYear());
-  const projetF=document.getElementById('rProjet')?.value;
-  const projetLabel=projetF?(ACTN_PROJETS.find(p=>String(p.id)===projetF)?.lib_projet||''):'Tous projets';
-  document.getElementById('presTitle').textContent=(projetLabel||'Tous projets')+' · '+yearVal;
-
-  const actIds=new Set(actions.map(a=>a.id));
-  const nbEtab=new Set((window._ALL_ETAB_PARTS||[]).filter(ep=>actIds.has(ep.ACTION_CONCERNEE)).map(ep=>ep.ETABLISSEMENT_PARTICIPANT)).size;
-  const nbPart=new Set((window._ALL_ENT_PARTS||[]).filter(ep=>actIds.has(ep.action_ref)).map(ep=>ep.entreprise_ref)).size;
-  const tDone=(TACHES||[]).filter(t=>t.statut==='Réalisé').length;
-  const tTotal=(TACHES||[]).length;
-  const pct=tTotal>0?Math.round(tDone/tTotal*100):0;
-
-  const recent=[...actions].sort((a,b)=>(b.date_suivi_action||0)-(a.date_suivi_action||0)).slice(0,6);
-  const recentHtml=recent.map(a=>{
-    const d=new Date((a.date_suivi_action||0)*1000).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
-    const wp=ACTN_AXES.find(w=>w.id===a.wp_axe_ref);
-    const dot=wp?wpCol(wp.cod_wp_axe||''):'#9488e8';
-    return`<div class="pres-recent-item"><div class="pres-recent-dot" style="background:${dot}"></div><div class="pres-recent-date">${d}</div><div class="pres-recent-name">${esc(a.nom_suivi_action||'—')}</div></div>`;
-  }).join('');
-
-  document.getElementById('presBody').innerHTML=`
-    <div class="pres-kpis">
-      <div class="pres-kpi"><div class="pres-kpi-val" data-target="${actions.length}">0</div><div class="pres-kpi-lbl">Actions réalisées</div></div>
-      <div class="pres-kpi"><div class="pres-kpi-val" data-target="${nbEtab}">0</div><div class="pres-kpi-lbl">Établissements</div></div>
-      <div class="pres-kpi"><div class="pres-kpi-val" data-target="${nbPart}">0</div><div class="pres-kpi-lbl">Partenaires</div></div>
-      <div class="pres-kpi"><div class="pres-kpi-val" data-target="${pct}" data-suffix="%">0</div><div class="pres-kpi-lbl">Tâches réalisées</div></div>
-    </div>
-    <div class="pres-section">
-      <div class="pres-section-title">Activité ${yearVal} — jour par jour</div>
-      <div class="pres-heatmap-scroll">${renderHeatmapSvg(actions,yearVal,true)}</div>
-    </div>
-    ${recentHtml?`<div class="pres-section"><div class="pres-section-title">Dernières actions</div>${recentHtml}</div>`:''}`;
-
-  document.getElementById('presOverlay').classList.add('open');
-  _presEscHandler=e=>{if(e.key==='Escape')closePresentation();};
-  document.addEventListener('keydown',_presEscHandler);
-
-  requestAnimationFrame(()=>{
-    document.querySelectorAll('#presBody .pres-kpi-val[data-target]').forEach(el=>{
-      const target=parseInt(el.dataset.target)||0;
-      const suffix=el.dataset.suffix||'';
-      if(!target){el.textContent='0'+suffix;return;}
-      const start=performance.now(),dur=900;
-      (function tick(now){
-        const t=Math.min(1,(now-start)/dur);
-        el.textContent=Math.round((1-Math.pow(1-t,3))*target)+suffix;
-        if(t<1)requestAnimationFrame(tick);
-      })(performance.now());
-    });
-  });
-}
-function closePresentation(){
-  document.getElementById('presOverlay').classList.remove('open');
-  if(_presEscHandler)document.removeEventListener('keydown',_presEscHandler);
-}
 
 function exportPDF(){
   const jsPDFCls=window.jspdf?.jsPDF;

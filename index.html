@@ -1521,8 +1521,30 @@ async function loadAll(){
     window._ALL_ENT_PARTS=tableToRows(entParts);
     ALL_OBJECTIFS=tableToRows(objectifs);
     _ALL_PARTENAIRES=tableToRows(partenaires);
-    const savedName=localStorage.getItem('cmq_user_name');
-    _currentUser=savedName?{name:savedName}:null;
+    // Tentative 1 : grist.getUser()
+    try{
+      const u=await grist.getUser();
+      if(u&&u.name)_currentUser=u;
+    }catch(e){}
+    // Tentative 2 : décoder le JWT du token d'accès
+    if(!_currentUser||!_currentUser.name){
+      try{
+        const tok=await grist.getAccessToken({readOnly:true});
+        if(tok&&tok.token){
+          const b64=tok.token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+          const payload=JSON.parse(atob(b64));
+          console.log('[CMQ] token payload:',JSON.stringify(payload));
+          const name=payload.name||payload.email||'';
+          if(name)_currentUser={name:name,email:payload.email||''};
+        }
+      }catch(e){console.warn('[CMQ] token failed:',e.message);}
+    }
+    // Tentative 3 : fallback localStorage
+    if(!_currentUser||!_currentUser.name){
+      const saved=localStorage.getItem('cmq_user_name');
+      if(saved)_currentUser={name:saved};
+    }
+    console.log('[CMQ] user final:',_currentUser);
     renderAccueil();
   }catch(e){
     console.warn('Mode démo:',e.message);

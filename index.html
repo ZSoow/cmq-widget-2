@@ -26,7 +26,8 @@
   --bg:#ffffff;--surf:#fafafa;--surf2:#f4f4f5;--border:#e4e4e7;
   --txt:#09090b;--sub:#71717a;--faint:#a1a1aa;
 }
-body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:100vh;font-size:13px}
+body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:100vh;font-size:13px;user-select:none;-webkit-user-select:none}
+input,textarea,select,[contenteditable]{user-select:text;-webkit-user-select:text}
 
 /* ══ BUREAU LAYOUT ══ */
 .sb{width:220px;flex-shrink:0;background:var(--surf);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:200}

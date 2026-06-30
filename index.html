@@ -28,6 +28,9 @@
 }
 body{font-family:var(--font);background:var(--bg);color:var(--txt);min-height:100vh;font-size:13px;user-select:none;-webkit-user-select:none}
 input,textarea,select,[contenteditable]{user-select:text;-webkit-user-select:text}
+.app-footer{position:fixed;bottom:0;left:0;right:0;height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(255,255,255,.88);backdrop-filter:blur(6px);border-top:.5px solid #ebebeb;z-index:190;pointer-events:none}
+.app-footer-credit{font-size:9.5px;color:#ccc;letter-spacing:.02em}
+.app-footer-logo{height:16px;opacity:.45;filter:grayscale(1)}
 
 /* ══ BUREAU LAYOUT ══ */
 .sb{width:220px;flex-shrink:0;background:var(--surf);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:200}
@@ -4897,5 +4900,11 @@ loadAll();
 </script>
 
 </div><!-- /main-wrap -->
+
+<div class="app-footer">
+  <span class="app-footer-credit">Création juin 2026 · CMQ Bioéco Academy Grand Est</span>
+  <img class="app-footer-logo" src="LOGO_URL_ICI" alt="CMQ" onerror="this.style.display='none'">
+</div>
+
 </body>
 </html>

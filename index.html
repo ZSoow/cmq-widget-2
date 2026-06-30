@@ -4980,6 +4980,7 @@ function loadDemo(){
    INIT
 ══════════════════════════════════════════════ */
 showPage('accueil');
+window.addEventListener('message',function(e){if(e.data&&typeof e.data==='object')console.log('[CMQ-MSG]',JSON.stringify(e.data).slice(0,500));});
 try { grist.ready({requiredAccess:'full'}); } catch(e) { console.warn('Hors Grist:', e.message); }
 loadAll();
 </script>

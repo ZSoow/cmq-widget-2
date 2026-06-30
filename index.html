@@ -1508,7 +1508,11 @@ async function loadAll(){
     window._ALL_ENT_PARTS=tableToRows(entParts);
     ALL_OBJECTIFS=tableToRows(objectifs);
     _ALL_PARTENAIRES=tableToRows(partenaires);
-    try{_currentUser=await grist.getUser();}catch(e){_currentUser=null;}
+    try{
+      if(typeof grist.getUser==='function') _currentUser=await grist.getUser();
+      else if(typeof grist.getUserCred==='function') _currentUser=await grist.getUserCred();
+      console.log('[CMQ] user:', JSON.stringify(_currentUser));
+    }catch(e){console.warn('[CMQ] getUser failed:',e.message);_currentUser=null;}
     renderAccueil();
   }catch(e){
     console.warn('Mode démo:',e.message);

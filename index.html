@@ -1357,6 +1357,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 ══════════════════════════════════════════════ */
 let PROJETS=[], ALL_TACHES=[], ALL_MEMBRES=[], ALL_AXES=[];
 let indicActiveTab='suivi';
+let _currentUser=null;
 let ACTN_PROJETS=[], ACTN_AXES=[], ACTN_ACTIONS=[], ACTN_SOUS_ACTIONS=[];
 let ALL_RH=[], ALL_INDIC_CONFIG=[], ALL_INDIC_VAL=[];
 let ALL_OBJECTIFS=[];
@@ -1507,6 +1508,7 @@ async function loadAll(){
     window._ALL_ENT_PARTS=tableToRows(entParts);
     ALL_OBJECTIFS=tableToRows(objectifs);
     _ALL_PARTENAIRES=tableToRows(partenaires);
+    try{_currentUser=await grist.getUser();}catch(e){_currentUser=null;}
     renderAccueil();
   }catch(e){
     console.warn('Mode démo:',e.message);
@@ -1770,6 +1772,8 @@ function initSaisieActionPanel(){
 
 function openSaisieActionPanel(){
   initSaisieActionPanel();
+  const matched=matchUserToMember();
+  if(matched){const ar=document.getElementById('afResp');if(ar)ar.value=matched;}
   document.getElementById('saisieActionPanel').style.display='block';
   document.getElementById('saNom').focus();
 }
@@ -2849,12 +2853,27 @@ function renderPartnerChips(){
 /* ══════════════════════════════════════════════
    PAGE ACCUEIL
 ══════════════════════════════════════════════ */
+function matchUserToMember(){
+  if(!_currentUser||!ALL_RH.length)return'';
+  const uName=(_currentUser.name||'').trim();
+  if(!uName)return'';
+  const members=ALL_RH.filter(m=>m.Membre).map(m=>m.Membre);
+  // Correspondance exacte
+  const exact=members.find(m=>m.toLowerCase()===uName.toLowerCase());
+  if(exact)return exact;
+  // Correspondance sur les mots (prénom ou nom)
+  const parts=uName.toLowerCase().split(/\s+/).filter(p=>p.length>2);
+  const partial=members.find(m=>parts.some(p=>m.toLowerCase().includes(p)));
+  return partial||'';
+}
+
 function renderAccueil(){
   const now=new Date();
   const jours=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   var _fl=document.querySelector('.app-footer-logo');if(_fl)document.getElementById('accLogo').src=_fl.src;
-  document.getElementById('accDate').textContent=
-    `${jours[now.getDay()]} ${now.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}`;
+  const dateStr=`${jours[now.getDay()]} ${now.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}`;
+  const prenom=_currentUser?(_currentUser.name||'').split(' ')[0]:'';
+  document.getElementById('accDate').textContent=prenom?`Bonjour ${prenom} · ${dateStr}`:dateStr;
   renderSbProjects();
 
   // Liste des projets
@@ -3803,7 +3822,7 @@ function openAddModal(){
   editingId=null;
   document.getElementById('modalTitle').textContent='Nouvelle tâche';
   ['mTache','mProjet','mComment','mDateDebut','mDeadline','mDateReal'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
-  document.getElementById('mQui').value='';document.getElementById('mStatut').value='A traiter';
+  document.getElementById('mQui').value=matchUserToMember();document.getElementById('mStatut').value='A traiter';
   document.getElementById('mWP').value='';document.getElementById('mPrio').value='Normale';
   document.getElementById('btnDelete').style.display='none';
   document.getElementById('btnDuplicate').style.display='none';

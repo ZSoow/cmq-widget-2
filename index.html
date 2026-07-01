@@ -609,6 +609,13 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 .partner-chip-x{cursor:pointer;color:var(--p200);font-size:14px;line-height:1;transition:color .1s}.partner-chip-x:hover{color:var(--c600)}
 .partner-msg{padding:10px 12px;font-size:11px;color:#bbb;text-align:center}
 .partner-hint{font-size:10px;color:#bbb;margin-top:5px;font-style:italic}
+.sa-etab-card{background:#fff;border:.5px solid #e0e0e0;border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.sa-etab-card-hd{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:#fafafa;border-bottom:.5px solid #f0f0f0}
+.sa-etab-card-body{padding:12px 14px;display:flex;flex-direction:column;gap:12px}
+.sa-etab-section-lbl{font-size:10px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.sa-form-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.sa-form-chip{display:inline-flex;align-items:center;gap:5px;background:var(--p50);border:.5px solid var(--p200);border-radius:20px;padding:3px 9px;font-size:11px;color:var(--accent)}
+.sa-form-chip-x{cursor:pointer;color:var(--p300);font-size:13px;line-height:1}.sa-form-chip-x:hover{color:var(--c600)}
 
 /* ══ PRINT ══ */
 @media print{
@@ -844,7 +851,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
         <select id="saSousAction" onchange="onSaSousActionChange()" disabled style="width:100%"><option value="">— Choisir d'abord une action —</option></select>
       </div>
     </div>
-    <div id="saIndicZone" style="display:none"></div>
+    <div id="saIndicZone" style="display:none!important"></div>
     <div class="partner-section f-field">
       <div class="partner-section-hd">
         <label class="f-label" style="margin:0">Établissements partenaires</label>
@@ -1360,6 +1367,7 @@ let PROJETS=[], ALL_TACHES=[], ALL_MEMBRES=[], ALL_AXES=[];
 let indicActiveTab='suivi';
 let ACTN_PROJETS=[], ACTN_AXES=[], ACTN_ACTIONS=[], ACTN_SOUS_ACTIONS=[];
 let ALL_RH=[], ALL_INDIC_CONFIG=[], ALL_INDIC_VAL=[];
+let ALL_FORMATIONS=[];
 let ALL_OBJECTIFS=[];
 let _mapLayer='etab', _mapProjetOnly=false, _leafletMap=null, _mapMarkers=[], _mapData=[], _mapDeptFilter='';
 let currentProjetId=null;
@@ -1471,7 +1479,7 @@ async function loadAll(){
   // Timeout de 3s : si Grist ne répond pas, on passe en mode démo
   const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),5000));
   try{
-    const [projets,taches,membres,axes,actnProjets,actnAxes,actnActions,actnSousActions,rh,indicConfig,indicVal,saisieActions,etabParts,entParts,objectifs,partenaires]=await Promise.race([
+    const [projets,taches,membres,axes,actnProjets,actnAxes,actnActions,actnSousActions,rh,indicConfig,indicVal,saisieActions,etabParts,entParts,objectifs,partenaires,formations]=await Promise.race([
       Promise.all([
         grist.docApi.fetchTable('CONFIG_PROJETS'),
         grist.docApi.fetchTable('SUIVI_TACHES_ALL'),
@@ -1489,6 +1497,7 @@ async function loadAll(){
         grist.docApi.fetchTable('SAISIE_entreprises_par_action'),
         grist.docApi.fetchTable('CONFIG_objectifs_indicateurs'),
         grist.docApi.fetchTable('CONFIG_entreprises_partenaires'),
+        grist.docApi.fetchTable('CONFIG_FORMATIONS'),
       ]),
       timeout
     ]);
@@ -1508,6 +1517,7 @@ async function loadAll(){
     window._ALL_ENT_PARTS=tableToRows(entParts);
     ALL_OBJECTIFS=tableToRows(objectifs);
     _ALL_PARTENAIRES=tableToRows(partenaires);
+    ALL_FORMATIONS=tableToRows(formations);
     renderAccueil();
   }catch(e){
     console.warn('Mode démo:',e.message);
@@ -1810,21 +1820,8 @@ function onSaActionChange(){
 }
 
 function onSaSousActionChange(){
-  const sid=parseInt(document.getElementById('saSousAction').value)||0;
-  const zone=document.getElementById('saIndicZone');
-  if(!sid){zone.style.display='none';zone.innerHTML='';return}
-  const indics=ALL_INDIC_CONFIG.filter(c=>c.type_sous_action===sid);
-  if(!indics.length){zone.style.display='none';return}
-  zone.style.display='block';
-  zone.innerHTML=`<div class="indic-zone">
-    <div class="indic-zone-hd">Indicateurs à renseigner</div>
-    ${indics.map(ind=>`<div class="indic-row">
-      <div class="indic-row-lbl">${ind.obligatoire?'<span class="indic-row-req">*</span>':''}${esc(ind.libelle_indicateurs)}</div>
-      ${ind.type_valeur==='booleen'
-        ?`<select id="sa_${ind.id}" class="indic-row-input" style="width:110px"><option value="">—</option><option value="1">Oui</option><option value="0">Non</option></select>`
-        :`<input type="number" id="sa_${ind.id}" class="indic-row-input" min="0" placeholder="0">`}
-    </div>`).join('')}
-  </div>`;
+  syncEtabIndicValues();
+  renderSaPartnerChips();
 }
 
 async function submitSaisieAction(){
@@ -1845,10 +1842,19 @@ async function submitSaisieAction(){
   try{
     const res=await grist.docApi.applyUserActions([['AddRecord','SAISIE_actions_realisees',null,record]]);
     const newId=res?.retValues?.[0]??null;
-    if(sid&&newId){
-      for(const ind of ALL_INDIC_CONFIG.filter(c=>c.type_sous_action===sid)){
-        const el=document.getElementById('sa_'+ind.id);const val=el?parseFloat(el.value):NaN;
-        try{await grist.docApi.applyUserActions([['AddRecord','SUIVI_indicateurs',null,{action_ref:newId,indicateur_ref:ind.id,valeur:isNaN(val)?0:val,valeur_bool:ind.type_valeur==='booleen'&&el?.value==='1',Cree_par:'widget',date_creation:toTs(date)}]])}catch(e2){console.warn(e2)}
+    if(newId){
+      syncEtabIndicValues();
+      const indics=sid?ALL_INDIC_CONFIG.filter(c=>c.type_sous_action===sid):[];
+      for(const p of _saPartnerSelected){
+        // Formations par établissement
+        for(const fid of (p.formations||[])){
+          try{await grist.docApi.applyUserActions([['AddRecord','SAISIE_formations_par_action',null,{action_ref:newId,etablissement_ref:p.id,formation_ref:fid}]])}catch(e2){console.warn(e2)}
+        }
+        // Indicateurs par établissement
+        for(const ind of indics){
+          const val=parseFloat((p.indicateurs||{})[ind.id]);
+          try{await grist.docApi.applyUserActions([['AddRecord','SAISIE_indicateurs_par_etab',null,{action_ref:newId,etablissement_ref:p.id,indicateur_ref:ind.id,valeur:isNaN(val)?0:val}]])}catch(e2){console.warn(e2)}
+        }
       }
     }
     if(newId&&_saPartnerSelected.length){
@@ -1922,23 +1928,78 @@ function addSaEtabPartner(id){
   const etabs=window._ALL_ETABLISSEMENTS||[];
   const e=etabs.find(x=>x.id===id);
   if(!e||_saPartnerSelected.find(p=>p.id===id))return;
-  _saPartnerSelected.push({type:'etablissement',id:e.id,label:e.nom_etablissement,cp:e.code_postal_etablissement||'',region_ref:e.region_ref_calc||0,dept_ref:e.departement_ref_calc||0,type_etab_ref:e.type_etablissement_ref||0});
+  _saPartnerSelected.push({type:'etablissement',id:e.id,label:e.nom_etablissement,cp:e.code_postal_etablissement||'',region_ref:e.region_ref_calc||0,dept_ref:e.departement_ref_calc||0,type_etab_ref:e.type_etablissement_ref||0,formations:[],indicateurs:{}});
   renderSaPartnerChips();
   const inp=document.getElementById('saEtabSearch');if(inp)inp.value='';
   const res=document.getElementById('saPartnerResults');if(res)res.classList.remove('open');
 }
 
+function syncEtabIndicValues(){
+  const sid=parseInt(document.getElementById('saSousAction')?.value)||0;
+  const indics=sid?ALL_INDIC_CONFIG.filter(c=>c.type_sous_action===sid):[];
+  for(const p of _saPartnerSelected){
+    if(!p.indicateurs)p.indicateurs={};
+    for(const ind of indics){
+      const el=document.getElementById(`saEI_${p.id}_${ind.id}`);
+      if(el)p.indicateurs[ind.id]=el.value;
+    }
+  }
+}
+
 function removeSaPartner(id){
+  syncEtabIndicValues();
   _saPartnerSelected=_saPartnerSelected.filter(p=>p.id!==id);
+  renderSaPartnerChips();
+}
+
+function addFormToEtab(etabId,formId){
+  formId=parseInt(formId);if(!formId)return;
+  const p=_saPartnerSelected.find(x=>x.id===etabId);if(!p)return;
+  if(!p.formations.includes(formId))p.formations.push(formId);
+  renderSaPartnerChips();
+}
+
+function removeFormFromEtab(etabId,formId){
+  const p=_saPartnerSelected.find(x=>x.id===etabId);if(!p)return;
+  p.formations=p.formations.filter(f=>f!==formId);
   renderSaPartnerChips();
 }
 
 function renderSaPartnerChips(){
   const el=document.getElementById('saPartnerChips');if(!el)return;
-  el.innerHTML=_saPartnerSelected.map(p=>`<div class="partner-chip">
-    <span>${esc(p.label)}${p.cp?` · ${p.cp}`:''}</span>
-    <span class="partner-chip-x" onclick="removeSaPartner(${p.id})">×</span>
-  </div>`).join('');
+  const sid=parseInt(document.getElementById('saSousAction')?.value)||0;
+  const indics=sid?ALL_INDIC_CONFIG.filter(c=>c.type_sous_action===sid):[];
+  el.innerHTML=_saPartnerSelected.map(p=>{
+    const etabForms=ALL_FORMATIONS.filter(f=>f.etablissement_ref===p.id&&f.actif!==false);
+    const selectedForms=p.formations||[];
+    const formChips=selectedForms.map(fid=>{
+      const form=ALL_FORMATIONS.find(f=>f.id===fid);
+      return form?`<div class="sa-form-chip"><span>${esc(form.nom_formation)}</span><span class="sa-form-chip-x" onclick="removeFormFromEtab(${p.id},${fid})">×</span></div>`:'';
+    }).join('');
+    const availForms=etabForms.filter(f=>!selectedForms.includes(f.id));
+    const formSelect=etabForms.length
+      ?`<select onchange="addFormToEtab(${p.id},this.value);this.value=''" style="font-size:12px;font-family:var(--font);padding:5px 8px;border:.5px solid #ddd;border-radius:var(--rsm);color:#555;width:100%"><option value="">— Sélectionner une formation —</option>${availForms.map(f=>`<option value="${f.id}">${esc(f.nom_formation)}${f.type_diplome?' · '+f.type_diplome:''}</option>`).join('')}</select>`
+      :`<span style="font-size:11px;color:#bbb;font-style:italic">Aucune formation configurée — à ajouter dans CONFIG_FORMATIONS</span>`;
+    const indicHtml=indics.length?`<div>
+      <div class="sa-etab-section-lbl">Indicateurs</div>
+      ${indics.map(ind=>`<div class="indic-row">
+        <div class="indic-row-lbl">${ind.obligatoire?'<span class="indic-row-req">*</span>':''}${esc(ind.libelle_indicateurs)}</div>
+        ${ind.type_valeur==='booleen'
+          ?`<select id="saEI_${p.id}_${ind.id}" class="indic-row-input" style="width:110px"><option value="">—</option><option value="1">Oui</option><option value="0">Non</option></select>`
+          :`<input type="number" id="saEI_${p.id}_${ind.id}" class="indic-row-input" min="0" placeholder="0" value="${(p.indicateurs||{})[ind.id]||''}">`}
+      </div>`).join('')}
+    </div>`:'';
+    return `<div class="sa-etab-card">
+      <div class="sa-etab-card-hd">
+        <div><div style="font-size:12px;font-weight:600;color:#1a1a1a">${esc(p.label)}</div><div style="font-size:10px;color:#aaa">${p.cp||''}</div></div>
+        <span class="partner-chip-x" onclick="removeSaPartner(${p.id})" style="font-size:18px;color:#ccc">×</span>
+      </div>
+      <div class="sa-etab-card-body">
+        <div><div class="sa-etab-section-lbl">Formations</div>${formSelect}<div class="sa-form-chips">${formChips}</div></div>
+        ${indicHtml}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 /* ══ PARTENAIRES (entreprises/entités) ══ */
@@ -2781,7 +2842,8 @@ async function loadEtablissements(){
   if(window._ALL_ETABLISSEMENTS)return window._ALL_ETABLISSEMENTS;
   try{
     const t=await grist.docApi.fetchTable('CONFIG_liste_des_etablissements_RGE');
-    window._ALL_ETABLISSEMENTS=tableToRows(t);
+    const all=tableToRows(t);
+    window._ALL_ETABLISSEMENTS=all.filter(e=>e.region_lib==='Grand Est'||e.code_region_calc==='44'||String(e.code_region_calc)==='44');
   }catch(e){window._ALL_ETABLISSEMENTS=[]}
   return window._ALL_ETABLISSEMENTS;
 }

@@ -2842,9 +2842,8 @@ function resetPartnerSection(){
 async function loadEtablissements(){
   if(window._ALL_ETABLISSEMENTS)return window._ALL_ETABLISSEMENTS;
   try{
-    const t=await grist.docApi.fetchTable('CONFIG_liste_des_etablissements_RGE');
-    const all=tableToRows(t);
-    window._ALL_ETABLISSEMENTS=all.filter(e=>e.region_lib==='Grand Est'||e.code_region_calc==='44'||String(e.code_region_calc)==='44');
+    const t=await grist.docApi.fetchTable('CONFIG_etablissements_partenaires');
+    window._ALL_ETABLISSEMENTS=tableToRows(t);
   }catch(e){window._ALL_ETABLISSEMENTS=[]}
   return window._ALL_ETABLISSEMENTS;
 }

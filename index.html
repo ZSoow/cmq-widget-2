@@ -1974,11 +1974,12 @@ function renderSaPartnerChips(){
     const selectedForms=p.formations||[];
     const formChips=selectedForms.map(fid=>{
       const form=ALL_FORMATIONS.find(f=>f.id===fid);
-      return form?`<div class="sa-form-chip"><span>${esc(form.nom_formation)}</span><span class="sa-form-chip-x" onclick="removeFormFromEtab(${p.id},${fid})">×</span></div>`:'';
+      const formLabel=form?(form.type_diplome&&form.description?`${form.type_diplome} · ${form.description}`:form.nom_formation):'';
+      return form?`<div class="sa-form-chip"><span>${esc(formLabel)}</span><span class="sa-form-chip-x" onclick="removeFormFromEtab(${p.id},${fid})">×</span></div>`:'';
     }).join('');
     const availForms=etabForms.filter(f=>!selectedForms.includes(f.id));
     const formSelect=etabForms.length
-      ?`<select onchange="addFormToEtab(${p.id},this.value);this.value=''" style="font-size:12px;font-family:var(--font);padding:5px 8px;border:.5px solid #ddd;border-radius:var(--rsm);color:#555;width:100%"><option value="">— Sélectionner une formation —</option>${availForms.map(f=>`<option value="${f.id}">${esc(f.nom_formation)}${f.type_diplome?' · '+f.type_diplome:''}</option>`).join('')}</select>`
+      ?`<select onchange="addFormToEtab(${p.id},this.value);this.value=''" style="font-size:12px;font-family:var(--font);padding:5px 8px;border:.5px solid #ddd;border-radius:var(--rsm);color:#555;width:100%"><option value="">— Sélectionner une formation —</option>${availForms.map(f=>`<option value="${f.id}">${esc(f.type_diplome&&f.description?f.type_diplome+' · '+f.description:f.nom_formation)}</option>`).join('')}</select>`
       :`<span style="font-size:11px;color:#bbb;font-style:italic">Aucune formation configurée — à ajouter dans CONFIG_FORMATIONS</span>`;
     const indicHtml=indics.length?`<div>
       <div class="sa-etab-section-lbl">Indicateurs</div>

@@ -893,10 +893,20 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
       <label class="f-label">Commentaire</label>
       <textarea id="saComment" style="width:100%;min-height:55px" placeholder="Notes, contexte…"></textarea>
     </div>
+    <!-- Section "Reprendre un modèle" — visible en mode création uniquement -->
+    <div id="saReprendreSection" style="display:none;margin-top:14px;border-top:.5px solid #ebebeb;padding-top:12px">
+      <div style="font-size:11px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Reprendre un modèle archivé</div>
+      <select id="saReprendreSelect" onchange="onSaReprendreChange()" style="width:100%;font-size:12px;font-family:var(--font);padding:6px 10px;border:.5px solid #ddd;border-radius:var(--rsm);color:#555">
+        <option value="">— Choisir une action clôturée —</option>
+      </select>
+      <div id="saReprendereTaches" style="display:none;margin-top:10px"></div>
+    </div>
+    <!-- Tâches liées (mode édition) -->
     <div id="saTachesLiees" style="display:none;margin-top:18px;border-top:.5px solid #ebebeb;padding-top:14px"></div>
     <div class="toast" id="saisieToast" style="margin-top:10px;margin-bottom:0">Action enregistrée !</div>
-    <div style="display:flex;gap:8px;margin-top:10px">
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
       <button class="btn btn-ghost" onclick="closeSaisieActionPanel()">Annuler</button>
+      <button id="btnCloturerAction" style="display:none;font-size:12px;padding:8px 14px;background:#fff3cd;border:.5px solid #e0ac00;color:#856404;border-radius:var(--rsm);cursor:pointer;font-family:var(--font)" onclick="cloturerAction()">Clôturer l'action</button>
       <button id="btnSaisieSubmit" class="btn btn-primary" style="flex:1;padding:10px;font-size:13px" onclick="submitSaisieAction()">Enregistrer l'action</button>
     </div>
   </div>
@@ -1776,7 +1786,7 @@ function setActFiltStatut(val){
   renderActHistoryCurrent();
 }
 function renderActHistory(proj,actnProj){
-  let projActions=actnProj?[...(window._ALL_ACTIONS||[])].filter(a=>a.projet_ref===actnProj.id):[];
+  let projActions=actnProj?[...(window._ALL_ACTIONS||[])].filter(a=>a.projet_ref===actnProj.id&&!a.cloturee):[];
   // Filtre WP/Axe
   const wpFilt=parseInt(document.getElementById('actFiltWP')?.value)||0;
   if(wpFilt)projActions=projActions.filter(a=>a.wp_axe_ref===wpFilt);
@@ -1887,8 +1897,8 @@ function switchObjTab(tab){
 
 function initSaisieActionPanel(){
   const proj=PROJETS.find(p=>p.id===currentProjetId);if(!proj)return;
-  // Date par défaut
-  document.getElementById('saDate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('saDate').value='';
+  document.getElementById('saDateDebut').value='';
   // Responsables
   const sr=document.getElementById('saResp');
   sr.innerHTML='<option value="">— Choisir —</option>';
@@ -1912,6 +1922,23 @@ function initSaisieActionPanel(){
   resetSaPartnerSection();
   resetSaPartenaireSection();
   const tDiv=document.getElementById('saTachesLiees');if(tDiv){tDiv.style.display='none';tDiv.innerHTML='';}
+  // Mode création : afficher Reprendre, masquer Clôturer
+  const rp=document.getElementById('saReprendreSection');
+  const rc=document.getElementById('saReprendreSelect');
+  const rt=document.getElementById('saReprendereTaches');
+  if(rp){
+    rp.style.display='block';
+    if(rc){
+      rc.innerHTML='<option value="">— Choisir une action clôturée —</option>';
+      const proj=PROJETS.find(p=>p.id===currentProjetId);
+      const actnProj=proj&&ACTN_PROJETS.find(ap=>ap.cod_projet===proj.code);
+      const archived=(window._ALL_ACTIONS||[]).filter(a=>actnProj&&a.projet_ref===actnProj.id&&a.cloturee);
+      if(!archived.length){rp.style.display='none';}
+      else archived.forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=a.nom_suivi_action||'(sans nom)';rc.appendChild(o)});
+    }
+    if(rt){rt.style.display='none';rt.innerHTML='';}
+  }
+  const btnC=document.getElementById('btnCloturerAction');if(btnC)btnC.style.display='none';
   ['saStepNum1','saStepNum2','saStepNum3'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.className='step-num'+(i>0?' inactive':'')});
 }
 
@@ -1926,6 +1953,85 @@ function closeSaisieActionPanel(){
   _editingSaisieActionId=null;
   const btn=document.getElementById('btnSaisieSubmit');
   if(btn)btn.textContent="Enregistrer l'action";
+}
+
+async function cloturerAction(){
+  if(!_editingSaisieActionId)return;
+  if(!confirm('Clôturer cette action ? Toutes les tâches liées seront archivées (Réalisé). Cette action disparaîtra des listes actives.'))return;
+  const actionId=_editingSaisieActionId;
+  try{
+    // Marquer l'action comme clôturée + terminée
+    await grist.docApi.applyUserActions([['UpdateRecord','SAISIE_actions_realisees',actionId,{cloturee:true,terminee:true}]]);
+    // Archiver toutes les tâches liées (→ Réalisé)
+    const linked=(ALL_TACHES||[]).filter(t=>t.action_ref===actionId&&t.statut!=='Réalisé');
+    for(const t of linked){
+      try{await grist.docApi.applyUserActions([['UpdateRecord','SUIVI_TACHES_ALL',t.id,{statut:'Réalisé',date_realisation:Math.floor(Date.now()/1000)}]])}catch(e2){console.warn(e2)}
+    }
+    // Rafraîchir les caches
+    const fresh=await grist.docApi.fetchTable('SAISIE_actions_realisees');
+    window._ALL_ACTIONS=tableToRows(fresh);
+    const freshT=await grist.docApi.fetchTable('SUIVI_TACHES_ALL');
+    ALL_TACHES=tableToRows(freshT);
+    TACHES=ALL_TACHES.filter(t=>t.projet_id===currentProjetId);
+    closeSaisieActionPanel();
+    populateSelects();
+    applyFilters();
+    renderActHistoryCurrent();
+    showToast('Action clôturée — tâches archivées','info');
+  }catch(e){showToast('Erreur : '+e.message,'error')}
+}
+
+let _reproTaches=[];
+
+function onSaReprendreChange(){
+  const sel=document.getElementById('saReprendreSelect');
+  const actionId=parseInt(sel?.value)||0;
+  const container=document.getElementById('saReprendereTaches');
+  if(!container)return;
+  if(!actionId){container.style.display='none';container.innerHTML='';_reproTaches=[];return;}
+  const taches=(ALL_TACHES||[]).filter(t=>t.action_ref===actionId);
+  _reproTaches=taches.map(t=>t.id);
+  if(!taches.length){
+    container.innerHTML='<div style="font-size:12px;color:#bbb;font-style:italic">Aucune tâche liée à cette action archivée</div>';
+    container.style.display='block';return;
+  }
+  const SC_map={'A traiter':['#f0f0f0','#555'],'En cours':['#e8f0fe','#1a56a0'],'Réalisé':['#e6f4ea','#1e7e34']};
+  container.innerHTML='<div style="font-size:11px;color:#888;margin-bottom:8px">Sélectionner les tâches à reproduire :</div>'
+    +taches.map(t=>{
+      const sc=SC_map[t.statut]||['#f0f0f0','#555'];
+      return`<label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:12px">
+        <input type="checkbox" checked data-tid="${t.id}" onchange="toggleReproTache(${t.id},this.checked)" style="width:14px;height:14px;flex-shrink:0">
+        <span style="font-size:9px;background:${sc[0]};color:${sc[1]};padding:1px 5px;border-radius:3px">${esc(t.statut)}</span>
+        <span style="flex:1">${esc(t.tache)}</span>
+        ${t.qui?`<span style="font-size:11px;color:#aaa">${esc(t.qui)}</span>`:''}
+      </label>`;
+    }).join('');
+  container.style.display='block';
+}
+
+function toggleReproTache(tid,checked){
+  if(checked&&!_reproTaches.includes(tid))_reproTaches.push(tid);
+  else if(!checked)_reproTaches=_reproTaches.filter(x=>x!==tid);
+}
+
+async function reproduireTaches(newActionId){
+  if(!_reproTaches.length)return;
+  const taches=(ALL_TACHES||[]).filter(t=>_reproTaches.includes(t.id));
+  for(const t of taches){
+    const rec={
+      tache:t.tache,qui:t.qui||'',statut:'A traiter',
+      priorite:t.priorite||'Normale',wp_code:t.wp_code||'',
+      commentaire:t.commentaire||'',projet_id:currentProjetId,
+      action_ref:newActionId,
+      deadline:null,date_debut:null,date_realisation:null
+    };
+    try{
+      const res=await grist.docApi.applyUserActions([['AddRecord','SUIVI_TACHES_ALL',null,rec]]);
+      ALL_TACHES.push({id:res?.retValues?.[0],...rec});
+    }catch(e2){console.warn(e2)}
+  }
+  TACHES=ALL_TACHES.filter(t=>t.projet_id===currentProjetId);
+  _reproTaches=[];
 }
 
 function onSaWpChange(){
@@ -2045,6 +2151,8 @@ async function submitSaisieAction(){
       }
       try{const freshEP=await grist.docApi.fetchTable('SAISIE_entreprises_par_action');window._ALL_ENT_PARTS=tableToRows(freshEP);}catch(e5){console.warn(e5)}
     }
+    // Reproduire les tâches d'un modèle archivé (mode création uniquement)
+    if(!_editingSaisieActionId&&newId)await reproduireTaches(newId);
     const fresh=await grist.docApi.fetchTable('SAISIE_actions_realisees');
     window._ALL_ACTIONS=tableToRows(fresh);
     const t=document.getElementById('saisieToast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);
@@ -2056,6 +2164,7 @@ async function submitSaisieAction(){
     ALL_INDIC_VAL=tableToRows(freshVal);
     renderObjectifs();
     renderActHistoryCurrent();
+    applyFilters();
   }catch(e){showToast(e.message,'error')}
 }
 
@@ -2068,6 +2177,9 @@ async function openSaisieActionPanelEdit(actionId){
   _editingSaisieActionId=actionId;
   const btn=document.getElementById('btnSaisieSubmit');
   if(btn)btn.textContent="Modifier l'action";
+  // Mode édition : afficher Clôturer, masquer Reprendre
+  const btnC=document.getElementById('btnCloturerAction');if(btnC)btnC.style.display='block';
+  const rp=document.getElementById('saReprendreSection');if(rp)rp.style.display='none';
   const a=(window._ALL_ACTIONS||[]).find(x=>x.id===actionId);
   if(!a)return;
   // Champs de base
@@ -3396,7 +3508,7 @@ function populateSelects(){
   // Actions liées aux tâches (filtrées par projet courant)
   const ma=document.getElementById('mAction');
   ma.innerHTML='<option value="">— Tâche libre —</option>';
-  const projActions=(window._ALL_ACTIONS||[]).filter(a=>actnProj&&a.projet_ref===actnProj.id).sort((a,b)=>(a.nom_suivi_action||'').localeCompare(b.nom_suivi_action||'','fr'));
+  const projActions=(window._ALL_ACTIONS||[]).filter(a=>actnProj&&a.projet_ref===actnProj.id&&!a.cloturee).sort((a,b)=>(a.nom_suivi_action||'').localeCompare(b.nom_suivi_action||'','fr'));
   projActions.forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=(a.terminee?'✓ ':'')+a.nom_suivi_action;ma.appendChild(o)});
 
   // Filtre "Action liée" dans la barre de filtres tâches (actions en cours uniquement)
@@ -3900,7 +4012,9 @@ function renderHebdo(){
 function renderActions(){
   const proj=PROJETS.find(p=>p.id===currentProjetId);
   const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj?.code);
-  const projActions=actnProj?[...window._ALL_ACTIONS||[]].filter(a=>a.projet_ref===actnProj.id):[];
+  const allProjActions=actnProj?[...window._ALL_ACTIONS||[]].filter(a=>a.projet_ref===actnProj.id):[];
+  const projActions=allProjActions.filter(a=>!a.cloturee);
+  const archivedActions=allProjActions.filter(a=>a.cloturee);
   const sorted=projActions.sort((a,b)=>b.date_suivi_action-a.date_suivi_action);
 
   const rows=sorted.length?sorted.map((a,i)=>{
@@ -3926,13 +4040,30 @@ function renderActions(){
     </div>`;
   }).join(''):`<div style="padding:28px;text-align:center;color:#bbb;font-size:13px">Aucune action réalisée pour ce projet</div>`;
 
+  const archivedRows=archivedActions.length?`
+    <div style="margin-top:12px;border:.5px solid #e0e0e0;border-radius:var(--r);overflow:hidden">
+      <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('.arch-chev').textContent=this.nextElementSibling.style.display==='none'?'▼':'▲'" style="width:100%;background:#fafafa;border:none;padding:9px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-family:var(--font);font-size:12px;color:#888">
+        <span>Archives — ${archivedActions.length} action${archivedActions.length>1?'s':''} clôturée${archivedActions.length>1?'s':''}</span>
+        <span class="arch-chev">▼</span>
+      </button>
+      <div style="display:none">${archivedActions.map(a=>{
+        const rh=ALL_RH.find(m=>m.id===a.responsable_suivi_action_ref)||{};
+        const ax=ACTN_AXES.find(w=>w.id===a.wp_axe_ref)||{};
+        return`<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-top:.5px solid #f0f0f0;font-size:12px">
+          <span style="font-size:10px;background:#f0f0f0;color:#888;padding:2px 7px;border-radius:10px;flex-shrink:0">Clôturée</span>
+          <span style="flex:1;color:#888">${esc(a.nom_suivi_action||'(sans nom)')}</span>
+          <span style="font-size:11px;color:#bbb">${rh.Membre||''} · ${ax.cod_wp_axe||''}</span>
+        </div>`;
+      }).join('')}</div>
+    </div>`:'';
+
   document.getElementById('actionsContent').innerHTML=`<div class="actions-layout">
     <div class="actions-list">
       <div class="actions-list-hd">
         <span class="actions-list-title">Actions réalisées</span>
         <button class="btn btn-primary btn-sm" onclick="openActionModal()">+ Nouvelle action</button>
       </div>
-      ${rows}
+      ${rows}${archivedRows}
     </div>
     <div class="action-form-card">
       <div class="action-form-hd"><div class="action-form-title">Saisir une action réalisée</div></div>

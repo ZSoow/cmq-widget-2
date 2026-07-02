@@ -786,7 +786,21 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
       </div>
     </div>
     <div class="act-history">
-      <div class="act-history-hd" id="actHistoryHd">Actions réalisées</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:.5px solid #e8e8e8">
+        <span style="font-size:13px;font-weight:600;color:#1a1a1a" id="actHistoryHd">Actions</span>
+        <button onclick="openActionModal()" style="font-size:11px;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:var(--font);font-weight:500">+ Nouvelle action</button>
+      </div>
+      <div style="display:flex;gap:8px;padding:10px 14px;border-bottom:.5px solid #f0f0f0;background:#fafafa;flex-wrap:wrap;align-items:center">
+        <select id="actFiltWP" onchange="renderActHistoryCurrent()" style="font-size:12px;padding:5px 8px;border:.5px solid #ddd;border-radius:6px;background:#fff;font-family:var(--font)">
+          <option value="">Tous les WP/Axes</option>
+        </select>
+        <div style="display:flex;border:.5px solid #ddd;border-radius:6px;overflow:hidden">
+          <button id="actFiltBtnAll"    onclick="setActFiltStatut('')"         style="font-size:11px;padding:5px 10px;border:none;cursor:pointer;font-family:var(--font);background:var(--accent);color:#fff">Toutes</button>
+          <button id="actFiltBtnEncours" onclick="setActFiltStatut('encours')" style="font-size:11px;padding:5px 10px;border:none;cursor:pointer;font-family:var(--font);background:transparent">En cours</button>
+          <button id="actFiltBtnTerminee" onclick="setActFiltStatut('terminee')" style="font-size:11px;padding:5px 10px;border:none;cursor:pointer;font-family:var(--font);background:transparent">Terminées</button>
+        </div>
+        <input type="search" id="actFiltSearch" oninput="renderActHistoryCurrent()" placeholder="Rechercher une action…" style="font-size:12px;padding:5px 10px;border:.5px solid #ddd;border-radius:6px;flex:1;min-width:120px;font-family:var(--font)">
+      </div>
       <div id="actHistoryList"><div style="padding:20px;text-align:center;font-size:12px;color:#bbb">Chargement…</div></div>
     </div>
   </div>
@@ -1389,7 +1403,7 @@ let _mapLayer='etab', _mapProjetOnly=false, _leafletMap=null, _mapMarkers=[], _m
 let currentProjetId=null;
 let TACHES=[], MEMBRES=[], WPS=[];
 let filteredTaches=[], activeStatut='';
-let editingId=null, editingActionId=null;
+let editingId=null, editingActionId=null, _actFiltStatut='';
 let ganttMode='wp', ganttOffset=0;
 let wpGroupState={};
 let activeTab='kanban';
@@ -1713,15 +1727,61 @@ function openActionsPage(){
   document.getElementById('afIndicZone').style.display='none';
   document.getElementById('afIndicZone').innerHTML='';
   resetPartnerSection();
+  // Filtres de la liste d'actions : peupler le WP et réinitialiser
+  const fw=document.getElementById('actFiltWP');
+  fw.innerHTML='<option value="">Tous les WP/Axes</option>';
+  if(actnProj)ACTN_AXES.filter(a=>a.projet_ref===actnProj.id).forEach(a=>{
+    const o=document.createElement('option');o.value=a.id;
+    o.textContent=a.id_wp_axe_calc||`${a.cod_wp_axe} — ${a.lib_wp_axe}`;fw.appendChild(o);
+  });
+  const fs=document.getElementById('actFiltSearch');if(fs)fs.value='';
+  _actFiltStatut='';
+  ['All','Encours','Terminee'].forEach(k=>{
+    const b=document.getElementById('actFiltBtn'+k);
+    if(b){b.style.background=k==='All'?'var(--accent)':'transparent';b.style.color=k==='All'?'#fff':'inherit';}
+  });
   renderActHistory(proj,actnProj);
   showPage('actions');
 }
 
+function renderActHistoryCurrent(){
+  const proj=PROJETS.find(p=>p.id===currentProjetId);
+  const actnProj=proj&&ACTN_PROJETS.find(ap=>ap.cod_projet===proj.code);
+  renderActHistory(proj,actnProj);
+}
+function setActFiltStatut(val){
+  _actFiltStatut=val;
+  const map={All:'',Encours:'encours',Terminee:'terminee'};
+  Object.entries(map).forEach(([k,v])=>{
+    const btn=document.getElementById('actFiltBtn'+k);
+    if(!btn)return;
+    btn.style.background=val===v?'var(--accent)':'transparent';
+    btn.style.color=val===v?'#fff':'inherit';
+  });
+  renderActHistoryCurrent();
+}
 function renderActHistory(proj,actnProj){
-  const projActions=actnProj?[...(window._ALL_ACTIONS||[])].filter(a=>a.projet_ref===actnProj.id).sort((a,b)=>b.date_suivi_action-a.date_suivi_action):[];
-  document.getElementById('actHistoryHd').textContent=`Actions — ${proj?.nom||''} (${projActions.length})`;
+  let projActions=actnProj?[...(window._ALL_ACTIONS||[])].filter(a=>a.projet_ref===actnProj.id):[];
+  // Filtre WP/Axe
+  const wpFilt=parseInt(document.getElementById('actFiltWP')?.value)||0;
+  if(wpFilt)projActions=projActions.filter(a=>a.wp_axe_ref===wpFilt);
+  // Filtre statut
+  if(_actFiltStatut==='encours')projActions=projActions.filter(a=>!a.terminee);
+  if(_actFiltStatut==='terminee')projActions=projActions.filter(a=>a.terminee);
+  // Filtre recherche
+  const q=(document.getElementById('actFiltSearch')?.value||'').toLowerCase().trim();
+  if(q)projActions=projActions.filter(a=>(a.nom_suivi_action||'').toLowerCase().includes(q));
+  // Tri : en cours d'abord (par date début), puis terminées
+  projActions.sort((a,b)=>{
+    if(!!a.terminee!==!!b.terminee)return a.terminee?1:-1;
+    const da=a.date_debut_action||a.date_suivi_action||0;
+    const db=b.date_debut_action||b.date_suivi_action||0;
+    return db-da;
+  });
+  const total=actnProj?(window._ALL_ACTIONS||[]).filter(a=>a.projet_ref===actnProj.id).length:0;
+  document.getElementById('actHistoryHd').textContent=`Actions — ${proj?.nom||''} (${projActions.length}${projActions.length!==total?' / '+total:''})`;
   if(!projActions.length){
-    document.getElementById('actHistoryList').innerHTML='<div style="padding:24px;text-align:center;font-size:12px;color:#bbb">Aucune action enregistrée pour ce projet.<br>Utilisez le formulaire pour en saisir une.</div>';
+    document.getElementById('actHistoryList').innerHTML='<div style="padding:24px;text-align:center;font-size:12px;color:#bbb">Aucune action trouvée.<br>Modifiez les filtres ou créez une nouvelle action.</div>';
     return;
   }
   document.getElementById('actHistoryList').innerHTML=projActions.map(a=>{
@@ -1730,7 +1790,6 @@ function renderActHistory(proj,actnProj){
     const act=ACTN_ACTIONS.find(x=>x.id===a.action_ref);
     const sa=ACTN_SOUS_ACTIONS.find(s=>s.id===a.sous_action_ref);
     const indics=getIndicForAction(a.id);
-    const path=[wp?.cod_wp_axe,act?.cod_action,sa?.cod_sous_action].filter(Boolean).join(' › ');
     const chips=indics.map(iv=>{const cfg=ALL_INDIC_CONFIG.find(c=>c.id===iv.indicateur_ref);return cfg?`<span class="ah-chip">${esc(cfg.libelle_indicateurs)} <strong>${(iv.valeur||0).toLocaleString('fr-FR')}</strong></span>`:''}).filter(Boolean).join('');
     const partenaires=(window._ALL_ETAB_PARTS||[]).filter(p=>p.ACTION_CONCERNEE===a.id);
     const etabChips=partenaires.map(p=>{
@@ -1738,13 +1797,28 @@ function renderActHistory(proj,actnProj){
       const label=p.ETABLISSEMENT||e?.nom_etablissement||`Étab. #${p.ETABLISSEMENT_PARTICIPANT}`;
       return`<span class="ah-chip" style="background:#f0f4ff;border:.5px solid #c5d3f0;color:#2a4a8a" title="${esc(label)}">${esc(label.length>30?label.substring(0,28)+'…':label)}</span>`;
     }).join('');
-    const statut=a.terminee
-      ?`<span style="font-size:10px;background:#e6f4ea;color:#1e7e34;padding:2px 7px;border-radius:10px;font-weight:600">Terminée</span>`
-      :`<span style="font-size:10px;background:#fff3cd;color:#856404;padding:2px 7px;border-radius:10px;font-weight:600">En cours</span>`;
-    return`<div class="ah-item" onclick="openActionModal(${a.id})" style="cursor:pointer" onmouseover="this.style.background='#f7f7fb'" onmouseout="this.style.background=''">
-      <div class="ah-top"><div class="ah-date">${fmtDateFull(a.date_suivi_action)||fmtDateFull(a.date_debut_action)||'—'}</div><div class="ah-name">${esc(a.nom_suivi_action||'(sans nom)')}</div>${statut}</div>
-      <div class="ah-path">${esc(rh?.Membre||'')}${path?' · '+esc(path):''}</div>
-      ${chips||etabChips?`<div class="ah-indics">${chips}${etabChips}</div>`:''}
+    const statutBadge=a.terminee
+      ?`<span style="font-size:10px;background:#e6f4ea;color:#1e7e34;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0">Terminée</span>`
+      :`<span style="font-size:10px;background:#fff3cd;color:#856404;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0">En cours</span>`;
+    const wpBadge=wp?`<span style="font-size:10px;background:var(--accent);color:#fff;padding:2px 7px;border-radius:4px;font-weight:600;flex-shrink:0">${esc(wp.cod_wp_axe)}</span>`:'';
+    const dateStr=a.terminee&&a.date_suivi_action
+      ?'Terminée le '+fmtDate(a.date_suivi_action)
+      :a.date_debut_action?'Début : '+fmtDate(a.date_debut_action):'';
+    const actionLib=act?`<span style="color:var(--sub);font-size:11px">${esc(act.lib_action)}</span>`:'';
+    const saLib=sa?`<span style="color:var(--sub);font-size:11px"> › ${esc(sa.lib_sous_action)}</span>`:'';
+    return`<div class="ah-item" onclick="openActionModal(${a.id})" style="cursor:pointer;transition:background .1s" onmouseover="this.style.background='#f4f4fb'" onmouseout="this.style.background=''">
+      <div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap">
+        ${wpBadge}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:2px">${esc(a.nom_suivi_action||'(sans nom)')}</div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--sub)">${esc(rh?.Membre||'')}${actionLib}${saLib}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+          ${statutBadge}
+          ${dateStr?`<span style="font-size:10px;color:var(--sub)">${dateStr}</span>`:''}
+        </div>
+      </div>
+      ${chips||etabChips?`<div class="ah-indics" style="margin-top:6px">${chips}${etabChips}</div>`:''}
     </div>`;
   }).join('');
 }

@@ -996,16 +996,16 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
         <select id="fWP" onchange="onFWpChange()" style="min-width:130px"><option value="">Tous</option></select>
       </div>
       <div class="fg-inline">
+        <span class="filter-lbl">Action liée</span>
+        <select id="fAction" onchange="applyFilters()" style="min-width:160px;max-width:220px"><option value="">Toutes</option></select>
+      </div>
+      <div class="fg-inline">
         <span class="filter-lbl">Responsable</span>
         <select id="fQui" onchange="applyFilters()" style="min-width:120px"><option value="">Tous</option></select>
       </div>
       <div class="fg-inline">
         <span class="filter-lbl">Recherche</span>
         <input type="text" id="fSearch" placeholder="Tâche, commentaire…" oninput="applyFilters()" style="min-width:150px">
-      </div>
-      <div class="fg-inline">
-        <span class="filter-lbl">Action liée</span>
-        <select id="fAction" onchange="applyFilters()" style="min-width:160px;max-width:220px"><option value="">Toutes</option></select>
       </div>
       <div class="fg-inline" style="margin-left:auto">
         <span class="filter-lbl">Priorité</span>
@@ -3615,10 +3615,25 @@ function renderHeader(){
 }
 
 function renderStats(){
-  const byS={};filteredTaches.forEach(t=>{byS[t.statut]=(byS[t.statut]||0)+1});
+  // Compter par statut sans le filtre activeStatut (pour garder tous les boutons visibles)
+  const wp=document.getElementById('fWP')?.value||'';
+  const qui=document.getElementById('fQui')?.value||'';
+  const q=(document.getElementById('fSearch')?.value||'').toLowerCase();
+  const prio=document.getElementById('fPrio')?.value||'';
+  const actionFilt=parseInt(document.getElementById('fAction')?.value)||0;
+  const base=TACHES.filter(t=>{
+    if(wp&&t.wp_code!==wp)return false;
+    if(qui&&t.qui!==qui)return false;
+    if(prio&&t.priorite!==prio)return false;
+    if(actionFilt&&(t.action_ref||0)!==actionFilt)return false;
+    if(q&&!t.tache?.toLowerCase().includes(q)&&!(t.commentaire||'').toLowerCase().includes(q))return false;
+    return true;
+  });
+  const byS={};base.forEach(t=>{byS[t.statut]=(byS[t.statut]||0)+1});
   document.getElementById('statsBar').innerHTML=
-    `<div class="stat-chip sc-all ${!activeStatut?'active':''}" onclick="filterByStatut('')">Toutes <strong>${filteredTaches.length}</strong></div>`+
-    Object.entries(SC).map(([s,c])=>{const n=byS[s]||0;if(!n)return'';
+    `<div class="stat-chip sc-all ${!activeStatut?'active':''}" onclick="filterByStatut('')">Toutes <strong>${base.length}</strong></div>`+
+    Object.entries(SC).map(([s,c])=>{
+      const n=byS[s]||0;
       const cls=c.cls.replace('k-','sc-');
       return`<div class="stat-chip ${cls} ${activeStatut===s?'active':''}" onclick="filterByStatut('${s}')">${c.label} <strong>${n}</strong></div>`;
     }).join('');

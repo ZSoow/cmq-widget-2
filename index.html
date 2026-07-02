@@ -983,7 +983,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     <div class="filters">
       <div class="fg-inline">
         <span class="filter-lbl" id="labelWP">WP / Axe</span>
-        <select id="fWP" onchange="applyFilters()" style="min-width:130px"><option value="">Tous</option></select>
+        <select id="fWP" onchange="onFWpChange()" style="min-width:130px"><option value="">Tous</option></select>
       </div>
       <div class="fg-inline">
         <span class="filter-lbl">Responsable</span>
@@ -3423,6 +3423,26 @@ function onMWPChange(){
     .forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=(a.terminee?'✓ ':'')+a.nom_suivi_action;ma.appendChild(o)});
 }
 
+function onFWpChange(){
+  const wpCode=document.getElementById('fWP')?.value||'';
+  const fa=document.getElementById('fAction');
+  if(fa){
+    const curVal=parseInt(fa.value)||0;
+    fa.innerHTML='<option value="">Toutes</option>';
+    const proj=PROJETS.find(p=>p.id===currentProjetId);
+    const actnProj=proj&&ACTN_PROJETS.find(ap=>ap.cod_projet===proj.code);
+    const axeId=wpCode?(ACTN_AXES.find(x=>x.cod_wp_axe===wpCode&&x.projet_ref===actnProj?.id)?.id||null):null;
+    const list=(window._ALL_ACTIONS||[])
+      .filter(a=>actnProj&&a.projet_ref===actnProj.id&&!a.terminee)
+      .filter(a=>!axeId||a.wp_axe_ref===axeId)
+      .sort((a,b)=>(a.nom_suivi_action||'').localeCompare(b.nom_suivi_action||'','fr'));
+    list.forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=a.nom_suivi_action||'(sans nom)';fa.appendChild(o)});
+    if(curVal&&[...fa.options].some(o=>parseInt(o.value)===curVal))fa.value=curVal;
+    else fa.value='';
+  }
+  applyFilters();
+}
+
 function applyFilters(){
   const wp=document.getElementById('fWP')?.value||'';
   const qui=document.getElementById('fQui')?.value||'';
@@ -3442,7 +3462,7 @@ function applyFilters(){
 }
 function resetFilters(){
   ['fWP','fQui','fSearch','fPrio','fAction'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
-  activeStatut='';applyFilters();
+  activeStatut='';onFWpChange();
 }
 function filterByStatut(s){activeStatut=activeStatut===s?'':s;applyFilters()}
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CMQ Bioeco - Tableau de bord</title>
+<title>CMQ Bioeco — Tableau de bord</title>
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1236,6 +1236,37 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
   <div class="modal-ft">
     <button class="btn btn-ghost" onclick="closeActionModal()">Annuler</button>
     <button class="btn btn-primary" id="btnActionSubmit" onclick="submitAction()">Enregistrer</button>
+  </div>
+</div>
+</div>
+
+<!-- MODALE ÉDITION INDICATEUR -->
+<div class="overlay" id="indicEditOverlay" onclick="if(event.target===this)closeIndicEditModal()">
+<div class="modal" style="width:580px;max-width:96vw;max-height:85vh;display:flex;flex-direction:column;padding:0">
+  <div class="modal-hd" style="padding:16px 20px;flex-shrink:0">
+    <span class="modal-title">Modifier l'indicateur</span>
+    <button class="btn-x" onclick="closeIndicEditModal()">×</button>
+  </div>
+  <div style="padding:16px 20px;overflow-y:auto;flex:1">
+    <!-- Config indicateur -->
+    <div class="fg">
+      <label class="fl">Nom de l'indicateur</label>
+      <input type="text" id="indicEditNom" style="width:100%" placeholder="Libellé…">
+    </div>
+    <div class="fg" style="margin-top:10px">
+      <label class="fl">Type</label>
+      <select id="indicEditType" style="width:100%">
+        <option value="nombre">Quantitatif (nombre)</option>
+        <option value="booleen">Qualitatif (oui / non)</option>
+      </select>
+    </div>
+    <div class="toast" id="indicConfigToast" style="margin-top:8px;margin-bottom:0">Config enregistrée !</div>
+    <button onclick="saveIndicConfig()" class="btn btn-primary btn-sm" style="margin-top:10px">Enregistrer la config</button>
+    <!-- Détail des valeurs -->
+    <div style="margin-top:20px;border-top:.5px solid #ebebeb;padding-top:14px">
+      <div style="font-size:11px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Valeurs saisies</div>
+      <div id="indicEditValues"><div style="font-size:12px;color:#bbb;font-style:italic">Aucune valeur saisie pour cet indicateur.</div></div>
+    </div>
   </div>
 </div>
 </div>
@@ -2666,6 +2697,7 @@ function renderObjectifs(){
         +'<div class="indic-target-info"><div class="indic-target-name">'+esc(ind.libelle_indicateurs)+'</div></div>'
         +'<div class="indic-target-num" style="color:'+(pct!==null&&pct>=100?'var(--t600)':accent)+'">'+val.toLocaleString('fr-FR')+'</div>'
         +'<div class="indic-target-bar-wrap" style="min-width:180px">'+bar+'</div>'
+        +'<button onclick="openIndicEditModal('+ind.id+')" title="Modifier" style="background:none;border:.5px solid #e0e0e0;border-radius:4px;cursor:pointer;font-size:12px;color:#888;padding:2px 7px;flex-shrink:0;font-family:var(--font)">✎</button>'
         +'</div>';
     }).join('');
     content='<div style="background:#fff;border:.5px solid #e0e0e0;border-radius:var(--r);overflow:hidden;margin-bottom:24px">'+suivi+'</div>';
@@ -2692,6 +2724,84 @@ function renderObjectifs(){
    CALENDRIER DES ACTIONS
 ══════════════════════════════════════════════ */
 var _calYear=new Date().getFullYear(), _calMonth=new Date().getMonth();
+
+/* ══════════════════════════════════════════════
+   ÉDITION INDICATEUR
+══════════════════════════════════════════════ */
+let _indicEditId=null;
+
+function openIndicEditModal(indicId){
+  _indicEditId=indicId;
+  const ind=ALL_INDIC_CONFIG.find(c=>c.id===indicId);
+  if(!ind)return;
+  document.getElementById('indicEditNom').value=ind.libelle_indicateurs||'';
+  document.getElementById('indicEditType').value=ind.type_valeur==='booleen'?'booleen':'nombre';
+  const t=document.getElementById('indicConfigToast');if(t)t.classList.remove('show');
+  // Charger les valeurs existantes
+  const proj=PROJETS.find(p=>p.id===currentProjetId);
+  const actnProj=proj&&ACTN_PROJETS.find(ap=>ap.cod_projet===proj.code);
+  const projActionIds=new Set(actnProj?(window._ALL_ACTIONS||[]).filter(a=>a.projet_ref===actnProj.id).map(a=>a.id):[]);
+  const rows=(ALL_INDIC_VAL||[]).filter(v=>v.indicateur_ref===indicId&&projActionIds.has(v.action_ref));
+  const valContainer=document.getElementById('indicEditValues');
+  if(!rows.length){
+    valContainer.innerHTML='<div style="font-size:12px;color:#bbb;font-style:italic">Aucune valeur saisie pour cet indicateur.</div>';
+  } else {
+    valContainer.innerHTML=rows.map(v=>{
+      const a=(window._ALL_ACTIONS||[]).find(x=>x.id===v.action_ref);
+      const e=(window._ALL_ETABLISSEMENTS||[]).find(x=>x.id===v.etablissement_ref);
+      const etabLabel=e?.nom_etablissement||(v.etablissement_ref?`Étab #${v.etablissement_ref}`:'—');
+      const isQual=ind.type_valeur==='booleen';
+      const inputHtml=isQual
+        ?`<select id="iev_${v.id}" style="font-size:12px;padding:3px 6px;border:.5px solid #ddd;border-radius:4px;font-family:var(--font)"><option value="1"${v.valeur===1?' selected':''}>Oui</option><option value="0"${v.valeur===0?' selected':''}>Non</option></select>`
+        :`<input type="number" id="iev_${v.id}" value="${v.valeur??''}" min="0" style="width:80px;font-size:12px;padding:3px 6px;border:.5px solid #ddd;border-radius:4px;font-family:var(--font)">`;
+      return`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:.5px solid #f5f5f5;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:500;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a?.nom_suivi_action||'Action #'+v.action_ref)}</div>
+          <div style="font-size:10px;color:#aaa">${esc(etabLabel)}</div>
+        </div>
+        ${inputHtml}
+        <button onclick="saveIndicValue(${v.id})" style="font-size:11px;padding:3px 9px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-family:var(--font);flex-shrink:0">Sauver</button>
+        <span id="iev_toast_${v.id}" style="font-size:10px;color:var(--t600);opacity:0;transition:opacity .3s">✓</span>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('indicEditOverlay').classList.add('open');
+}
+
+function closeIndicEditModal(){
+  document.getElementById('indicEditOverlay').classList.remove('open');
+  _indicEditId=null;
+}
+
+async function saveIndicConfig(){
+  if(!_indicEditId)return;
+  const nom=document.getElementById('indicEditNom').value.trim();
+  const type=document.getElementById('indicEditType').value;
+  if(!nom){alert('Le nom ne peut pas être vide.');return;}
+  try{
+    await grist.docApi.applyUserActions([['UpdateRecord','CONFIG_liste_des_indicateurs_par_action',_indicEditId,{libelle_indicateurs:nom,type_valeur:type}]]);
+    // Mettre à jour le cache local
+    const idx=ALL_INDIC_CONFIG.findIndex(c=>c.id===_indicEditId);
+    if(idx>=0){ALL_INDIC_CONFIG[idx].libelle_indicateurs=nom;ALL_INDIC_CONFIG[idx].type_valeur=type;}
+    const t=document.getElementById('indicConfigToast');if(t){t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
+    renderObjectifs();
+  }catch(e){alert('Erreur : '+e.message);}
+}
+
+async function saveIndicValue(rowId){
+  const inp=document.getElementById('iev_'+rowId);
+  if(!inp)return;
+  const val=parseFloat(inp.value);
+  try{
+    await grist.docApi.applyUserActions([['UpdateRecord','SUIVI_indicateurs',rowId,{valeur:isNaN(val)?0:val}]]);
+    // Mettre à jour le cache local
+    const idx=ALL_INDIC_VAL.findIndex(v=>v.id===rowId);
+    if(idx>=0)ALL_INDIC_VAL[idx].valeur=isNaN(val)?0:val;
+    const toast=document.getElementById('iev_toast_'+rowId);
+    if(toast){toast.style.opacity='1';setTimeout(()=>toast.style.opacity='0',1500);}
+    renderObjectifs();
+  }catch(e){alert('Erreur : '+e.message);}
+}
 
 function renderCalendrierActions(actions, accent){
   var today=new Date();

@@ -2019,6 +2019,7 @@ async function submitSaisieAction(){
     const freshVal=await grist.docApi.fetchTable('SUIVI_indicateurs');
     ALL_INDIC_VAL=tableToRows(freshVal);
     renderObjectifs();
+    renderActHistoryCurrent();
   }catch(e){showToast(e.message,'error')}
 }
 
@@ -3323,7 +3324,7 @@ function renderHeader(){
 }
 
 function renderStats(){
-  const byS={};TACHES.forEach(t=>{byS[t.statut]=(byS[t.statut]||0)+1});
+  const byS={};filteredTaches.forEach(t=>{byS[t.statut]=(byS[t.statut]||0)+1});
   document.getElementById('statsBar').innerHTML=
     `<div class="stat-chip sc-all ${!activeStatut?'active':''}" onclick="filterByStatut('')">Toutes <strong>${filteredTaches.length}</strong></div>`+
     Object.entries(SC).map(([s,c])=>{const n=byS[s]||0;if(!n)return'';
@@ -5048,6 +5049,7 @@ async function duplicateTask(){
     ALL_TACHES.push({id:newId,...record});
   }catch(e){showToast('Erreur duplication : '+e.message,'error');return}
   TACHES=ALL_TACHES.filter(t=>t.projet_id===currentProjetId);
+  activeStatut='';
   closeModal();applyFilters();
   showToast('Tâche dupliquée');
 }
@@ -5172,3 +5174,4 @@ loadAll();
 
 </body>
 </html>
+

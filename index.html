@@ -973,7 +973,6 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     <button class="tab" data-tab="calendrier" onclick="switchTab('calendrier')">Calendrier</button>
     <button class="tab" data-tab="hebdo" onclick="switchTab('hebdo')">Réunion hebdo</button>
     <button class="tab" data-tab="dashboard" onclick="switchTab('dashboard')">Tableau de bord</button>
-    <button class="tab tab-shortcut" onclick="goActions()">↗ Saisir une action</button>
   </div>
   <div class="filter-bar" id="filterBarWrap">
     <div id="subtabSuivi" class="subtab-bar" style="padding:8px 20px 0;background:transparent;border-bottom:none;margin-bottom:6px">
@@ -1153,12 +1152,14 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     <div class="fg"><label class="fl">Statut</label><select id="mStatut" style="width:100%"><option>A traiter</option><option>En cours</option><option>En attente</option><option>Réalisé</option><option>Problématique à résoudre</option></select></div>
     <div class="fg"><label class="fl" id="mLabelWP">WP / Axe</label><select id="mWP" onchange="onMWPChange()" style="width:100%"></select></div>
     <div class="fg"><label class="fl">Priorité</label><select id="mPrio" style="width:100%"><option value="Normale">Normale</option><option value="Haute">Haute</option></select></div>
+  </div>
+  <div class="fg"><label class="fl">Action liée <span style="color:#999;font-weight:400">(optionnel — laisser vide pour tâche libre)</span></label><select id="mAction" style="width:100%"><option value="">— Tâche libre —</option></select></div>
+  <div class="form-row">
     <div class="fg"><label class="fl">Date de début</label><input type="date" id="mDateDebut" style="width:100%"></div>
     <div class="fg"><label class="fl">Deadline</label><input type="date" id="mDeadline" style="width:100%"></div>
     <div class="fg"><label class="fl">Date réalisation</label><input type="date" id="mDateReal" style="width:100%"></div>
     <div class="fg"><label class="fl">Contexte / Sous-projet</label><input type="text" id="mProjet" style="width:100%" placeholder="Ex: Coloration formations"></div>
   </div>
-  <div class="fg"><label class="fl">Action liée <span style="color:#999;font-weight:400">(optionnel — laisser vide pour tâche libre)</span></label><select id="mAction" style="width:100%"><option value="">— Tâche libre —</option></select></div>
   <div class="fg"><label class="fl">Commentaire</label><textarea id="mComment"></textarea></div>
   <div class="modal-ft">
     <button class="btn btn-danger btn-sm" id="btnDelete" onclick="deleteTask()" style="display:none">Supprimer</button>
@@ -3209,17 +3210,21 @@ function switchTab(t,silent=false){
 }
 
 function populateSelects(){
+  const proj=PROJETS.find(p=>p.id===currentProjetId);
+  const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj?.code);
+  const membresProjet=getMembresActionsListe(actnProj?.typ_projet);
+
   const wp=document.getElementById('fWP');
   wp.innerHTML='<option value="">Tous</option>';
   WPS.forEach(w=>{const o=document.createElement('option');o.value=w.code;o.textContent=`${w.code} — ${w.label}`;wp.appendChild(o)});
 
   const qi=document.getElementById('fQui');
   qi.innerHTML='<option value="">Tous</option>';
-  ALL_RH.filter(m=>m.Membre).forEach(m=>{const o=document.createElement('option');o.value=m.Membre;o.textContent=m.Membre;qi.appendChild(o)});
+  membresProjet.forEach(m=>{const o=document.createElement('option');o.value=m.nom;o.textContent=m.nom;qi.appendChild(o)});
 
   const mq=document.getElementById('mQui');
   mq.innerHTML='<option value="">— Choisir —</option>';
-  ALL_RH.filter(m=>m.Membre).forEach(m=>{const o=document.createElement('option');o.value=m.Membre;o.textContent=m.Membre;mq.appendChild(o)});
+  membresProjet.forEach(m=>{const o=document.createElement('option');o.value=m.nom;o.textContent=m.nom;mq.appendChild(o)});
 
   const mw=document.getElementById('mWP');
   mw.innerHTML='<option value="">— Choisir —</option>';
@@ -3231,8 +3236,6 @@ function populateSelects(){
   getMembresActionsListe().forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.nom;ar.appendChild(o)});
 
   // WP/Axe actions réalisées (depuis PROJET_axes bridgé par code projet)
-  const proj=PROJETS.find(p=>p.id===currentProjetId);
-  const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj?.code);
   const aw=document.getElementById('aWP');
   aw.innerHTML='<option value="">— Choisir —</option>';
   if(actnProj){

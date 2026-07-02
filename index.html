@@ -639,8 +639,8 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
   <div id="sbNav" style="display:none">
     <div class="sb-sec-lbl">Navigation</div>
     <div class="sb-item" id="sbn-hub" onclick="goHub()">Vue d'ensemble</div>
-    <div class="sb-item" id="sbn-taches" onclick="openTaches()">Tâches</div>
     <div class="sb-item" id="sbn-actions" onclick="openIndicateursPage()">Actions & Objectifs</div>
+    <div class="sb-item" id="sbn-taches" onclick="openTaches()">Tâches</div>
     <div class="sb-item" id="sbn-rapport" onclick="showRapport()">Rapport</div>
     <div class="sb-item" id="sbn-annuaire" onclick="openAnnuairePage()">Annuaire</div>
     <div class="sb-item" id="sbn-carte" onclick="openCartePage()">Carte</div>
@@ -811,7 +811,6 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
       <div style="font-size:13px;font-weight:600;color:#1a1a1a">Saisir une action</div>
       <button onclick="closeSaisieActionPanel()" style="background:none;border:none;cursor:pointer;font-size:18px;color:#bbb;padding:0 4px">×</button>
     </div>
-    <div class="toast" id="saisieToast" style="margin-bottom:10px">Action enregistrée !</div>
     <div class="f-field">
       <label class="f-label">Nom de l'action <span class="req">*</span></label>
       <input type="text" id="saNom" style="width:100%" placeholder="Ex : Forum Bioeco 2025, atelier formation…">
@@ -894,6 +893,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
       <label class="f-label">Commentaire</label>
       <textarea id="saComment" style="width:100%;min-height:55px" placeholder="Notes, contexte…"></textarea>
     </div>
+    <div class="toast" id="saisieToast" style="margin-top:10px;margin-bottom:0">Action enregistrée !</div>
     <div style="display:flex;gap:8px;margin-top:10px">
       <button class="btn btn-ghost" onclick="closeSaisieActionPanel()">Annuler</button>
       <button class="btn btn-primary" style="flex:1;padding:10px;font-size:13px" onclick="submitSaisieAction()">Enregistrer l'action</button>
@@ -1200,7 +1200,6 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 <div class="overlay" id="actionOverlay">
 <div class="modal">
   <div class="modal-hd"><span class="modal-title" id="actionModalTitle">Nouvelle action</span><button class="btn-x" onclick="closeActionModal()">×</button></div>
-  <div class="toast" id="actionToast">Action enregistrée !</div>
   <div class="fg"><label class="fl">Nom de l'action <span class="req">*</span></label><input type="text" id="aNom" style="width:100%" placeholder="Ex: Forum Bioeco, COPIL FIBI…"></div>
   <div class="form-row">
     <div class="fg"><label class="fl">Date de début</label><input type="date" id="aDateDebut" style="width:100%"></div>
@@ -1218,6 +1217,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
   <div class="fg"><label class="fl">Sous-action</label><select id="aSousAction" onchange="onASousActionChange()" disabled style="width:100%"><option value="">— Choisir d'abord une action —</option></select></div>
   <div id="aIndicSection" style="display:none"><div class="fl" style="margin-top:10px">Indicateurs</div><div id="aIndicContainer"></div></div>
   <div class="fg" style="margin-top:10px"><label class="fl">Commentaire</label><textarea id="aComment" placeholder="Notes, contexte…"></textarea></div>
+  <div class="toast" id="actionToast" style="margin-bottom:0;margin-top:10px">Action enregistrée !</div>
   <div class="modal-ft">
     <button class="btn btn-ghost" onclick="closeActionModal()">Annuler</button>
     <button class="btn btn-primary" id="btnActionSubmit" onclick="submitAction()">Enregistrer</button>

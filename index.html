@@ -1983,13 +1983,14 @@ async function submitSaisieAction(){
         for(const fid of (p.formations||[])){
           try{await grist.docApi.applyUserActions([['AddRecord','SAISIE_formations_par_action',null,{action_ref:newId,etablissement_ref:p.id,formation_ref:fid}]])}catch(e2){console.warn(e2)}
         }
-        // Indicateurs par établissement → SUIVI_indicateurs (avec etablissement_ref)
+        // Indicateurs par établissement → SUIVI_indicateurs (avec etablissement_ref et formation_ref)
         const dateTs=toTs(document.getElementById('saDate').value);
+        const formRef=(p.formations&&p.formations[0])||0;
         for(const ind of indics){
           const val=parseFloat((p.indicateurs||{})[ind.id]);
           try{await grist.docApi.applyUserActions([['AddRecord','SUIVI_indicateurs',null,{
             action_ref:newId,indicateur_ref:ind.id,valeur:isNaN(val)?0:val,
-            etablissement_ref:p.id,formation_ref:0,Cree_par:'widget',date_creation:dateTs
+            etablissement_ref:p.id,formation_ref:formRef,Cree_par:'widget',date_creation:dateTs
           }]])}catch(e2){console.warn(e2)}
         }
       }

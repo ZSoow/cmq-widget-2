@@ -1128,7 +1128,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
   <div class="form-row">
     <div class="fg"><label class="fl">Responsable <span class="req">*</span></label><select id="mQui" style="width:100%"></select></div>
     <div class="fg"><label class="fl">Statut</label><select id="mStatut" style="width:100%"><option>A traiter</option><option>En cours</option><option>En attente</option><option>Réalisé</option><option>Problématique à résoudre</option></select></div>
-    <div class="fg"><label class="fl" id="mLabelWP">WP / Axe</label><select id="mWP" style="width:100%"></select></div>
+    <div class="fg"><label class="fl" id="mLabelWP">WP / Axe</label><select id="mWP" onchange="onMWPChange()" style="width:100%"></select></div>
     <div class="fg"><label class="fl">Priorité</label><select id="mPrio" style="width:100%"><option value="Normale">Normale</option><option value="Haute">Haute</option></select></div>
     <div class="fg"><label class="fl">Date de début</label><input type="date" id="mDateDebut" style="width:100%"></div>
     <div class="fg"><label class="fl">Deadline</label><input type="date" id="mDeadline" style="width:100%"></div>
@@ -1389,7 +1389,7 @@ let _mapLayer='etab', _mapProjetOnly=false, _leafletMap=null, _mapMarkers=[], _m
 let currentProjetId=null;
 let TACHES=[], MEMBRES=[], WPS=[];
 let filteredTaches=[], activeStatut='';
-let editingId=null;
+let editingId=null, editingActionId=null;
 let ganttMode='wp', ganttOffset=0;
 let wpGroupState={};
 let activeTab='kanban';
@@ -1719,7 +1719,7 @@ function openActionsPage(){
 
 function renderActHistory(proj,actnProj){
   const projActions=actnProj?[...(window._ALL_ACTIONS||[])].filter(a=>a.projet_ref===actnProj.id).sort((a,b)=>b.date_suivi_action-a.date_suivi_action):[];
-  document.getElementById('actHistoryHd').textContent=`Actions réalisées — ${proj?.nom||''} (${projActions.length})`;
+  document.getElementById('actHistoryHd').textContent=`Actions — ${proj?.nom||''} (${projActions.length})`;
   if(!projActions.length){
     document.getElementById('actHistoryList').innerHTML='<div style="padding:24px;text-align:center;font-size:12px;color:#bbb">Aucune action enregistrée pour ce projet.<br>Utilisez le formulaire pour en saisir une.</div>';
     return;
@@ -1738,8 +1738,11 @@ function renderActHistory(proj,actnProj){
       const label=p.ETABLISSEMENT||e?.nom_etablissement||`Étab. #${p.ETABLISSEMENT_PARTICIPANT}`;
       return`<span class="ah-chip" style="background:#f0f4ff;border:.5px solid #c5d3f0;color:#2a4a8a" title="${esc(label)}">${esc(label.length>30?label.substring(0,28)+'…':label)}</span>`;
     }).join('');
-    return`<div class="ah-item">
-      <div class="ah-top"><div class="ah-date">${fmtDateFull(a.date_suivi_action)}</div><div class="ah-name">${esc(a.nom_suivi_action||'(sans nom)')}</div></div>
+    const statut=a.terminee
+      ?`<span style="font-size:10px;background:#e6f4ea;color:#1e7e34;padding:2px 7px;border-radius:10px;font-weight:600">Terminée</span>`
+      :`<span style="font-size:10px;background:#fff3cd;color:#856404;padding:2px 7px;border-radius:10px;font-weight:600">En cours</span>`;
+    return`<div class="ah-item" onclick="openActionModal(${a.id})" style="cursor:pointer" onmouseover="this.style.background='#f7f7fb'" onmouseout="this.style.background=''">
+      <div class="ah-top"><div class="ah-date">${fmtDateFull(a.date_suivi_action)||fmtDateFull(a.date_debut_action)||'—'}</div><div class="ah-name">${esc(a.nom_suivi_action||'(sans nom)')}</div>${statut}</div>
       <div class="ah-path">${esc(rh?.Membre||'')}${path?' · '+esc(path):''}</div>
       ${chips||etabChips?`<div class="ah-indics">${chips}${etabChips}</div>`:''}
     </div>`;
@@ -1846,7 +1849,10 @@ async function submitSaisieAction(){
   const nom=document.getElementById('saNom').value.trim();
   const date=document.getElementById('saDate').value;
   const resp=document.getElementById('saResp').value;
+  const saWp=parseInt(document.getElementById('saWP').value)||0;
+  const saAct=parseInt(document.getElementById('saAction').value)||0;
   if(!nom||!resp){showToast('Nom et responsable sont obligatoires.','error');return}
+  if(!saWp||!saAct){showToast('WP/Axe et Action sont obligatoires.','error');return}
   const proj=PROJETS.find(p=>p.id===currentProjetId);
   const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj?.code);
   const sid=parseInt(document.getElementById('saSousAction').value)||0;
@@ -1855,8 +1861,7 @@ async function submitSaisieAction(){
     date_debut_action:toTs(document.getElementById('saDateDebut').value),
     terminee:document.getElementById('saTerminee').checked,
     responsable_suivi_action_ref:parseInt(resp)||0,projet_ref:actnProj?.id||0,
-    wp_axe_ref:parseInt(document.getElementById('saWP').value)||0,
-    action_ref:parseInt(document.getElementById('saAction').value)||0,
+    wp_axe_ref:saWp,action_ref:saAct,
     sous_action_ref:sid,Commentaires:document.getElementById('saComment').value,Cree_par:'widget'
   };
   try{
@@ -3136,6 +3141,20 @@ function populateSelects(){
   projActions.forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=(a.terminee?'✓ ':'')+a.nom_suivi_action;ma.appendChild(o)});
 }
 
+function onMWPChange(){
+  const wpCode=document.getElementById('mWP').value;
+  const ma=document.getElementById('mAction');
+  ma.innerHTML='<option value="">— Tâche libre —</option>';
+  if(!wpCode)return;
+  const proj=PROJETS.find(p=>p.id===currentProjetId);
+  const actnProj=proj&&ACTN_PROJETS.find(ap=>ap.cod_projet===proj.code);
+  const axe=actnProj&&ACTN_AXES.find(a=>a.projet_ref===actnProj.id&&a.cod_wp_axe===wpCode);
+  if(!axe)return;
+  (window._ALL_ACTIONS||[]).filter(a=>a.wp_axe_ref===axe.id)
+    .sort((a,b)=>(a.nom_suivi_action||'').localeCompare(b.nom_suivi_action||'','fr'))
+    .forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=(a.terminee?'✓ ':'')+a.nom_suivi_action;ma.appendChild(o)});
+}
+
 function applyFilters(){
   const wp=document.getElementById('fWP')?.value||'';
   const qui=document.getElementById('fQui')?.value||'';
@@ -3896,7 +3915,7 @@ function openAddModal(){
   ['mTache','mProjet','mComment','mDateDebut','mDeadline','mDateReal'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
   document.getElementById('mQui').value='';document.getElementById('mStatut').value='A traiter';
   document.getElementById('mWP').value='';document.getElementById('mPrio').value='Normale';
-  document.getElementById('mAction').value='';
+  document.getElementById('mAction').value='';onMWPChange();
   document.getElementById('btnDelete').style.display='none';
   document.getElementById('btnDuplicate').style.display='none';
   document.getElementById('taskOverlay').classList.add('open');
@@ -3915,6 +3934,7 @@ function openEditModal(id){
   document.getElementById('mDateReal').value=fromTs(t.date_realisation);
   document.getElementById('mProjet').value=t.projet_label||'';
   document.getElementById('mComment').value=t.commentaire||'';
+  onMWPChange();
   document.getElementById('mAction').value=t.action_ref||'';
   document.getElementById('btnDelete').style.display='inline-flex';
   document.getElementById('btnDuplicate').style.display='inline-flex';
@@ -4013,7 +4033,34 @@ async function saveNewProjet(){
 /* ══════════════════════════════════════════════
    MODAL ACTION (overlay complet)
 ══════════════════════════════════════════════ */
-function openActionModal(){document.getElementById('actionOverlay').classList.add('open');document.getElementById('aDate').value='';document.getElementById('aDateDebut').value='';document.getElementById('aTerminee').checked=false;}
+function openActionModal(id=null){
+  editingActionId=id;
+  document.getElementById('actionOverlay').classList.add('open');
+  if(id){
+    const a=(window._ALL_ACTIONS||[]).find(x=>x.id===id);if(!a)return;
+    document.getElementById('actionModalTitle').textContent='Modifier l\'action';
+    document.getElementById('aNom').value=a.nom_suivi_action||'';
+    document.getElementById('aDateDebut').value=fromTs(a.date_debut_action);
+    document.getElementById('aDate').value=fromTs(a.date_suivi_action);
+    document.getElementById('aTerminee').checked=!!a.terminee;
+    document.getElementById('aComment').value=a.Commentaires||'';
+    document.getElementById('aWP').value=a.wp_axe_ref||'';onAWpChange();
+    setTimeout(()=>{document.getElementById('aAction').value=a.action_ref||'';onAActionChange();
+      setTimeout(()=>{document.getElementById('aSousAction').value=a.sous_action_ref||'';onASousActionChange();},50);},50);
+    document.getElementById('aResp').value=a.responsable_suivi_action_ref||'';
+    document.getElementById('btnActionSubmit').textContent='Enregistrer les modifications';
+  }else{
+    document.getElementById('actionModalTitle').textContent='Nouvelle action';
+    document.getElementById('aNom').value='';
+    document.getElementById('aDate').value='';document.getElementById('aDateDebut').value='';
+    document.getElementById('aTerminee').checked=false;document.getElementById('aComment').value='';
+    document.getElementById('aWP').value='';
+    document.getElementById('aAction').innerHTML='<option value="">— Choisir —</option>';document.getElementById('aAction').disabled=true;
+    document.getElementById('aSousAction').innerHTML='<option value="">— Choisir —</option>';document.getElementById('aSousAction').disabled=true;
+    clearAIndic();
+    document.getElementById('btnActionSubmit').textContent='Enregistrer';
+  }
+}
 function closeActionModal(){document.getElementById('actionOverlay').classList.remove('open')}
 function onAWpChange(){
   const wid=parseInt(document.getElementById('aWP').value)||0;
@@ -4045,18 +4092,27 @@ async function submitAction(){
   const resp=document.getElementById('aResp').value;
   const proj=PROJETS.find(p=>p.id===currentProjetId);
   const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj?.code);
-  if(!nom||!resp){alert('Nom et responsable obligatoires.');return}
+  const aWp=parseInt(document.getElementById('aWP').value)||0;
+  const aAct=parseInt(document.getElementById('aAction').value)||0;
+  if(!nom||!resp){showToast('Nom et responsable obligatoires.','error');return}
+  if(!aWp||!aAct){showToast('WP/Axe et Action sont obligatoires.','error');return}
   const sid=parseInt(document.getElementById('aSousAction').value)||0;
-  const record={nom_suivi_action:nom,date_suivi_action:toTs(date),date_debut_action:toTs(document.getElementById('aDateDebut').value),terminee:document.getElementById('aTerminee').checked,responsable_suivi_action_ref:parseInt(resp)||0,projet_ref:actnProj?.id||0,wp_axe_ref:parseInt(document.getElementById('aWP').value)||0,action_ref:parseInt(document.getElementById('aAction').value)||0,sous_action_ref:sid,Commentaires:document.getElementById('aComment').value,Cree_par:'widget'};
+  const record={nom_suivi_action:nom,date_suivi_action:toTs(date),date_debut_action:toTs(document.getElementById('aDateDebut').value),terminee:document.getElementById('aTerminee').checked,responsable_suivi_action_ref:parseInt(resp)||0,projet_ref:actnProj?.id||0,wp_axe_ref:aWp,action_ref:aAct,sous_action_ref:sid,Commentaires:document.getElementById('aComment').value,Cree_par:'widget'};
   const btn=document.getElementById('btnActionSubmit');btn.disabled=true;
   try{
-    const res=await grist.docApi.applyUserActions([['AddRecord','SAISIE_actions_realisees',null,record]]);
-    const newId=res?.retValues?.[0]??null;
-    if(sid&&newId){for(const ind of ALL_INDIC_CONFIG.filter(c=>c.type_sous_action===sid)){const el=document.getElementById('ai_'+ind.id);const val=el?parseFloat(el.value):NaN;try{await grist.docApi.applyUserActions([['AddRecord','SUIVI_indicateurs',null,{action_ref:newId,indicateur_ref:ind.id,valeur:isNaN(val)?0:val,valeur_bool:ind.type_valeur==='booleen'&&el?.value==='1',Cree_par:'widget',date_creation:toTs(date)}]])}catch(e2){console.warn(e2)}}}
+    if(editingActionId){
+      await grist.docApi.applyUserActions([['UpdateRecord','SAISIE_actions_realisees',editingActionId,record]]);
+      const i=(window._ALL_ACTIONS||[]).findIndex(x=>x.id===editingActionId);
+      if(i>=0)Object.assign(window._ALL_ACTIONS[i],{...record,id:editingActionId});
+    }else{
+      const res=await grist.docApi.applyUserActions([['AddRecord','SAISIE_actions_realisees',null,record]]);
+      const newId=res?.retValues?.[0]??null;
+      if(sid&&newId){for(const ind of ALL_INDIC_CONFIG.filter(c=>c.type_sous_action===sid)){const el=document.getElementById('ai_'+ind.id);const val=el?parseFloat(el.value):NaN;try{await grist.docApi.applyUserActions([['AddRecord','SUIVI_indicateurs',null,{action_ref:newId,indicateur_ref:ind.id,valeur:isNaN(val)?0:val,valeur_bool:ind.type_valeur==='booleen'&&el?.value==='1',Cree_par:'widget',date_creation:toTs(date)}]])}catch(e2){console.warn(e2)}}}
+      if(newId){const fresh=await grist.docApi.fetchTable('SAISIE_actions_realisees');window._ALL_ACTIONS=tableToRows(fresh);}
+    }
     document.getElementById('actionToast').classList.add('show');setTimeout(()=>{closeActionModal();document.getElementById('actionToast').classList.remove('show')},1800);
-    const fresh=await grist.docApi.fetchTable('SAISIE_actions_realisees');window._ALL_ACTIONS=tableToRows(fresh);
-    renderActions();
-  }catch(e){alert('Erreur: '+e.message)}
+    renderActions();renderActHistory(PROJETS.find(p=>p.id===currentProjetId),ACTN_PROJETS.find(ap=>ap.cod_projet===PROJETS.find(p=>p.id===currentProjetId)?.code));
+  }catch(e){showToast('Erreur: '+e.message,'error')}
   btn.disabled=false;
 }
 

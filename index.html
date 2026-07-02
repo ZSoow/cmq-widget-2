@@ -896,7 +896,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     <div class="toast" id="saisieToast" style="margin-top:10px;margin-bottom:0">Action enregistrée !</div>
     <div style="display:flex;gap:8px;margin-top:10px">
       <button class="btn btn-ghost" onclick="closeSaisieActionPanel()">Annuler</button>
-      <button class="btn btn-primary" style="flex:1;padding:10px;font-size:13px" onclick="submitSaisieAction()">Enregistrer l'action</button>
+      <button id="btnSaisieSubmit" class="btn btn-primary" style="flex:1;padding:10px;font-size:13px" onclick="submitSaisieAction()">Enregistrer l'action</button>
     </div>
   </div>
   <!-- Onglets principaux -->
@@ -1816,7 +1816,7 @@ function renderActHistory(proj,actnProj){
       :a.date_debut_action?'Début : '+fmtDate(a.date_debut_action):'';
     const actionLib=act?`<span style="color:var(--sub);font-size:11px">${esc(act.lib_action)}</span>`:'';
     const saLib=sa?`<span style="color:var(--sub);font-size:11px"> › ${esc(sa.lib_sous_action)}</span>`:'';
-    return`<div class="ah-item" onclick="openActionModal(${a.id})" style="cursor:pointer;transition:background .1s" onmouseover="this.style.background='#f4f4fb'" onmouseout="this.style.background=''">
+    return`<div class="ah-item" onclick="openSaisieActionPanelEdit(${a.id})" style="cursor:pointer;transition:background .1s" onmouseover="this.style.background='#f4f4fb'" onmouseout="this.style.background=''">
       <div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap">
         ${wpBadge}
         <div style="flex:1;min-width:0">
@@ -1864,6 +1864,7 @@ function openIndicateursPage(){
     const b=document.getElementById('actFiltBtn'+k);
     if(b){b.style.background=k==='All'?'var(--accent)':'transparent';b.style.color=k==='All'?'#fff':'inherit';}
   });
+  _indicFiltWP=0;
   renderActHistory(proj,actnProj);
   renderObjectifs();
   switchObjTab('actions');
@@ -1916,6 +1917,9 @@ function openSaisieActionPanel(){
 
 function closeSaisieActionPanel(){
   document.getElementById('saisieActionPanel').style.display='none';
+  _editingSaisieActionId=null;
+  const btn=document.getElementById('btnSaisieSubmit');
+  if(btn)btn.textContent="Enregistrer l'action";
 }
 
 function onSaWpChange(){
@@ -1973,8 +1977,28 @@ async function submitSaisieAction(){
     sous_action_ref:sid,Commentaires:document.getElementById('saComment').value,Cree_par:'widget'
   };
   try{
-    const res=await grist.docApi.applyUserActions([['AddRecord','SAISIE_actions_realisees',null,record]]);
-    const newId=res?.retValues?.[0]??null;
+    let newId;
+    if(_editingSaisieActionId){
+      // MODE ÉDITION : mettre à jour l'action principale
+      await grist.docApi.applyUserActions([['UpdateRecord','SAISIE_actions_realisees',_editingSaisieActionId,record]]);
+      newId=_editingSaisieActionId;
+      // Supprimer les données liées existantes avant de les recréer
+      const etabToDelete=(window._ALL_ETAB_PARTS||[]).filter(p=>p.ACTION_CONCERNEE===newId).map(p=>p.id);
+      for(const rid of etabToDelete){try{await grist.docApi.applyUserActions([['RemoveRecord','SAISIE_etablissements_participants_par_action',rid]])}catch(e2){console.warn(e2)}}
+      const indicToDelete=(ALL_INDIC_VAL||[]).filter(v=>v.action_ref===newId&&(v.etablissement_ref||0)>0).map(v=>v.id);
+      for(const rid of indicToDelete){try{await grist.docApi.applyUserActions([['RemoveRecord','SUIVI_indicateurs',rid]])}catch(e2){console.warn(e2)}}
+      try{
+        const ftDel=await grist.docApi.fetchTable('SAISIE_formations_par_action');
+        const formToDelete=tableToRows(ftDel).filter(r=>r.action_ref===newId);
+        for(const r of formToDelete){try{await grist.docApi.applyUserActions([['RemoveRecord','SAISIE_formations_par_action',r.id]])}catch(e2){console.warn(e2)}}
+      }catch(e2){console.warn(e2)}
+      const entToDelete=(window._ALL_ENT_PARTS||[]).filter(p=>p.action_ref===newId).map(p=>p.id);
+      for(const rid of entToDelete){try{await grist.docApi.applyUserActions([['RemoveRecord','SAISIE_entreprises_par_action',rid]])}catch(e2){console.warn(e2)}}
+    } else {
+      // MODE CRÉATION
+      const res=await grist.docApi.applyUserActions([['AddRecord','SAISIE_actions_realisees',null,record]]);
+      newId=res?.retValues?.[0]??null;
+    }
     if(newId){
       syncEtabIndicValues();
       const indics=sid?ALL_INDIC_CONFIG.filter(c=>c.type_sous_action===sid):[];
@@ -1983,7 +2007,7 @@ async function submitSaisieAction(){
         for(const fid of (p.formations||[])){
           try{await grist.docApi.applyUserActions([['AddRecord','SAISIE_formations_par_action',null,{action_ref:newId,etablissement_ref:p.id,formation_ref:fid}]])}catch(e2){console.warn(e2)}
         }
-        // Indicateurs par établissement → SUIVI_indicateurs (avec etablissement_ref et formation_ref)
+        // Indicateurs par établissement → SUIVI_indicateurs
         const dateTs=toTs(document.getElementById('saDate').value);
         const formRef=(p.formations&&p.formations[0])||0;
         for(const ind of indics){
@@ -2013,12 +2037,13 @@ async function submitSaisieAction(){
           action_ref:newId,entreprise_ref:p.id,role_entreprise:'',nb_participants:0,nb_heures:heures,notes:''
         }]])}catch(e4){console.warn(e4)}
       }
-      // Rafraîchir le cache local
       try{const freshEP=await grist.docApi.fetchTable('SAISIE_entreprises_par_action');window._ALL_ENT_PARTS=tableToRows(freshEP);}catch(e5){console.warn(e5)}
     }
     const fresh=await grist.docApi.fetchTable('SAISIE_actions_realisees');
     window._ALL_ACTIONS=tableToRows(fresh);
     const t=document.getElementById('saisieToast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);
+    _editingSaisieActionId=null;
+    const btnS=document.getElementById('btnSaisieSubmit');if(btnS)btnS.textContent="Enregistrer l'action";
     initSaisieActionPanel();
     // Actualiser SUIVI_indicateurs (source unique des valeurs)
     const freshVal=await grist.docApi.fetchTable('SUIVI_indicateurs');
@@ -2030,6 +2055,71 @@ async function submitSaisieAction(){
 
 /* Recherche établissements dans le panneau de saisie */
 let _saPartnerSelected=[];
+let _editingSaisieActionId=null;
+
+async function openSaisieActionPanelEdit(actionId){
+  openSaisieActionPanel();
+  _editingSaisieActionId=actionId;
+  const btn=document.getElementById('btnSaisieSubmit');
+  if(btn)btn.textContent="Modifier l'action";
+  const a=(window._ALL_ACTIONS||[]).find(x=>x.id===actionId);
+  if(!a)return;
+  // Champs de base
+  document.getElementById('saNom').value=a.nom_suivi_action||'';
+  document.getElementById('saDate').value=fromTs(a.date_suivi_action)||'';
+  document.getElementById('saDateDebut').value=fromTs(a.date_debut_action)||'';
+  document.getElementById('saTerminee').checked=!!a.terminee;
+  document.getElementById('saComment').value=a.Commentaires||'';
+  document.getElementById('saResp').value=a.responsable_suivi_action_ref||'';
+  // Cascade WP → Action → Sous-action
+  if(a.wp_axe_ref){
+    document.getElementById('saWP').value=a.wp_axe_ref;
+    onSaWpChange();
+    if(a.action_ref){
+      document.getElementById('saAction').value=a.action_ref;
+      onSaActionChange();
+      if(a.sous_action_ref){
+        document.getElementById('saSousAction').value=a.sous_action_ref;
+      }
+    }
+  }
+  // Charger les formations liées par établissement
+  let formsByEtab={};
+  try{
+    const ft=await grist.docApi.fetchTable('SAISIE_formations_par_action');
+    tableToRows(ft).filter(r=>r.action_ref===actionId).forEach(r=>{
+      if(!formsByEtab[r.etablissement_ref])formsByEtab[r.etablissement_ref]=[];
+      formsByEtab[r.etablissement_ref].push(r.formation_ref);
+    });
+  }catch(e){console.warn('forms edit:',e)}
+  // Reconstruire _saPartnerSelected depuis les étabs liés
+  const etabParts=(window._ALL_ETAB_PARTS||[]).filter(p=>p.ACTION_CONCERNEE===actionId);
+  if(etabParts.length&&!window._ALL_ETABLISSEMENTS)await loadEtablissements();
+  _saPartnerSelected=etabParts.map(p=>{
+    const e=(window._ALL_ETABLISSEMENTS||[]).find(x=>x.id===p.ETABLISSEMENT_PARTICIPANT);
+    const indicVals={};
+    (ALL_INDIC_VAL||[]).filter(v=>v.action_ref===actionId&&v.etablissement_ref===p.ETABLISSEMENT_PARTICIPANT).forEach(v=>{indicVals[v.indicateur_ref]=v.valeur;});
+    return{type:'etablissement',id:p.ETABLISSEMENT_PARTICIPANT,
+      label:p.ETABLISSEMENT||(e?.nom_etablissement||`Étab. #${p.ETABLISSEMENT_PARTICIPANT}`),
+      cp:e?.code_postal_etablissement||'',region_ref:p.FILTRE_REGION||0,dept_ref:p.FILTRE_DEPARTEMENT||0,type_etab_ref:p.FILTRE_TYPE_ETABLISSEMENT||0,
+      formations:formsByEtab[p.ETABLISSEMENT_PARTICIPANT]||[],indicateurs:indicVals};
+  });
+  // Reconstruire _saPartenairesSelected depuis les entreprises liées
+  const entParts=(window._ALL_ENT_PARTS||[]).filter(p=>p.action_ref===actionId);
+  if(entParts.length&&!_ALL_PARTENAIRES)await loadPartenaires();
+  _saPartenairesSelected=entParts.map(p=>{
+    const ent=(_ALL_PARTENAIRES||[]).find(x=>x.id===p.entreprise_ref);
+    return{id:p.entreprise_ref,label:ent?.nom_entreprise||`Partenaire #${p.entreprise_ref}`,type:ent?.type_partenaire||''};
+  });
+  // Déclencher le rendu (indicateurs par étab via sous-action)
+  if(a.sous_action_ref)onSaSousActionChange();
+  else renderSaPartnerChips();
+  renderSaPartenaireChips();
+  // Remplir les heures des partenaires
+  setTimeout(()=>{
+    entParts.forEach(p=>{const inp=document.getElementById('saH_'+p.entreprise_ref);if(inp)inp.value=p.nb_heures||'';});
+  },50);
+}
 
 function resetSaPartnerSection(){
   _saPartnerSelected=[];
@@ -2331,34 +2421,54 @@ async function submitNewEtab(){
   }
 }
 
+let _indicFiltWP=0;
+
 function renderObjectifs(){
   const proj=PROJETS.find(p=>p.id===currentProjetId);
   const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj?.code);
   const accent=proj&&proj.couleur||'#534AB7';
   const targets=getIndicTargets(proj&&proj.code||'');
 
-  const projAxeIds=new Set(ACTN_AXES.filter(a=>a.projet_ref===(actnProj&&actnProj.id)).map(a=>a.id));
+  const projAxes=ACTN_AXES.filter(a=>a.projet_ref===(actnProj&&actnProj.id));
+  const projAxeIds=new Set(projAxes.map(a=>a.id));
   const projActIds=new Set(ACTN_ACTIONS.filter(a=>projAxeIds.has(a.wp_axe_ref)).map(a=>a.id));
   const projSaIds=new Set(ACTN_SOUS_ACTIONS.filter(sa=>projActIds.has(sa.action_ref)).map(sa=>sa.id));
-  const projIndics=ALL_INDIC_CONFIG.filter(c=>projSaIds.has(c.type_sous_action));
+  const projIndicsAll=ALL_INDIC_CONFIG.filter(c=>projSaIds.has(c.type_sous_action));
 
   const allProjActions=actnProj?(window._ALL_ACTIONS||[]).filter(a=>a.projet_ref===actnProj.id):[];
-  const projActionIds=new Set(allProjActions.map(a=>a.id));
+
+  // Filtre WP/Axe
+  let projIndics=projIndicsAll;
+  let indicActionIds=new Set(allProjActions.map(a=>a.id));
+  let indicActions=allProjActions;
+  if(_indicFiltWP){
+    const wpActIds=new Set(ACTN_ACTIONS.filter(a=>a.wp_axe_ref===_indicFiltWP).map(a=>a.id));
+    const wpSaIds=new Set(ACTN_SOUS_ACTIONS.filter(sa=>wpActIds.has(sa.action_ref)).map(sa=>sa.id));
+    projIndics=projIndicsAll.filter(c=>wpSaIds.has(c.type_sous_action));
+    indicActions=allProjActions.filter(a=>wpActIds.has(a.action_ref));
+    indicActionIds=new Set(indicActions.map(a=>a.id));
+  }
+
   const totals={};
   ALL_INDIC_VAL.forEach(function(row){
-    if(!projActionIds.has(row.action_ref))return;
+    if(!indicActionIds.has(row.action_ref))return;
     var cfg=ALL_INDIC_CONFIG.find(function(c){return c.id===row.indicateur_ref;});
     if(!cfg)return;
     totals[cfg.Code_indicateur]=(totals[cfg.Code_indicateur]||0)+(typeof row.valeur==='number'?row.valeur:0);
   });
 
-  if(!projIndics.length){
+  if(!projIndicsAll.length){
     document.getElementById('objBody').innerHTML='<div class="obj-empty">Aucun indicateur configuré pour ce projet.</div>';
     return;
   }
 
+  // Filtre WP/Axe — dropdown persistant
+  const wpOpts=projAxes.map(a=>`<option value="${a.id}"${_indicFiltWP===a.id?' selected':''}>${esc(a.cod_wp_axe||'')} — ${esc(a.lib_wp_axe||'')}</option>`).join('');
+  const wpFilter='<div style="margin-bottom:14px"><select onchange="_indicFiltWP=parseInt(this.value)||0;renderObjectifs()" style="font-size:12px;font-family:var(--font);padding:6px 10px;border:.5px solid #ddd;border-radius:var(--rsm);color:#555;max-width:340px">'
+    +'<option value="">Tous les WP / Axes</option>'+wpOpts+'</select></div>';
+
   // Sous-onglets
-  var tabBar='<div class="subtab-bar" style="padding:0 0 14px;border-bottom:.5px solid #ebebeb;margin-bottom:16px">'
+  var tabBar=wpFilter+'<div class="subtab-bar" style="padding:0 0 14px;border-bottom:.5px solid #ebebeb;margin-bottom:16px">'
     +'<button class="subtab'+(indicActiveTab==='suivi'?' active':'')+'" onclick="indicActiveTab=\'suivi\';renderObjectifs()">Suivi</button>'
     +'<button class="subtab'+(indicActiveTab==='objectifs'?' active':'')+'" onclick="indicActiveTab=\'objectifs\';renderObjectifs()">Objectifs</button>'
     +'<button class="subtab'+(indicActiveTab==='calendrier'?' active':'')+'" onclick="indicActiveTab=\'calendrier\';renderObjectifs()">Calendrier</button>'
@@ -2367,7 +2477,7 @@ function renderObjectifs(){
   var content='';
 
   if(indicActiveTab==='calendrier'){
-    content=renderCalendrierActions(allProjActions,accent);
+    content=renderCalendrierActions(indicActions,accent);
   } else if(indicActiveTab==='objectifs'){
     // ── Onglet Objectifs : cards avec inputs éditables ──
     var rows=projIndics.map(function(ind){
@@ -2417,7 +2527,7 @@ function renderObjectifs(){
 
     // Historique avec archivage (seuil = 30 jours)
     var oneMonthAgo=Math.floor(Date.now()/1000)-30*86400;
-    var sorted=[].concat(allProjActions).sort(function(a,b){return b.date_suivi_action-a.date_suivi_action;});
+    var sorted=[].concat(indicActions).sort(function(a,b){return b.date_suivi_action-a.date_suivi_action;});
     var recent=sorted.filter(function(a){return a.date_suivi_action>=oneMonthAgo;});
     var archived=sorted.filter(function(a){return a.date_suivi_action<oneMonthAgo;});
 
@@ -2469,7 +2579,7 @@ function renderCalendrierActions(actions, accent){
     var dayActs=byDay[d]||[];
     var evts=dayActs.slice(0,3).map(function(a){
       var rh=ALL_RH.find(function(r){return r.id===a.responsable_suivi_action_ref;});
-      return'<div class="cal-event" style="background:'+accent+'22;color:'+accent+'" title="'+esc(a.nom_suivi_action)+' — '+(rh?esc(rh.Membre):'')+'">'+esc(a.nom_suivi_action)+'</div>';
+      return'<div class="cal-event" style="background:'+accent+'22;color:'+accent+';cursor:pointer" title="'+esc(a.nom_suivi_action)+' — '+(rh?esc(rh.Membre):'')+'" onclick="openSaisieActionPanelEdit('+a.id+')">'+esc(a.nom_suivi_action)+'</div>';
     }).join('');
     if(dayActs.length>3)evts+='<div style="font-size:9px;color:#bbb">+'+( dayActs.length-3)+' autres</div>';
     cells+='<div class="cal-day'+(isToday?' today':'')+'"><div class="cal-day-num">'+d+'</div>'+evts+'</div>';
@@ -5179,3 +5289,4 @@ loadAll();
 
 </body>
 </html>
+

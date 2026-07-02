@@ -893,6 +893,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
       <label class="f-label">Commentaire</label>
       <textarea id="saComment" style="width:100%;min-height:55px" placeholder="Notes, contexte…"></textarea>
     </div>
+    <div id="saTachesLiees" style="display:none;margin-top:18px;border-top:.5px solid #ebebeb;padding-top:14px"></div>
     <div class="toast" id="saisieToast" style="margin-top:10px;margin-bottom:0">Action enregistrée !</div>
     <div style="display:flex;gap:8px;margin-top:10px">
       <button class="btn btn-ghost" onclick="closeSaisieActionPanel()">Annuler</button>
@@ -991,6 +992,10 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
       <div class="fg-inline">
         <span class="filter-lbl">Recherche</span>
         <input type="text" id="fSearch" placeholder="Tâche, commentaire…" oninput="applyFilters()" style="min-width:150px">
+      </div>
+      <div class="fg-inline">
+        <span class="filter-lbl">Action liée</span>
+        <select id="fAction" onchange="applyFilters()" style="min-width:160px;max-width:220px"><option value="">Toutes</option></select>
       </div>
       <div class="fg-inline" style="margin-left:auto">
         <span class="filter-lbl">Priorité</span>
@@ -1906,6 +1911,7 @@ function initSaisieActionPanel(){
   document.getElementById('saComment').value='';
   resetSaPartnerSection();
   resetSaPartenaireSection();
+  const tDiv=document.getElementById('saTachesLiees');if(tDiv){tDiv.style.display='none';tDiv.innerHTML='';}
   ['saStepNum1','saStepNum2','saStepNum3'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.className='step-num'+(i>0?' inactive':'')});
 }
 
@@ -2119,6 +2125,33 @@ async function openSaisieActionPanelEdit(actionId){
   setTimeout(()=>{
     entParts.forEach(p=>{const inp=document.getElementById('saH_'+p.entreprise_ref);if(inp)inp.value=p.nb_heures||'';});
   },50);
+  // Afficher les tâches liées à cette action
+  const tachesLiees=(ALL_TACHES||[]).filter(t=>t.action_ref===actionId);
+  const tDiv=document.getElementById('saTachesLiees');
+  if(tDiv){
+    if(tachesLiees.length){
+      const SC_map={
+        'A traiter':['#f0f0f0','#555'],
+        'En cours':['#e8f0fe','#1a56a0'],
+        'En attente':['#fff3cd','#856404'],
+        'Réalisé':['#e6f4ea','#1e7e34']
+      };
+      tDiv.innerHTML='<div style="font-size:11px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Tâches liées ('+tachesLiees.length+')</div>'
+        +tachesLiees.map(t=>{
+          const sc=SC_map[t.statut]||['#f0f0f0','#555'];
+          return'<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:.5px solid #f5f5f5;cursor:pointer" onclick="openEditModal('+t.id+');closeSaisieActionPanel()" onmouseover="this.style.background=\'#fafafa\'" onmouseout="this.style.background=\'\'">'
+            +'<span style="font-size:9px;font-weight:700;background:'+sc[0]+';color:'+sc[1]+';padding:2px 6px;border-radius:4px;white-space:nowrap">'+esc(t.statut)+'</span>'
+            +'<span style="flex:1;font-size:12px;color:#1a1a1a">'+esc(t.tache)+'</span>'
+            +(t.qui?'<span style="font-size:11px;color:#aaa;flex-shrink:0">'+esc(t.qui)+'</span>':'')
+            +'</div>';
+        }).join('');
+      tDiv.style.display='block';
+    } else {
+      tDiv.innerHTML='<div style="font-size:11px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Tâches liées</div>'
+        +'<div style="font-size:12px;color:#ccc;font-style:italic">Aucune tâche liée à cette action</div>';
+      tDiv.style.display='block';
+    }
+  }
 }
 
 function resetSaPartnerSection(){
@@ -3365,6 +3398,15 @@ function populateSelects(){
   ma.innerHTML='<option value="">— Tâche libre —</option>';
   const projActions=(window._ALL_ACTIONS||[]).filter(a=>actnProj&&a.projet_ref===actnProj.id).sort((a,b)=>(a.nom_suivi_action||'').localeCompare(b.nom_suivi_action||'','fr'));
   projActions.forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=(a.terminee?'✓ ':'')+a.nom_suivi_action;ma.appendChild(o)});
+
+  // Filtre "Action liée" dans la barre de filtres tâches (actions en cours uniquement)
+  const fa=document.getElementById('fAction');
+  if(fa){
+    const curVal=fa.value;
+    fa.innerHTML='<option value="">Toutes</option>';
+    projActions.filter(a=>!a.terminee).forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=a.nom_suivi_action||'(sans nom)';fa.appendChild(o)});
+    if(curVal&&[...fa.options].some(o=>o.value===curVal))fa.value=curVal;
+  }
 }
 
 function onMWPChange(){
@@ -3386,18 +3428,20 @@ function applyFilters(){
   const qui=document.getElementById('fQui')?.value||'';
   const q=(document.getElementById('fSearch')?.value||'').toLowerCase();
   const prio=document.getElementById('fPrio')?.value||'';
+  const actionFilt=parseInt(document.getElementById('fAction')?.value)||0;
   filteredTaches=TACHES.filter(t=>{
     if(wp&&t.wp_code!==wp)return false;
     if(qui&&t.qui!==qui)return false;
     if(prio&&t.priorite!==prio)return false;
     if(activeStatut&&t.statut!==activeStatut)return false;
+    if(actionFilt&&(t.action_ref||0)!==actionFilt)return false;
     if(q&&!t.tache?.toLowerCase().includes(q)&&!(t.commentaire||'').toLowerCase().includes(q))return false;
     return true;
   });
   render();
 }
 function resetFilters(){
-  ['fWP','fQui','fSearch','fPrio'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  ['fWP','fQui','fSearch','fPrio','fAction'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
   activeStatut='';applyFilters();
 }
 function filterByStatut(s){activeStatut=activeStatut===s?'':s;applyFilters()}
@@ -3844,13 +3888,21 @@ function renderActions(){
     const ax=ACTN_AXES.find(w=>w.id===a.wp_axe_ref)||{};
     const cols=['#534AB7','#0F6E56','#854F0B','#993C1D','#185FA5'];
     const col=cols[i%cols.length];
-    return`<div class="action-row">
+    const linked=(ALL_TACHES||[]).filter(t=>t.action_ref===a.id);
+    const tBadge=linked.length?`<span style="font-size:10px;background:#f0f4ff;color:#2a4a8a;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0">${linked.length} tâche${linked.length>1?'s':''}</span>`:'';
+    const statutBadge=a.terminee
+      ?`<span style="font-size:10px;background:#e6f4ea;color:#1e7e34;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0">Terminée</span>`
+      :`<span style="font-size:10px;background:#fff3cd;color:#856404;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0">En cours</span>`;
+    return`<div class="action-row" onclick="openActionFromProjet(${a.id})" style="cursor:pointer" onmouseover="this.style.background='#f8f8ff'" onmouseout="this.style.background=''">
       <div class="action-av" style="background:${lighten(col)};color:${col}">${initials(rh.Membre||'?')}</div>
-      <div class="action-info">
+      <div class="action-info" style="flex:1;min-width:0">
         <div class="action-name">${esc(a.nom_suivi_action||'(sans nom)')}</div>
         <div class="action-meta">${rh.Membre||''} · ${ax.id_wp_axe_calc||''}</div>
       </div>
-      <div class="action-date">${fmtDateFull(a.date_suivi_action)}</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+        ${statutBadge}${tBadge}
+        <span style="font-size:11px;color:var(--sub)">${fmtDateFull(a.date_suivi_action)}</span>
+      </div>
     </div>`;
   }).join(''):`<div style="padding:28px;text-align:center;color:#bbb;font-size:13px">Aucune action réalisée pour ce projet</div>`;
 
@@ -3882,6 +3934,11 @@ function renderActions(){
   </div>`;
   // Init date
   const id=document.getElementById('iDate');if(id)id.value=new Date().toISOString().split('T')[0];
+}
+
+function openActionFromProjet(actionId){
+  openIndicateursPage();
+  setTimeout(()=>openSaisieActionPanelEdit(actionId),150);
 }
 
 function onIWpChange(){
@@ -5289,4 +5346,3 @@ loadAll();
 
 </body>
 </html>
-

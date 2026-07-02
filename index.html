@@ -1589,7 +1589,7 @@ function openProjet(projetId){
   if(!proj)return;
   TACHES=ALL_TACHES.filter(t=>t.projet_id===projetId);
   MEMBRES=ALL_MEMBRES.filter(m=>m.projet_id===projetId);
-  WPS=ALL_AXES.filter(a=>a.projet_id===projetId);
+  WPS=ALL_AXES.filter(a=>a.projet_id===projetId).sort((a,b)=>(a.code||'').localeCompare(b.code||'',undefined,{numeric:true}));
   const accent=proj.couleur||'#534AB7';
   document.documentElement.style.setProperty('--accent',accent);
   // accLogo is now an img

@@ -1983,10 +1983,14 @@ async function submitSaisieAction(){
         for(const fid of (p.formations||[])){
           try{await grist.docApi.applyUserActions([['AddRecord','SAISIE_formations_par_action',null,{action_ref:newId,etablissement_ref:p.id,formation_ref:fid}]])}catch(e2){console.warn(e2)}
         }
-        // Indicateurs par établissement
+        // Indicateurs par établissement → SUIVI_indicateurs (avec etablissement_ref)
+        const dateTs=toTs(document.getElementById('saDate').value);
         for(const ind of indics){
           const val=parseFloat((p.indicateurs||{})[ind.id]);
-          try{await grist.docApi.applyUserActions([['AddRecord','SAISIE_indicateurs_par_etab',null,{action_ref:newId,etablissement_ref:p.id,indicateur_ref:ind.id,valeur:isNaN(val)?0:val}]])}catch(e2){console.warn(e2)}
+          try{await grist.docApi.applyUserActions([['AddRecord','SUIVI_indicateurs',null,{
+            action_ref:newId,indicateur_ref:ind.id,valeur:isNaN(val)?0:val,
+            etablissement_ref:p.id,formation_ref:0,Cree_par:'widget',date_creation:dateTs
+          }]])}catch(e2){console.warn(e2)}
         }
       }
     }
@@ -2015,7 +2019,7 @@ async function submitSaisieAction(){
     window._ALL_ACTIONS=tableToRows(fresh);
     const t=document.getElementById('saisieToast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);
     initSaisieActionPanel();
-    // Actualiser les valeurs affichées
+    // Actualiser SUIVI_indicateurs (source unique des valeurs)
     const freshVal=await grist.docApi.fetchTable('SUIVI_indicateurs');
     ALL_INDIC_VAL=tableToRows(freshVal);
     renderObjectifs();
@@ -5174,4 +5178,3 @@ loadAll();
 
 </body>
 </html>
-

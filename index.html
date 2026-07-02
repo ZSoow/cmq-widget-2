@@ -1391,8 +1391,8 @@ const SO=['A traiter','En cours','En attente','Problématique à résoudre','Ré
 const TABS=['kanban','gantt','calendrier','hebdo','dashboard']; // ordre = tab bar
 
 // Source unique pour les responsables d'actions : CMQ_RH
-function getMembresActionsListe(){
-  return ALL_RH.filter(m=>m.Membre).map(m=>({id:m.id,nom:m.Membre}));
+function getMembresActionsListe(typProjet){
+  return ALL_RH.filter(m=>m.Membre&&(!typProjet||Array.isArray(m.Equipe)&&m.Equipe.includes(typProjet))).map(m=>({id:m.id,nom:m.Membre}));
 }
 
 /* ══════════════════════════════════════════════
@@ -1683,10 +1683,10 @@ function openActionsPage(){
   document.getElementById('actBadge').style.background=accent;
   document.getElementById('actSub').textContent=proj.nom;
   document.getElementById('afDate').value=new Date().toISOString().split('T')[0];
+  const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj.code);
   const ar=document.getElementById('afResp');
   ar.innerHTML='<option value="">— Choisir —</option>';
-  getMembresActionsListe().forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.nom;ar.appendChild(o)});
-  const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj.code);
+  getMembresActionsListe(actnProj?.typ_projet).forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.nom;ar.appendChild(o)});
   const aw=document.getElementById('afWP');
   aw.innerHTML='<option value="">— Choisir —</option>';
   if(actnProj)ACTN_AXES.filter(a=>a.projet_ref===actnProj.id).forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=a.id_wp_axe_calc||`${a.cod_wp_axe} - ${a.lib_wp_axe}`;aw.appendChild(o)});
@@ -1759,9 +1759,9 @@ function initSaisieActionPanel(){
   // Responsables
   const sr=document.getElementById('saResp');
   sr.innerHTML='<option value="">— Choisir —</option>';
-  getMembresActionsListe().forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.nom;sr.appendChild(o)});
-  // WP/Axes
   const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj.code);
+  getMembresActionsListe(actnProj?.typ_projet).forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.nom;sr.appendChild(o)});
+  // WP/Axes
   const sw=document.getElementById('saWP');
   sw.innerHTML='<option value="">— Choisir —</option>';
   if(actnProj)ACTN_AXES.filter(a=>a.projet_ref===actnProj.id).forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=a.id_wp_axe_calc||`${a.cod_wp_axe} - ${a.lib_wp_axe}`;sw.appendChild(o)});

@@ -811,7 +811,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
   <!-- Panneau de saisie action (masqué par défaut) -->
   <div id="saisieActionPanel" style="display:none;background:#fff;border-bottom:.5px solid #e0e0e0;padding:18px 24px 14px;max-width:820px;margin:0 auto;width:100%">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div style="font-size:13px;font-weight:600;color:#1a1a1a">Saisir une action réalisée</div>
+      <div style="font-size:13px;font-weight:600;color:#1a1a1a">Saisir une action</div>
       <button onclick="closeSaisieActionPanel()" style="background:none;border:none;cursor:pointer;font-size:18px;color:#bbb;padding:0 4px">×</button>
     </div>
     <div class="toast" id="saisieToast" style="margin-bottom:10px">Action enregistrée !</div>
@@ -821,12 +821,22 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     </div>
     <div class="f-row2">
       <div class="f-field">
-        <label class="f-label">Date <span class="req">*</span></label>
+        <label class="f-label">Date de début</label>
+        <input type="date" id="saDateDebut" style="width:100%">
+      </div>
+      <div class="f-field">
+        <label class="f-label">Date de réalisation</label>
         <input type="date" id="saDate" style="width:100%">
       </div>
+    </div>
+    <div class="f-row2">
       <div class="f-field">
         <label class="f-label">Responsable <span class="req">*</span></label>
         <select id="saResp" style="width:100%"><option value="">— Choisir —</option></select>
+      </div>
+      <div class="f-field" style="display:flex;align-items:center;gap:8px;padding-top:18px">
+        <input type="checkbox" id="saTerminee" style="width:auto;margin:0;cursor:pointer">
+        <label class="f-label" for="saTerminee" style="margin:0;cursor:pointer">Action terminée</label>
       </div>
     </div>
     <div class="cascade-divider">Associer à une sous-action (optionnel)</div>
@@ -1125,6 +1135,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
     <div class="fg"><label class="fl">Date réalisation</label><input type="date" id="mDateReal" style="width:100%"></div>
     <div class="fg"><label class="fl">Contexte / Sous-projet</label><input type="text" id="mProjet" style="width:100%" placeholder="Ex: Coloration formations"></div>
   </div>
+  <div class="fg"><label class="fl">Action liée <span style="color:#999;font-weight:400">(optionnel — laisser vide pour tâche libre)</span></label><select id="mAction" style="width:100%"><option value="">— Tâche libre —</option></select></div>
   <div class="fg"><label class="fl">Commentaire</label><textarea id="mComment"></textarea></div>
   <div class="modal-ft">
     <button class="btn btn-danger btn-sm" id="btnDelete" onclick="deleteTask()" style="display:none">Supprimer</button>
@@ -1164,12 +1175,17 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 <!-- MODALE ACTION RÉALISÉE -->
 <div class="overlay" id="actionOverlay">
 <div class="modal">
-  <div class="modal-hd"><span class="modal-title" id="actionModalTitle">Nouvelle action réalisée</span><button class="btn-x" onclick="closeActionModal()">×</button></div>
+  <div class="modal-hd"><span class="modal-title" id="actionModalTitle">Nouvelle action</span><button class="btn-x" onclick="closeActionModal()">×</button></div>
   <div class="toast" id="actionToast">Action enregistrée !</div>
   <div class="fg"><label class="fl">Nom de l'action <span class="req">*</span></label><input type="text" id="aNom" style="width:100%" placeholder="Ex: Forum Bioeco, COPIL FIBI…"></div>
   <div class="form-row">
-    <div class="fg"><label class="fl">Date <span class="req">*</span></label><input type="date" id="aDate" style="width:100%"></div>
+    <div class="fg"><label class="fl">Date de début</label><input type="date" id="aDateDebut" style="width:100%"></div>
+    <div class="fg"><label class="fl">Date de réalisation</label><input type="date" id="aDate" style="width:100%"></div>
     <div class="fg"><label class="fl">Responsable <span class="req">*</span></label><select id="aResp" style="width:100%"><option value="">— Choisir —</option></select></div>
+    <div class="fg" style="display:flex;align-items:center;gap:8px;padding-top:18px">
+      <input type="checkbox" id="aTerminee" style="width:auto;margin:0;cursor:pointer">
+      <label class="fl" for="aTerminee" style="margin:0;cursor:pointer">Terminée</label>
+    </div>
   </div>
   <div class="fg"><label class="fl">WP / Axe</label><select id="aWP" onchange="onAWpChange()" style="width:100%"><option value="">— Choisir —</option></select></div>
   <div class="cascade-sep">▼</div>
@@ -1773,6 +1789,8 @@ function initSaisieActionPanel(){
   document.getElementById('saIndicZone').style.display='none';
   document.getElementById('saIndicZone').innerHTML='';
   document.getElementById('saNom').value='';
+  document.getElementById('saDateDebut').value='';
+  document.getElementById('saTerminee').checked=false;
   document.getElementById('saComment').value='';
   resetSaPartnerSection();
   resetSaPartenaireSection();
@@ -1828,12 +1846,14 @@ async function submitSaisieAction(){
   const nom=document.getElementById('saNom').value.trim();
   const date=document.getElementById('saDate').value;
   const resp=document.getElementById('saResp').value;
-  if(!nom||!date||!resp){showToast('Nom, date et responsable sont obligatoires.','error');return}
+  if(!nom||!resp){showToast('Nom et responsable sont obligatoires.','error');return}
   const proj=PROJETS.find(p=>p.id===currentProjetId);
   const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj?.code);
   const sid=parseInt(document.getElementById('saSousAction').value)||0;
   const record={
     nom_suivi_action:nom,date_suivi_action:toTs(date),
+    date_debut_action:toTs(document.getElementById('saDateDebut').value),
+    terminee:document.getElementById('saTerminee').checked,
     responsable_suivi_action_ref:parseInt(resp)||0,projet_ref:actnProj?.id||0,
     wp_axe_ref:parseInt(document.getElementById('saWP').value)||0,
     action_ref:parseInt(document.getElementById('saAction').value)||0,
@@ -3108,6 +3128,12 @@ function populateSelects(){
       const o=document.createElement('option');o.value=a.id;o.textContent=a.id_wp_axe_calc||`${a.cod_wp_axe} - ${a.lib_wp_axe}`;aw.appendChild(o);
     });
   }
+
+  // Actions liées aux tâches (filtrées par projet courant)
+  const ma=document.getElementById('mAction');
+  ma.innerHTML='<option value="">— Tâche libre —</option>';
+  const projActions=(window._ALL_ACTIONS||[]).filter(a=>actnProj&&a.projet_ref===actnProj.id).sort((a,b)=>(a.nom_suivi_action||'').localeCompare(b.nom_suivi_action||'','fr'));
+  projActions.forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=(a.terminee?'✓ ':'')+a.nom_suivi_action;ma.appendChild(o)});
 }
 
 function applyFilters(){
@@ -3200,6 +3226,7 @@ function renderKanban(){
           ondragstart="onDragStart(event,${t.id})" ondragend="onDragEnd(event)"
           onclick="openEditModal(${t.id})">
           <div class="k-card-title">${esc(t.tache)}</div>
+          ${t.action_ref?`<div style="font-size:10px;color:var(--accent);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">↳ ${esc((window._ALL_ACTIONS||[]).find(x=>x.id===t.action_ref)?.nom_suivi_action||'')}</div>`:''}
           <div class="k-card-meta">
             <span class="k-card-wp" style="background:${wpBg(t.wp_code)};color:${wpCol(t.wp_code)}">${t.wp_code||'—'}</span>
             <span class="k-card-qui">${initials(t.qui)}</span>
@@ -3869,6 +3896,7 @@ function openAddModal(){
   ['mTache','mProjet','mComment','mDateDebut','mDeadline','mDateReal'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
   document.getElementById('mQui').value='';document.getElementById('mStatut').value='A traiter';
   document.getElementById('mWP').value='';document.getElementById('mPrio').value='Normale';
+  document.getElementById('mAction').value='';
   document.getElementById('btnDelete').style.display='none';
   document.getElementById('btnDuplicate').style.display='none';
   document.getElementById('taskOverlay').classList.add('open');
@@ -3887,6 +3915,7 @@ function openEditModal(id){
   document.getElementById('mDateReal').value=fromTs(t.date_realisation);
   document.getElementById('mProjet').value=t.projet_label||'';
   document.getElementById('mComment').value=t.commentaire||'';
+  document.getElementById('mAction').value=t.action_ref||'';
   document.getElementById('btnDelete').style.display='inline-flex';
   document.getElementById('btnDuplicate').style.display='inline-flex';
   document.getElementById('taskOverlay').classList.add('open');
@@ -3911,9 +3940,10 @@ async function saveTask(){
     commentaire:document.getElementById('mComment').value,
     Cree_par:'widget',
   };
-  // date_debut : optionnel (colonne peut ne pas exister dans Grist)
   const dd=document.getElementById('mDateDebut').value;
   if(dd)record.date_debut=toTs(dd);
+  const actionRef=parseInt(document.getElementById('mAction').value)||0;
+  if(actionRef)record.action_ref=actionRef;
 
   try{
     if(editingId){
@@ -3983,7 +4013,7 @@ async function saveNewProjet(){
 /* ══════════════════════════════════════════════
    MODAL ACTION (overlay complet)
 ══════════════════════════════════════════════ */
-function openActionModal(){document.getElementById('actionOverlay').classList.add('open');document.getElementById('aDate').value=new Date().toISOString().split('T')[0]}
+function openActionModal(){document.getElementById('actionOverlay').classList.add('open');document.getElementById('aDate').value='';document.getElementById('aDateDebut').value='';document.getElementById('aTerminee').checked=false;}
 function closeActionModal(){document.getElementById('actionOverlay').classList.remove('open')}
 function onAWpChange(){
   const wid=parseInt(document.getElementById('aWP').value)||0;
@@ -4015,9 +4045,9 @@ async function submitAction(){
   const resp=document.getElementById('aResp').value;
   const proj=PROJETS.find(p=>p.id===currentProjetId);
   const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj?.code);
-  if(!nom||!date||!resp){alert('Nom, date et responsable obligatoires.');return}
+  if(!nom||!resp){alert('Nom et responsable obligatoires.');return}
   const sid=parseInt(document.getElementById('aSousAction').value)||0;
-  const record={nom_suivi_action:nom,date_suivi_action:toTs(date),responsable_suivi_action_ref:parseInt(resp)||0,projet_ref:actnProj?.id||0,wp_axe_ref:parseInt(document.getElementById('aWP').value)||0,action_ref:parseInt(document.getElementById('aAction').value)||0,sous_action_ref:sid,Commentaires:document.getElementById('aComment').value,Cree_par:'widget'};
+  const record={nom_suivi_action:nom,date_suivi_action:toTs(date),date_debut_action:toTs(document.getElementById('aDateDebut').value),terminee:document.getElementById('aTerminee').checked,responsable_suivi_action_ref:parseInt(resp)||0,projet_ref:actnProj?.id||0,wp_axe_ref:parseInt(document.getElementById('aWP').value)||0,action_ref:parseInt(document.getElementById('aAction').value)||0,sous_action_ref:sid,Commentaires:document.getElementById('aComment').value,Cree_par:'widget'};
   const btn=document.getElementById('btnActionSubmit');btn.disabled=true;
   try{
     const res=await grist.docApi.applyUserActions([['AddRecord','SAISIE_actions_realisees',null,record]]);

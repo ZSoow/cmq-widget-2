@@ -785,24 +785,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
         <button class="btn btn-primary" style="width:100%;padding:11px;font-size:13px;margin-top:4px" onclick="submitActForm()">Enregistrer l'action</button>
       </div>
     </div>
-    <div class="act-history">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:.5px solid #e8e8e8">
-        <span style="font-size:13px;font-weight:600;color:#1a1a1a" id="actHistoryHd">Actions</span>
-        <button onclick="openActionModal()" style="font-size:11px;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:var(--font);font-weight:500">+ Nouvelle action</button>
-      </div>
-      <div style="display:flex;gap:8px;padding:10px 14px;border-bottom:.5px solid #f0f0f0;background:#fafafa;flex-wrap:wrap;align-items:center">
-        <select id="actFiltWP" onchange="renderActHistoryCurrent()" style="font-size:12px;padding:5px 8px;border:.5px solid #ddd;border-radius:6px;background:#fff;font-family:var(--font)">
-          <option value="">Tous les WP/Axes</option>
-        </select>
-        <div style="display:flex;border:.5px solid #ddd;border-radius:6px;overflow:hidden">
-          <button id="actFiltBtnAll"    onclick="setActFiltStatut('')"         style="font-size:11px;padding:5px 10px;border:none;cursor:pointer;font-family:var(--font);background:var(--accent);color:#fff">Toutes</button>
-          <button id="actFiltBtnEncours" onclick="setActFiltStatut('encours')" style="font-size:11px;padding:5px 10px;border:none;cursor:pointer;font-family:var(--font);background:transparent">En cours</button>
-          <button id="actFiltBtnTerminee" onclick="setActFiltStatut('terminee')" style="font-size:11px;padding:5px 10px;border:none;cursor:pointer;font-family:var(--font);background:transparent">Terminées</button>
-        </div>
-        <input type="search" id="actFiltSearch" oninput="renderActHistoryCurrent()" placeholder="Rechercher une action…" style="font-size:12px;padding:5px 10px;border:.5px solid #ddd;border-radius:6px;flex:1;min-width:120px;font-family:var(--font)">
-      </div>
-      <div id="actHistoryList"><div style="padding:20px;text-align:center;font-size:12px;color:#bbb">Chargement…</div></div>
-    </div>
+    <div class="act-history" id="pageActionsHistory_unused"></div>
   </div>
 </div>
 
@@ -916,8 +899,34 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
       <button class="btn btn-primary" style="flex:1;padding:10px;font-size:13px" onclick="submitSaisieAction()">Enregistrer l'action</button>
     </div>
   </div>
-  <div class="obj-body" id="objBody">
-    <div style="padding:40px;text-align:center;font-size:12px;color:#bbb">Chargement…</div>
+  <!-- Onglets principaux -->
+  <div style="display:flex;border-bottom:.5px solid #e0e0e0;background:#fff;padding:0 20px">
+    <button id="objTabBtnActions" onclick="switchObjTab('actions')" style="font-size:12px;font-weight:600;padding:10px 16px;border:none;border-bottom:2px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-family:var(--font)">Actions</button>
+    <button id="objTabBtnIndic" onclick="switchObjTab('indic')" style="font-size:12px;font-weight:500;padding:10px 16px;border:none;border-bottom:2px solid transparent;background:transparent;color:#888;cursor:pointer;font-family:var(--font)">Indicateurs</button>
+  </div>
+  <!-- Panneau Actions -->
+  <div id="objTabPanelActions">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:.5px solid #e8e8e8">
+      <span style="font-size:13px;font-weight:600;color:#1a1a1a" id="actHistoryHd">Actions</span>
+    </div>
+    <div style="display:flex;gap:8px;padding:10px 14px;border-bottom:.5px solid #f0f0f0;background:#fafafa;flex-wrap:wrap;align-items:center">
+      <select id="actFiltWP" onchange="renderActHistoryCurrent()" style="font-size:12px;padding:5px 8px;border:.5px solid #ddd;border-radius:6px;background:#fff;font-family:var(--font)">
+        <option value="">Tous les WP/Axes</option>
+      </select>
+      <div style="display:flex;border:.5px solid #ddd;border-radius:6px;overflow:hidden">
+        <button id="actFiltBtnAll"      onclick="setActFiltStatut('')"          style="font-size:11px;padding:5px 10px;border:none;cursor:pointer;font-family:var(--font);background:var(--accent);color:#fff">Toutes</button>
+        <button id="actFiltBtnEncours"  onclick="setActFiltStatut('encours')"  style="font-size:11px;padding:5px 10px;border:none;cursor:pointer;font-family:var(--font);background:transparent">En cours</button>
+        <button id="actFiltBtnTerminee" onclick="setActFiltStatut('terminee')" style="font-size:11px;padding:5px 10px;border:none;cursor:pointer;font-family:var(--font);background:transparent">Terminées</button>
+      </div>
+      <input type="search" id="actFiltSearch" oninput="renderActHistoryCurrent()" placeholder="Rechercher une action…" style="font-size:12px;padding:5px 10px;border:.5px solid #ddd;border-radius:6px;flex:1;min-width:120px;font-family:var(--font)">
+    </div>
+    <div id="actHistoryList"><div style="padding:20px;text-align:center;font-size:12px;color:#bbb">Chargement…</div></div>
+  </div>
+  <!-- Panneau Indicateurs -->
+  <div id="objTabPanelIndic" style="display:none">
+    <div class="obj-body" id="objBody">
+      <div style="padding:40px;text-align:center;font-size:12px;color:#bbb">Chargement…</div>
+    </div>
   </div>
 </div>
 
@@ -1838,11 +1847,35 @@ function openIndicateursPage(){
   document.getElementById('objBadge').style.background=accent;
   document.getElementById('objSub').textContent=proj.nom;
   document.documentElement.style.setProperty('--accent',accent);
-  // Préparer le formulaire de saisie
   initSaisieActionPanel();
   closeSaisieActionPanel();
+  // Peupler le filtre WP/Axe
+  const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj.code);
+  const fw=document.getElementById('actFiltWP');
+  fw.innerHTML='<option value="">Tous les WP/Axes</option>';
+  if(actnProj)ACTN_AXES.filter(a=>a.projet_ref===actnProj.id).forEach(a=>{
+    const o=document.createElement('option');o.value=a.id;
+    o.textContent=a.id_wp_axe_calc||`${a.cod_wp_axe} — ${a.lib_wp_axe}`;fw.appendChild(o);
+  });
+  const fs=document.getElementById('actFiltSearch');if(fs)fs.value='';
+  _actFiltStatut='';
+  ['All','Encours','Terminee'].forEach(k=>{
+    const b=document.getElementById('actFiltBtn'+k);
+    if(b){b.style.background=k==='All'?'var(--accent)':'transparent';b.style.color=k==='All'?'#fff':'inherit';}
+  });
+  renderActHistory(proj,actnProj);
   renderObjectifs();
+  switchObjTab('actions');
   showPage('objectifs');
+}
+function switchObjTab(tab){
+  const isActions=tab==='actions';
+  document.getElementById('objTabPanelActions').style.display=isActions?'block':'none';
+  document.getElementById('objTabPanelIndic').style.display=isActions?'none':'block';
+  const ba=document.getElementById('objTabBtnActions');
+  const bi=document.getElementById('objTabBtnIndic');
+  if(ba){ba.style.borderBottomColor=isActions?'var(--accent)':'transparent';ba.style.color=isActions?'var(--accent)':'#888';ba.style.fontWeight=isActions?'600':'500';}
+  if(bi){bi.style.borderBottomColor=isActions?'transparent':'var(--accent)';bi.style.color=isActions?'#888':'var(--accent)';bi.style.fontWeight=isActions?'500':'600';}
 }
 
 function initSaisieActionPanel(){
@@ -2589,7 +2622,7 @@ function renderHubNotifs(proj,accent){
   var projIndics=ALL_INDIC_CONFIG.filter(function(c){return projSaIds.has(c.type_sous_action);});
   var missingTargets=projIndics.filter(function(ind){return!targets[ind.Code_indicateur];});
   if(missingTargets.length){
-    notifs.push({color:'#999',msg:missingTargets.length+' indicateur'+(missingTargets.length>1?'s sans':'  sans')+' objectif défini',action:'Définir les objectifs',onclick:"indicActiveTab='objectifs';openIndicateursPage()"});
+    notifs.push({color:'#999',msg:missingTargets.length+' indicateur'+(missingTargets.length>1?'s sans':'  sans')+' objectif défini',action:'Définir les objectifs',onclick:"indicActiveTab='objectifs';openIndicateursPage();switchObjTab('indic')"});
   }
 
   if(!notifs.length){nd.innerHTML='';return;}

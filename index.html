@@ -1855,7 +1855,7 @@ function renderActHistory(proj,actnProj){
     const partenaires=(window._ALL_ETAB_PARTS||[]).filter(p=>p.ACTION_CONCERNEE===a.id);
     const etabChips=partenaires.map(p=>{
       const e=(window._ALL_ETABLISSEMENTS||[]).find(x=>x.id===p.ETABLISSEMENT_PARTICIPANT);
-      const label=p.ETABLISSEMENT||e?.nom_etablissement||`Étab. #${p.ETABLISSEMENT_PARTICIPANT}`;
+      const label=e?.nom_etablissement||`Étab. #${p.ETABLISSEMENT_PARTICIPANT}`;
       return`<span class="ah-chip" style="background:#f0f4ff;border:.5px solid #c5d3f0;color:#2a4a8a" title="${esc(label)}">${esc(label.length>30?label.substring(0,28)+'…':label)}</span>`;
     }).join('');
     const statutBadge=a.cloturee
@@ -1893,7 +1893,7 @@ function openObjectifsPage(){openIndicateursPage()}
 
 function goActions(){openIndicateursPage();setTimeout(()=>openSaisieActionPanel(),100)}
 
-function openIndicateursPage(){
+async function openIndicateursPage(){
   const proj=PROJETS.find(p=>p.id===currentProjetId);if(!proj)return;
   const accent=proj.couleur||'#534AB7';
   const badge=proj.badge||proj.code||proj.nom;
@@ -1913,11 +1913,12 @@ function openIndicateursPage(){
   });
   const fs=document.getElementById('actFiltSearch');if(fs)fs.value='';
   _actFiltStatut='';
-  ['All','Encours','Terminee'].forEach(k=>{
+  ['All','Encours','Terminee','Archivee'].forEach(k=>{
     const b=document.getElementById('actFiltBtn'+k);
     if(b){b.style.background=k==='All'?'var(--accent)':'transparent';b.style.color=k==='All'?'#fff':'inherit';}
   });
   _indicFiltWP=0;
+  await loadEtablissements();
   renderActHistory(proj,actnProj);
   renderObjectifs();
   switchObjTab('actions');
@@ -2256,7 +2257,7 @@ async function openSaisieActionPanelEdit(actionId){
     const indicVals={};
     (ALL_INDIC_VAL||[]).filter(v=>v.action_ref===actionId&&v.etablissement_ref===p.ETABLISSEMENT_PARTICIPANT).forEach(v=>{indicVals[v.indicateur_ref]=v.valeur;});
     return{type:'etablissement',id:p.ETABLISSEMENT_PARTICIPANT,
-      label:p.ETABLISSEMENT||(e?.nom_etablissement||`Étab. #${p.ETABLISSEMENT_PARTICIPANT}`),
+      label:e?.nom_etablissement||`Étab. #${p.ETABLISSEMENT_PARTICIPANT}`,
       cp:e?.code_postal_etablissement||'',region_ref:p.FILTRE_REGION||0,dept_ref:p.FILTRE_DEPARTEMENT||0,type_etab_ref:p.FILTRE_TYPE_ETABLISSEMENT||0,
       formations:formsByEtab[p.ETABLISSEMENT_PARTICIPANT]||[],indicateurs:indicVals};
   });

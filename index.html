@@ -928,6 +928,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
         <button id="actFiltBtnAll"      onclick="setActFiltStatut('')"          style="font-size:11px;padding:5px 10px;border:none;cursor:pointer;font-family:var(--font);background:var(--accent);color:#fff">Toutes</button>
         <button id="actFiltBtnEncours"  onclick="setActFiltStatut('encours')"  style="font-size:11px;padding:5px 10px;border:none;cursor:pointer;font-family:var(--font);background:transparent">En cours</button>
         <button id="actFiltBtnTerminee" onclick="setActFiltStatut('terminee')" style="font-size:11px;padding:5px 10px;border:none;cursor:pointer;font-family:var(--font);background:transparent">Terminées</button>
+        <button id="actFiltBtnArchivee" onclick="setActFiltStatut('archivee')" style="font-size:11px;padding:5px 10px;border:none;cursor:pointer;font-family:var(--font);background:transparent">Archivées</button>
       </div>
       <input type="search" id="actFiltSearch" oninput="renderActHistoryCurrent()" placeholder="Rechercher une action…" style="font-size:12px;padding:5px 10px;border:.5px solid #ddd;border-radius:6px;flex:1;min-width:120px;font-family:var(--font)">
     </div>
@@ -1792,7 +1793,7 @@ function openActionsPage(){
   });
   const fs=document.getElementById('actFiltSearch');if(fs)fs.value='';
   _actFiltStatut='';
-  ['All','Encours','Terminee'].forEach(k=>{
+  ['All','Encours','Terminee','Archivee'].forEach(k=>{
     const b=document.getElementById('actFiltBtn'+k);
     if(b){b.style.background=k==='All'?'var(--accent)':'transparent';b.style.color=k==='All'?'#fff':'inherit';}
   });
@@ -1807,7 +1808,7 @@ function renderActHistoryCurrent(){
 }
 function setActFiltStatut(val){
   _actFiltStatut=val;
-  const map={All:'',Encours:'encours',Terminee:'terminee'};
+  const map={All:'',Encours:'encours',Terminee:'terminee',Archivee:'archivee'};
   Object.entries(map).forEach(([k,v])=>{
     const btn=document.getElementById('actFiltBtn'+k);
     if(!btn)return;
@@ -1817,13 +1818,17 @@ function setActFiltStatut(val){
   renderActHistoryCurrent();
 }
 function renderActHistory(proj,actnProj){
-  let projActions=actnProj?[...(window._ALL_ACTIONS||[])].filter(a=>a.projet_ref===actnProj.id&&!a.cloturee):[];
+  let projActions=actnProj?[...(window._ALL_ACTIONS||[])].filter(a=>a.projet_ref===actnProj.id):[];
   // Filtre WP/Axe
   const wpFilt=parseInt(document.getElementById('actFiltWP')?.value)||0;
   if(wpFilt)projActions=projActions.filter(a=>a.wp_axe_ref===wpFilt);
   // Filtre statut
-  if(_actFiltStatut==='encours')projActions=projActions.filter(a=>!a.terminee);
-  if(_actFiltStatut==='terminee')projActions=projActions.filter(a=>a.terminee);
+  if(_actFiltStatut==='archivee')projActions=projActions.filter(a=>a.cloturee);
+  else{
+    projActions=projActions.filter(a=>!a.cloturee);
+    if(_actFiltStatut==='encours')projActions=projActions.filter(a=>!a.terminee);
+    if(_actFiltStatut==='terminee')projActions=projActions.filter(a=>a.terminee);
+  }
   // Filtre recherche
   const q=(document.getElementById('actFiltSearch')?.value||'').toLowerCase().trim();
   if(q)projActions=projActions.filter(a=>(a.nom_suivi_action||'').toLowerCase().includes(q));
@@ -1853,7 +1858,9 @@ function renderActHistory(proj,actnProj){
       const label=p.ETABLISSEMENT||e?.nom_etablissement||`Étab. #${p.ETABLISSEMENT_PARTICIPANT}`;
       return`<span class="ah-chip" style="background:#f0f4ff;border:.5px solid #c5d3f0;color:#2a4a8a" title="${esc(label)}">${esc(label.length>30?label.substring(0,28)+'…':label)}</span>`;
     }).join('');
-    const statutBadge=a.terminee
+    const statutBadge=a.cloturee
+      ?`<span style="font-size:10px;background:#eee;color:#666;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0">Archivée</span>`
+      :a.terminee
       ?`<span style="font-size:10px;background:#e6f4ea;color:#1e7e34;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0">Terminée</span>`
       :`<span style="font-size:10px;background:#fff3cd;color:#856404;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0">En cours</span>`;
     const wpBadge=wp?`<span style="font-size:10px;background:var(--accent);color:#fff;padding:2px 7px;border-radius:4px;font-weight:600;flex-shrink:0">${esc(wp.cod_wp_axe)}</span>`:'';

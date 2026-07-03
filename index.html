@@ -3079,8 +3079,11 @@ function renderMap(){
     (window._ALL_ETABLISSEMENTS||[]).filter(function(e){
       return etabIds.has(e.id)&&e.latitude_etablissement_EN&&e.longitude_etablissement_EN;
     }).forEach(function(e){
-      var lat=parseFloat(e.latitude_etablissement_EN),lng=parseFloat(e.longitude_etablissement_EN);
-      if(isNaN(lat)||isNaN(lng))return;
+      var a=parseFloat(e.latitude_etablissement_EN),b=parseFloat(e.longitude_etablissement_EN);
+      if(isNaN(a)||isNaN(b))return;
+      // Les colonnes lat/lon sont inversées sur ~la moitié des lignes (bug d'import Excel) :
+      // en Grand Est/Hauts-de-France la latitude (~47-51) est toujours > la longitude (~1.4-8.3), donc on les réordonne ici.
+      var lat=Math.max(a,b),lng=Math.min(a,b);
       var idx=_mapData.length;
       var icon=L.divIcon({className:'',html:'<div style="width:14px;height:14px;border-radius:50%;background:#4A90D9;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(74,144,217,.45);cursor:pointer"></div>',iconSize:[14,14],iconAnchor:[7,7]});
       var m=L.marker([lat,lng],{icon:icon}).addTo(_leafletMap);

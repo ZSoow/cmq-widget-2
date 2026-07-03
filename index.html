@@ -438,6 +438,9 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 .mpop-title{font-weight:600;font-size:13px;color:var(--txt);margin-bottom:3px}
 .mpop-sub{color:var(--sub);font-size:11px;margin-top:2px}
 .mpop-badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;margin-top:7px}
+.mpop-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.mpop-open-btn{flex-shrink:0;width:20px;height:20px;border-radius:50%;border:none;background:var(--accent);color:#fff;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.mpop-open-btn:hover{filter:brightness(1.1)}
 .rapport-filters{background:#fff;border:.5px solid #e0e0e0;border-radius:var(--r);padding:14px 18px;margin-bottom:18px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
 .rf-grp{display:flex;flex-direction:column;gap:4px}
 .rf-label{font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.04em}
@@ -1420,10 +1423,10 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 
 <!-- FICHE ÉTABLISSEMENT -->
 <div class="overlay" id="etabDetailOverlay" onclick="if(event.target===this)closeEtabDetail()">
-<div class="modal" style="max-width:620px;max-height:85vh;display:flex;flex-direction:column;padding:0">
-  <div class="modal-hd"><span class="modal-title" id="edTitle">Fiche établissement</span><button class="btn-x" onclick="closeEtabDetail()">×</button></div>
+<div class="modal" style="max-width:620px;max-height:85vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
+  <div class="modal-hd" style="padding:16px 20px 0;margin-bottom:0;flex-shrink:0"><span class="modal-title" id="edTitle">Fiche établissement</span><button class="btn-x" onclick="closeEtabDetail()">×</button></div>
   <div id="edBody" style="padding:16px 20px;overflow-y:auto;flex:1"></div>
-  <div class="modal-ft">
+  <div class="modal-ft" style="padding:14px 20px;margin-top:0;flex-shrink:0">
     <button class="btn btn-ghost" onclick="closeEtabDetail()">Fermer</button>
     <button class="btn btn-primary" onclick="exportOneEtabExcel()">Exporter cette fiche</button>
   </div>
@@ -1432,10 +1435,10 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 
 <!-- FICHE PARTENAIRE -->
 <div class="overlay" id="partDetailOverlay" onclick="if(event.target===this)closePartDetail()">
-<div class="modal" style="max-width:640px;max-height:85vh;display:flex;flex-direction:column;padding:0">
-  <div class="modal-hd"><span class="modal-title" id="pdTitle">Fiche partenaire</span><button class="btn-x" onclick="closePartDetail()">×</button></div>
+<div class="modal" style="max-width:640px;max-height:85vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
+  <div class="modal-hd" style="padding:16px 20px 0;margin-bottom:0;flex-shrink:0"><span class="modal-title" id="pdTitle">Fiche partenaire</span><button class="btn-x" onclick="closePartDetail()">×</button></div>
   <div id="pdBody" style="padding:16px 20px;overflow-y:auto;flex:1"></div>
-  <div class="modal-ft">
+  <div class="modal-ft" style="padding:14px 20px;margin-top:0;flex-shrink:0">
     <button class="btn btn-ghost" onclick="closePartDetail()">Fermer</button>
     <button class="btn btn-primary" onclick="exportOnePartExcel()">Exporter cette fiche</button>
   </div>
@@ -3087,7 +3090,8 @@ function renderMap(){
       var idx=_mapData.length;
       var icon=L.divIcon({className:'',html:'<div style="width:14px;height:14px;border-radius:50%;background:#4A90D9;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(74,144,217,.45);cursor:pointer"></div>',iconSize:[14,14],iconAnchor:[7,7]});
       var m=L.marker([lat,lng],{icon:icon}).addTo(_leafletMap);
-      m.bindPopup('<div class="mpop-title">'+esc(e.nom_etablissement||'')+'</div>'
+      m.bindPopup('<div class="mpop-hd"><div class="mpop-title">'+esc(e.nom_etablissement||'')+'</div>'
+        +'<button class="mpop-open-btn" onclick="openEtabDetail('+e.id+')" title="Voir la fiche">+</button></div>'
         +(e.libelle_commune?'<div class="mpop-sub">'+esc(e.libelle_commune+(e.code_postal_etablissement?' ('+e.code_postal_etablissement+')':''))+'</div>':'')
         +'<span class="mpop-badge" style="background:#4A90D915;color:#4A90D9">Établissement</span>',{maxWidth:240});
       m.on('click',function(){highlightPanelItem(idx);});
@@ -3110,7 +3114,8 @@ function renderMap(){
       var idx=_mapData.length;
       var icon=L.divIcon({className:'',html:'<div style="width:14px;height:14px;border-radius:50%;background:#E8873A;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(232,135,58,.45);cursor:pointer"></div>',iconSize:[14,14],iconAnchor:[7,7]});
       var m=L.marker([lat,lng],{icon:icon}).addTo(_leafletMap);
-      m.bindPopup('<div class="mpop-title">'+esc(p.nom_entreprise||'')+'</div>'
+      m.bindPopup('<div class="mpop-hd"><div class="mpop-title">'+esc(p.nom_entreprise||'')+'</div>'
+        +'<button class="mpop-open-btn" onclick="openPartDetail('+p.id+')" title="Voir la fiche">+</button></div>'
         +(p.type_partenaire?'<div class="mpop-sub">'+esc(p.type_partenaire)+'</div>':'')
         +(p.ville?'<div class="mpop-sub">'+esc(p.ville+(p.code_postal?' ('+p.code_postal+')':''))+'</div>':'')
         +'<span class="mpop-badge" style="background:#E8873A15;color:#E8873A">Partenaire</span>',{maxWidth:240});

@@ -1108,6 +1108,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
         <button class="map-chip active" id="chipEtab" onclick="setMapLayer('etab')">Établissements</button>
         <button class="map-chip" id="chipPart" onclick="setMapLayer('part')">Partenaires</button>
         <button class="map-chip" id="chipAll" onclick="setMapLayer('all')">Tout</button>
+        <button class="map-chip" id="chipHeat" onclick="setMapLayer('heat')">Indicateurs</button>
         <span style="width:1px;height:16px;background:var(--border);display:inline-block"></span>
         <button class="map-chip" id="chipProjet" onclick="toggleMapProjet()">Ce projet</button>
       </div>
@@ -1119,6 +1120,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
         <select id="mapDeptFilter" onchange="onMapDeptChange()" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:var(--rsm);font-size:11px;font-family:var(--font);margin-bottom:4px;color:var(--txt);background:var(--surf);outline:none">
           <option value="">Tous les départements</option>
         </select>
+        <select id="mapHeatIndic" onchange="renderMapHeat()" style="display:none;width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:var(--rsm);font-size:11px;font-family:var(--font);margin-bottom:4px;color:var(--txt);background:var(--surf);outline:none"></select>
         <div class="map-panel-counts" id="mapPanelCounts">—</div>
       </div>
       <div class="map-panel-list" id="mapPanelList"><div class="map-panel-empty">Chargement…</div></div>
@@ -3042,6 +3044,13 @@ async function openCartePage(){
   document.getElementById('carteBadge').style.background=accent;
   document.getElementById('carteSub').textContent=proj.nom;
   _mapLayer='etab';_mapProjetOnly=true;
+  ['etab','part','all','heat'].forEach(function(l){
+    var el=document.getElementById('chip'+l.charAt(0).toUpperCase()+l.slice(1));
+    if(el)el.classList.toggle('active',l==='etab');
+  });
+  var s=document.getElementById('mapSearch');if(s)s.style.display='';
+  var df=document.getElementById('mapDeptFilter');if(df)df.style.display='';
+  var hi=document.getElementById('mapHeatIndic');if(hi)hi.style.display='none';
   showPage('carte');
   await loadEtablissements();
   setTimeout(renderMap,100);
@@ -3049,11 +3058,16 @@ async function openCartePage(){
 
 function setMapLayer(layer){
   _mapLayer=layer;
-  ['etab','part','all'].forEach(function(l){
+  ['etab','part','all','heat'].forEach(function(l){
     var el=document.getElementById('chip'+l.charAt(0).toUpperCase()+l.slice(1));
     if(el)el.classList.toggle('active',l===layer);
   });
-  renderMap();
+  var isHeat=layer==='heat';
+  var s=document.getElementById('mapSearch');if(s)s.style.display=isHeat?'none':'';
+  var df=document.getElementById('mapDeptFilter');if(df)df.style.display=isHeat?'none':'';
+  var hi=document.getElementById('mapHeatIndic');if(hi)hi.style.display=isHeat?'':'none';
+  if(isHeat){populateHeatIndicSelect();renderMapHeat();}
+  else renderMap();
 }
 
 function toggleMapProjet(){
@@ -3181,6 +3195,98 @@ function renderMapPanel(){
       +'<span class="mp-badge" style="background:'+color+'18;color:'+color+'">'+label+'</span>'
       +'</div>';
   }).join('')||'<div class="map-panel-empty">Aucun point à afficher</div>';
+}
+
+function getProjetIndicList(){
+  var proj=PROJETS.find(function(p){return p.id===currentProjetId;});
+  var actnProj=proj&&ACTN_PROJETS.find(function(ap){return ap.cod_projet===proj.code;});
+  var actions=actnProj?(window._ALL_ACTIONS||[]).filter(function(a){return a.projet_ref===actnProj.id;}):[];
+  var byId={};
+  actions.forEach(function(a){getIndicForAction(a.id).forEach(function(iv){
+    var cfg=ALL_INDIC_CONFIG.find(function(c){return c.id===iv.indicateur_ref;});
+    if(cfg)byId[cfg.id]=cfg;
+  });});
+  return Object.values(byId).sort(function(a,b){return(a.libelle_indicateurs||'').localeCompare(b.libelle_indicateurs||'','fr');});
+}
+
+function populateHeatIndicSelect(){
+  var sel=document.getElementById('mapHeatIndic');if(!sel)return;
+  var cur=sel.value;
+  var indics=getProjetIndicList();
+  sel.innerHTML=indics.map(function(c){return'<option value="'+c.id+'">'+esc(c.libelle_indicateurs)+'</option>';}).join('')||'<option value="">Aucun indicateur</option>';
+  if(indics.some(function(c){return String(c.id)===cur;}))sel.value=cur;
+}
+
+function renderMapHeat(){
+  var container=document.getElementById('mapContainer');
+  if(!container)return;
+  if(!_leafletMap){
+    _leafletMap=L.map('mapContainer',{zoomControl:true}).setView([46.5,2.3],6);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+      attribution:'&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> &copy; <a href="https://carto.com">CARTO</a>',
+      maxZoom:19
+    }).addTo(_leafletMap);
+  }
+  _mapMarkers.forEach(function(m){_leafletMap.removeLayer(m);});
+  _mapMarkers=[];_mapData=[];
+
+  var proj=PROJETS.find(function(p){return p.id===currentProjetId;});
+  var actnProj=proj&&ACTN_PROJETS.find(function(ap){return ap.cod_projet===proj.code;});
+  var actions=actnProj?(window._ALL_ACTIONS||[]).filter(function(a){return a.projet_ref===actnProj.id;}):[];
+  var indicId=parseInt(document.getElementById('mapHeatIndic')?.value)||0;
+  var indicCfg=indicId?ALL_INDIC_CONFIG.find(function(c){return c.id===indicId;}):null;
+
+  var deptAgg={};
+  if(indicId)actions.forEach(function(a){getIndicForAction(a.id).forEach(function(iv){
+    if(iv.indicateur_ref!==indicId||!iv.etablissement_ref)return;
+    var e=(window._ALL_ETABLISSEMENTS||[]).find(function(x){return x.id===iv.etablissement_ref;});
+    if(!e)return;
+    var dept=deptInfoFromEtab(e);
+    var la=parseFloat(e.latitude_etablissement_EN),lo=parseFloat(e.longitude_etablissement_EN);
+    if(!dept||isNaN(la)||isNaN(lo))return;
+    var lat=Math.max(la,lo),lng=Math.min(la,lo);
+    var key=dept.code;
+    if(!deptAgg[key])deptAgg[key]={code:dept.code,name:dept.name,region:dept.region,total:0,nb:0,lats:[],lngs:[]};
+    deptAgg[key].total+=(iv.valeur||0);deptAgg[key].nb++;
+    deptAgg[key].lats.push(lat);deptAgg[key].lngs.push(lng);
+  });});
+
+  var depts=Object.values(deptAgg).sort(function(a,b){return b.total-a.total;});
+  var maxVal=Math.max.apply(null,depts.map(function(d){return d.total;}).concat([1]));
+  var accentColor=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#E1543A';
+  var bounds=[];
+  depts.forEach(function(d){
+    var lat=d.lats.reduce(function(a,b){return a+b;},0)/d.lats.length;
+    var lng=d.lngs.reduce(function(a,b){return a+b;},0)/d.lngs.length;
+    var ratio=d.total/maxVal;
+    var circle=L.circleMarker([lat,lng],{radius:14+ratio*36,color:accentColor,weight:1,fillColor:accentColor,fillOpacity:0.12+ratio*0.5}).addTo(_leafletMap);
+    circle.bindPopup('<div class="mpop-title">'+esc(d.name)+' <span style="color:#bbb;font-weight:400">('+esc(d.code)+')</span></div>'
+      +'<div class="mpop-sub">'+esc(d.region)+'</div>'
+      +'<div style="margin-top:8px;font-weight:700;font-size:17px;color:'+accentColor+'">'+d.total.toLocaleString('fr-FR')+'</div>'
+      +'<div style="font-size:10px;color:#999">'+d.nb+' saisie'+(d.nb>1?'s':'')+'</div>',{maxWidth:200});
+    _mapMarkers.push(circle);
+    bounds.push([lat,lng]);
+  });
+  if(bounds.length>1)_leafletMap.fitBounds(bounds,{padding:[50,50]});
+  else if(bounds.length===1)_leafletMap.setView(bounds[0],8);
+  else _leafletMap.setView([48.7,4.5],7);
+
+  var cnt=document.getElementById('mapPanelCounts');
+  if(cnt)cnt.textContent=indicCfg?depts.length+' département'+(depts.length>1?'s':'')+' avec données':'Choisissez un indicateur';
+  var list=document.getElementById('mapPanelList');
+  if(list)list.innerHTML=!indicCfg?'<div class="map-panel-empty">Sélectionnez un indicateur ci-dessus</div>'
+    :depts.map(function(d){
+      var ratio=d.total/maxVal;
+      return'<div class="map-panel-item" style="cursor:default">'
+        +'<div class="mp-dot" style="background:'+accentColor+'"></div>'
+        +'<div style="flex:1;min-width:0">'
+        +'<div class="mp-name">'+esc(d.name)+' <span style="color:#bbb;font-weight:400">('+esc(d.code)+')</span></div>'
+        +'<div style="height:4px;background:#f0f0f0;border-radius:2px;margin-top:4px"><div style="height:4px;width:'+Math.round(ratio*100)+'%;background:'+accentColor+';border-radius:2px"></div></div>'
+        +'</div>'
+        +'<span class="mp-badge" style="background:'+accentColor+'18;color:'+accentColor+'">'+d.total.toLocaleString('fr-FR')+'</span>'
+        +'</div>';
+    }).join('')||'<div class="map-panel-empty">Aucune donnée pour cet indicateur sur ce projet</div>';
+  setTimeout(function(){if(_leafletMap)_leafletMap.invalidateSize();},150);
 }
 
 function onMapDeptChange(){

@@ -1866,7 +1866,7 @@ function renderActHistory(proj,actnProj){
       :a.terminee
       ?`<span style="font-size:10px;background:#e6f4ea;color:#1e7e34;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0">Terminée</span>`
       :`<span style="font-size:10px;background:#fff3cd;color:#856404;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0">En cours</span>`;
-    const wpBadge=wp?`<span style="font-size:10px;background:var(--accent);color:#fff;padding:2px 7px;border-radius:4px;font-weight:600;flex-shrink:0">${esc(wp.cod_wp_axe)}</span>`:'';
+    const wpBadge=wp?`<span style="font-size:10px;background:${wpBg(wp.cod_wp_axe)};color:${wpCol(wp.cod_wp_axe)};padding:2px 7px;border-radius:4px;font-weight:600;flex-shrink:0">${esc(wp.cod_wp_axe)}</span>`:'';
     const dateStr=a.terminee&&a.date_suivi_action
       ?'Terminée le '+fmtDate(a.date_suivi_action)
       :a.date_debut_action?'Début : '+fmtDate(a.date_debut_action):'';

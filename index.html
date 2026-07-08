@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CMQ Bioeco - Tableau de bord</title>
+<title>CMQ Bioeco — Tableau de bord</title>
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -635,7 +635,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 
 <!-- ══ SIDEBAR ══ -->
 <div class="sb" id="sidebar">
-  <div class="sb-brand">Nom sympa ?</div>
+  <div class="sb-brand">CMQ <em>·</em> Pilotage</div>
   <div class="sb-sec-lbl">Projets</div>
   <div id="sbProjects"><div style="padding:8px 12px;font-size:12px;color:var(--faint)">Chargement…</div></div>
   <div class="sb-sep" id="sbNavSep" style="display:none"></div>
@@ -1558,15 +1558,21 @@ function mCol(n){
 }
 function mBg(n){return lighten(mCol(n))}
 
-// Dans CONFIG_etablissements_partenaires les colonnes _calc sont mal étiquetées (décalage d'un niveau) :
-// libelle_departement contient en fait le code du département, code_region_calc son nom, et departement_ref_calc le nom de la région.
 function deptInfoFromEtab(e){
   if(!e)return null;
-  const code=e.libelle_departement||'';
-  const name=e.code_region_calc||'';
+  const code=e.code_departement_calc||'';
+  const name=e.libelle_departement||'';
   const region=e.departement_ref_calc||'';
   if(!code&&!name)return null;
   return{code,name,region};
+}
+// Table code département -> nom, construite à partir des établissements chargés (pour afficher le nom plutôt que le code brut, ex. sur la carte).
+function deptCodeToName(){
+  const map={};
+  (window._ALL_ETABLISSEMENTS||[]).forEach(function(e){
+    if(e.code_departement_calc&&e.libelle_departement)map[e.code_departement_calc]=e.libelle_departement;
+  });
+  return map;
 }
 
 function tableToRows(t){
@@ -2924,7 +2930,7 @@ function renderAnnuaire(){
     var etabIds=Object.keys(etabUse).map(Number);
     var etabs=(window._ALL_ETABLISSEMENTS||[]).filter(function(e){return etabIds.indexOf(e.id)>=0;});
     if(q)etabs=etabs.filter(function(e){
-      return(e.nom_etablissement||'').toLowerCase().includes(q)||(e.code_departement_calc||'').toLowerCase().includes(q)||(e.code_postal_etablissement||'').includes(q);
+      return(e.nom_etablissement||'').toLowerCase().includes(q)||(e.libelle_commune||'').toLowerCase().includes(q)||(e.code_postal_etablissement||'').includes(q);
     });
     var etabTopBar='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
       +'<span style="font-size:12px;color:#888">'+etabs.length+' établissement'+(etabs.length>1?'s':'')+' lié'+(etabs.length>1?'s':'')+' à ce projet</span>'
@@ -2938,10 +2944,10 @@ function renderAnnuaire(){
     var cards=etabs.map(function(e){
       var n=etabUse[e.id]||0;
       var etags='';
-      if(e.code_region_calc)etags+='<span class="ann-tag">Dép. '+esc(e.code_region_calc)+'</span>';
+      if(e.libelle_departement)etags+='<span class="ann-tag">Dép. '+esc(e.libelle_departement)+'</span>';
       return'<div class="ann-card" onclick="openEtabDetail('+e.id+')" title="Voir la fiche">'
         +'<div class="ann-card-name">'+esc(e.nom_etablissement||'')+'</div>'
-        +'<div class="ann-card-sub">'+(e.code_departement_calc||'')+(e.code_postal_etablissement?' ('+e.code_postal_etablissement+')':'')+'</div>'
+        +'<div class="ann-card-sub">'+(e.libelle_commune||'')+(e.code_postal_etablissement?' ('+e.code_postal_etablissement+')':'')+'</div>'
         +(etags?'<div class="ann-card-tags">'+etags+'</div>':'')
         +'<div class="ann-card-stat">'+n+' action'+(n>1?'s':'')+' sur ce projet</div>'
         +'</div>';
@@ -3117,11 +3123,11 @@ function renderMap(){
       var m=L.marker([lat,lng],{icon:icon}).addTo(_leafletMap);
       m.bindPopup('<div class="mpop-hd"><div class="mpop-title">'+esc(e.nom_etablissement||'')+'</div>'
         +'<button class="mpop-open-btn" onclick="openEtabDetail('+e.id+')" title="Voir la fiche">+</button></div>'
-        +(e.code_departement_calc?'<div class="mpop-sub">'+esc(e.code_departement_calc+(e.code_postal_etablissement?' ('+e.code_postal_etablissement+')':''))+'</div>':'')
+        +(e.libelle_commune?'<div class="mpop-sub">'+esc(e.libelle_commune+(e.code_postal_etablissement?' ('+e.code_postal_etablissement+')':''))+'</div>':'')
         +'<span class="mpop-badge" style="background:#4A90D915;color:#4A90D9">Établissement</span>',{maxWidth:240});
       m.on('click',function(){highlightPanelItem(idx);});
       _mapMarkers.push(m);
-      _mapData.push({marker:m,lat:lat,lng:lng,type:'etab',entity:{name:e.nom_etablissement||'',city:e.code_departement_calc||'',postal:e.code_postal_etablissement||'',dept:e.libelle_departement||''}});
+      _mapData.push({marker:m,lat:lat,lng:lng,type:'etab',entity:{name:e.nom_etablissement||'',city:e.libelle_commune||'',postal:e.code_postal_etablissement||'',dept:e.code_departement_calc||''}});
       bounds.push([lat,lng]);
     });
   }
@@ -3161,11 +3167,16 @@ function renderMap(){
 function renderMapPanel(){
   var q=(document.getElementById('mapSearch')?.value||'').toLowerCase();
   // Alimenter le filtre département
-  var depts=[...new Set(_mapData.map(function(d){return d.entity.dept;}).filter(Boolean))].sort();
+  var depts=[...new Set(_mapData.map(function(d){return d.entity.dept;}).filter(Boolean))];
+  var deptNames=deptCodeToName();
+  depts.sort(function(a,b){return(deptNames[a]||a).localeCompare(deptNames[b]||b,'fr');});
   var deptSel=document.getElementById('mapDeptFilter');
   if(deptSel){
     var cur=deptSel.value;
-    deptSel.innerHTML='<option value="">Tous les départements</option>'+depts.map(function(d){return'<option value="'+esc(d)+'">Dép. '+esc(d)+'</option>';}).join('');
+    deptSel.innerHTML='<option value="">Tous les départements</option>'+depts.map(function(d){
+      var label=deptNames[d]?deptNames[d]+' ('+d+')':'Dép. '+d;
+      return'<option value="'+esc(d)+'">'+esc(label)+'</option>';
+    }).join('');
     if(depts.indexOf(cur)>=0)deptSel.value=cur;
   }
   var items=_mapData.map(function(d,i){return{d:d,i:i};}).filter(function(o){
@@ -3629,7 +3640,7 @@ function renderGlobalSearch(q){
 
   const fT=ALL_TACHES.filter(t=>t.tache?.toLowerCase().includes(low)||(t.commentaire||'').toLowerCase().includes(low)||t.qui?.toLowerCase().includes(low)).slice(0,4);
   const fA=(window._ALL_ACTIONS||[]).filter(a=>a.nom_suivi_action?.toLowerCase().includes(low)).slice(0,3);
-  const fE=(window._ALL_ETABLISSEMENTS||[]).filter(e=>e.nom_etablissement?.toLowerCase().includes(low)||e.code_departement_calc?.toLowerCase().includes(low)||e.identifiant_etablissement?.toLowerCase().includes(low)).slice(0,3);
+  const fE=(window._ALL_ETABLISSEMENTS||[]).filter(e=>e.nom_etablissement?.toLowerCase().includes(low)||e.libelle_commune?.toLowerCase().includes(low)||e.identifiant_etablissement?.toLowerCase().includes(low)).slice(0,3);
   const fP=(_ALL_PARTENAIRES||[]).filter(p=>p.nom_entreprise?.toLowerCase().includes(low)||p.ville?.toLowerCase().includes(low)).slice(0,3);
 
   if(!fT.length&&!fA.length&&!fE.length&&!fP.length){
@@ -3661,7 +3672,7 @@ function renderGlobalSearch(q){
     html+=`<div class="search-group-hd">Établissements</div>`;
     html+=fE.map(e=>`<div class="search-result" onmousedown="openAnnuairePage();setTimeout(()=>openEtabDetail(${e.id}),700)">
       <div class="search-result-name">${esc(e.nom_etablissement||'—')}</div>
-      <div class="search-result-meta">${esc(e.code_departement_calc||'')}${e.code_region_calc?' · Dép. '+esc(e.code_region_calc):''}</div>
+      <div class="search-result-meta">${esc(e.libelle_commune||'')}${e.libelle_departement?' · Dép. '+esc(e.libelle_departement):''}</div>
     </div>`).join('');
   }
   if(fP.length){
@@ -5149,7 +5160,7 @@ function exportPDF(){
     doc.text('Établissements impliqués ('+etabList.length+')',M,lastY);
     doc.autoTable({
       head:[['Établissement','Commune','CP','Dép.','Actions']],
-      body:etabList.map(e=>[e.nom_etablissement||'',e.code_departement_calc||'',e.code_postal_etablissement||'',e.code_region_calc||'',String(etabUseMap[e.id]||0)]),
+      body:etabList.map(e=>[e.nom_etablissement||'',e.libelle_commune||'',e.code_postal_etablissement||'',e.libelle_departement||'',String(etabUseMap[e.id]||0)]),
       startY:lastY+4,margin:{left:M,right:M},
       styles:{fontSize:7.5,cellPadding:2},
       headStyles:{fillColor:[74,144,217],textColor:255,fontStyle:'bold',fontSize:7.5},
@@ -5388,8 +5399,8 @@ function openEtabDetail(id){
     return a?{ep,a}:null;
   }).filter(Boolean).sort((x,y)=>(y.a.date_suivi_action||0)-(x.a.date_suivi_action||0));
   let html='<div style="margin-bottom:16px">';
-  html+='<div style="font-size:11px;color:#999">'+(e.code_departement_calc||'')+(e.code_postal_etablissement?' ('+e.code_postal_etablissement+')':'')+'</div>';
-  const etags=[e.code_region_calc?'Dép. '+e.code_region_calc:null].filter(Boolean).map(t=>'<span class="ann-tag">'+esc(t)+'</span>').join('');
+  html+='<div style="font-size:11px;color:#999">'+(e.libelle_commune||'')+(e.code_postal_etablissement?' ('+e.code_postal_etablissement+')':'')+'</div>';
+  const etags=[e.libelle_departement?'Dép. '+e.libelle_departement:null].filter(Boolean).map(t=>'<span class="ann-tag">'+esc(t)+'</span>').join('');
   if(etags)html+='<div class="ann-card-tags" style="margin-top:6px">'+etags+'</div>';
   if(e.identifiant_etablissement)html+='<div style="margin-top:6px;font-size:11px;color:#999">UAI : <strong>'+esc(e.identifiant_etablissement)+'</strong></div>';
   html+='</div>';
@@ -5428,13 +5439,13 @@ function exportEtabExcel(){
   etabs.forEach(e=>{
     const actionIds=etabUse[e.id]||[];
     if(!actionIds.length){
-      data.push([e.nom_etablissement||'',e.code_departement_calc||'',e.code_postal_etablissement||'',e.code_region_calc||'',e.identifiant_etablissement||'','','','']);
+      data.push([e.nom_etablissement||'',e.libelle_commune||'',e.code_postal_etablissement||'',e.libelle_departement||'',e.identifiant_etablissement||'','','','']);
     }else{
       actionIds.forEach(aid=>{
         const a=(window._ALL_ACTIONS||[]).find(x=>x.id===aid);
         const ap=ACTN_PROJETS.find(x=>x.id===a?.projet_ref);
         const dateStr=a?.date_suivi_action?new Date(a.date_suivi_action*1000).toLocaleDateString('fr-FR'):'';
-        data.push([e.nom_etablissement||'',e.code_departement_calc||'',e.code_postal_etablissement||'',e.code_region_calc||'',e.identifiant_etablissement||'',a?.nom_suivi_action||'',dateStr,ap?.cod_projet||'']);
+        data.push([e.nom_etablissement||'',e.libelle_commune||'',e.code_postal_etablissement||'',e.libelle_departement||'',e.identifiant_etablissement||'',a?.nom_suivi_action||'',dateStr,ap?.cod_projet||'']);
       });
     }
   });
@@ -5453,7 +5464,7 @@ function exportOneEtabExcel(){
     const a=(window._ALL_ACTIONS||[]).find(x=>x.id===ep.ACTION_CONCERNEE);
     const ap=ACTN_PROJETS.find(x=>x.id===a?.projet_ref);
     const dateStr=a?.date_suivi_action?new Date(a.date_suivi_action*1000).toLocaleDateString('fr-FR'):'';
-    data.push([e.nom_etablissement||'',e.code_departement_calc||'',e.code_postal_etablissement||'',e.code_region_calc||'',e.identifiant_etablissement||'',a?.nom_suivi_action||'',dateStr,ap?.cod_projet||'']);
+    data.push([e.nom_etablissement||'',e.libelle_commune||'',e.code_postal_etablissement||'',e.libelle_departement||'',e.identifiant_etablissement||'',a?.nom_suivi_action||'',dateStr,ap?.cod_projet||'']);
   });
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet(data);
@@ -5745,8 +5756,8 @@ function loadDemo(){
     {id:3,ACTION_CONCERNEE:2,ETABLISSEMENT_PARTICIPANT:10,FILTRE_REGION:2,FILTRE_DEPARTEMENT:3,FILTRE_TYPE_ETABLISSEMENT:6},
   ];
   window._ALL_ETABLISSEMENTS=[
-    {id:10,nom_etablissement:'Lycée Verlaine',code_departement_calc:'Charleville-Mézières',code_postal_etablissement:'08000',libelle_departement:'08',code_region_calc:'Ardennes',departement_ref_calc:'Grand Est',identifiant_etablissement:'0080012A'},
-    {id:11,nom_etablissement:'Lycée Jean Rostand',code_departement_calc:'Strasbourg',code_postal_etablissement:'67000',libelle_departement:'67',code_region_calc:'Bas-Rhin',departement_ref_calc:'Grand Est',identifiant_etablissement:'0670021B'},
+    {id:10,nom_etablissement:'Lycée Verlaine',libelle_commune:'Charleville-Mézières',code_postal_etablissement:'08000',code_departement_calc:'008',libelle_departement:'Ardennes',departement_ref_calc:'Grand Est',identifiant_etablissement:'0080012A'},
+    {id:11,nom_etablissement:'Lycée Jean Rostand',libelle_commune:'Strasbourg',code_postal_etablissement:'67000',code_departement_calc:'067',libelle_departement:'Bas-Rhin',departement_ref_calc:'Grand Est',identifiant_etablissement:'0670021B'},
   ];
   _ALL_PARTENAIRES=[
     {id:1,nom_entreprise:'Agrial',ville:'Nancy',code_postal:'54000',type_partenaire:'Entreprise privée',secteur_activite:'Agroalimentaire',contact_nom:'Jean Dupont',contact_email:'j.dupont@agrial.fr'},

@@ -452,7 +452,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 .rf-actions{margin-left:auto;display:flex;gap:8px;align-items:flex-end}
 .btn-excel{background:var(--t600);color:#fff}.btn-excel:hover{background:var(--t800)}
 .rapport-doc{background:#fff;border-radius:var(--r);border:.5px solid #e0e0e0;overflow:hidden}
-.rap-cover{background:var(--p600);padding:32px 36px;color:#fff}
+.rap-cover{background:#185FA5;padding:32px 36px;color:#fff}
 .rap-cover-badge{display:inline-block;background:rgba(255,255,255,.15);border-radius:20px;padding:4px 14px;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:10px}
 .rap-cover h1{font-size:22px;font-weight:700;margin-bottom:4px}
 .rap-cover p{font-size:12px;opacity:.75}
@@ -5100,7 +5100,7 @@ function genRapport(){
   if(from||to)periodeLabel=(from||'…')+' → '+(to||'…');
   if(!periodeLabel)periodeLabel='Toutes périodes';
   const projetLabel=projetF?ACTN_PROJETS.find(p=>String(p.id)===projetF)?.lib_projet||'':'BEA + FIBI';
-  const RAP_NEUTRAL='#534AB7';
+  const RAP_NEUTRAL='#185FA5';
   const rapAccent=projetF?(PROJETS.find(p=>p.code===(ACTN_PROJETS.find(ap=>String(ap.id)===projetF)?.cod_projet))?.couleur||RAP_NEUTRAL):RAP_NEUTRAL;
   const totalActions=actions.length;
   const totalIndics=actions.reduce((s,a)=>s+getIndicForAction(a.id).length,0);
@@ -5170,7 +5170,7 @@ function genRapport(){
   const kpiChooser=recapEntriesSorted.length?`<div class="rap-kpi-chooser"><span style="font-size:11px;color:#999;margin-right:2px">Indicateurs affichés :</span>${recapEntriesSorted.map(([code,d])=>`<button type="button" class="rap-kpi-chip${kpiActiveCodes.has(code)?' active':''}" onclick="toggleRapKpi('${code}')">${esc(d.label)}</button>`).join('')}${_rapKpiSel.length?`<button type="button" class="rap-kpi-reset" onclick="resetRapKpi()">Réinitialiser</button>`:''}</div>`:'';
 
   zone.innerHTML=`<div class="rapport-doc" id="printZone">
-    <div class="rap-cover">
+    <div class="rap-cover" style="background:${rapAccent}">
       <div class="rap-cover-badge">CMQ BIOÉCO — RAPPORT D'ACTIVITÉ</div>
       <h1>Suivi des actions et indicateurs</h1>
       <p>${esc(projetLabel)} · ${periodeLabel}</p>
@@ -5207,12 +5207,15 @@ function exportPDF(){
   const projetF=document.getElementById('rProjet')?.value;
   const periodeLabel=year||'Toutes périodes';
   const projetLabel=projetF?ACTN_PROJETS.find(p=>String(p.id)===projetF)?.lib_projet||'':'BEA + FIBI';
+  const RAP_NEUTRAL='#185FA5';
+  const rapAccent=projetF?(PROJETS.find(p=>p.code===(ACTN_PROJETS.find(ap=>String(ap.id)===projetF)?.cod_projet))?.couleur||RAP_NEUTRAL):RAP_NEUTRAL;
+  const rapAccentRgb=hexToRgb(rapAccent).split(',').map(Number);
 
   const doc=new jsPDFCls({orientation:'portrait',unit:'mm',format:'a4'});
   const W=210,M=14;
 
   // Bandeau cover
-  doc.setFillColor(83,74,183);
+  doc.setFillColor(...rapAccentRgb);
   doc.rect(0,0,W,46,'F');
   doc.setTextColor(255,255,255);
   doc.setFontSize(7.5);doc.setFont('helvetica','bold');
@@ -5234,7 +5237,7 @@ function exportPDF(){
   kpis.forEach((k,i)=>{
     const x=M+i*kpiW;
     doc.setFillColor(248,248,252);doc.roundedRect(x,49,kpiW-2,16,1.5,1.5,'F');
-    doc.setTextColor(83,74,183);doc.setFontSize(13);doc.setFont('helvetica','bold');
+    doc.setTextColor(...rapAccentRgb);doc.setFontSize(13);doc.setFont('helvetica','bold');
     doc.text(String(k.val),x+3,58);
     doc.setTextColor(160,160,160);doc.setFontSize(7.5);doc.setFont('helvetica','normal');
     doc.text(k.label,x+3,63);
@@ -5251,7 +5254,7 @@ function exportPDF(){
     head:[['Action','Date','Projet','WP/Axe','Responsable']],
     body:tData,startY:70,margin:{left:M,right:M},
     styles:{fontSize:8,cellPadding:2.5,overflow:'linebreak'},
-    headStyles:{fillColor:[83,74,183],textColor:255,fontStyle:'bold',fontSize:7.5},
+    headStyles:{fillColor:rapAccentRgb,textColor:255,fontStyle:'bold',fontSize:7.5},
     alternateRowStyles:{fillColor:[248,248,252]},
     columnStyles:{0:{cellWidth:72},1:{cellWidth:20},2:{cellWidth:16},3:{cellWidth:26},4:{cellWidth:28}}
   });
@@ -5265,7 +5268,7 @@ function exportPDF(){
       startY:doc.lastAutoTable.finalY+8,
       margin:{left:M,right:M},
       styles:{fontSize:8,cellPadding:2.5},
-      headStyles:{fillColor:[83,74,183],textColor:255,fontStyle:'bold',fontSize:7.5},
+      headStyles:{fillColor:rapAccentRgb,textColor:255,fontStyle:'bold',fontSize:7.5},
     });
   }
 

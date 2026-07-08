@@ -1145,11 +1145,28 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
         <select id="mapDeptFilter" onchange="onMapDeptChange()" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:var(--rsm);font-size:11px;font-family:var(--font);margin-bottom:4px;color:var(--txt);background:var(--surf);outline:none">
           <option value="">Tous les départements</option>
         </select>
-        <div id="mapHeatWpWrap" style="display:none">
-          <div style="font-size:10px;color:#aaa;margin-bottom:3px">WP / Axe</div>
-          <div id="mapHeatWpChips" class="map-heat-chips"></div>
-        </div>
-        <div id="mapHeatIndicWrap" style="display:none">
+        <div id="mapHeatCascadeWrap" style="display:none">
+          <div class="cascade-step" style="margin-bottom:8px">
+            <div class="step-num" id="mhStepNum1" style="width:18px;height:18px;font-size:9px;margin-top:14px">1</div>
+            <div class="cascade-step-body">
+              <div style="font-size:10px;color:#aaa;margin-bottom:3px">WP / Axe</div>
+              <select id="mapHeatWpSel" onchange="onMapHeatWpChange()" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:var(--rsm);font-size:11px;font-family:var(--font);color:var(--txt);background:var(--surf);outline:none"></select>
+            </div>
+          </div>
+          <div class="cascade-step" style="margin-bottom:8px">
+            <div class="step-num inactive" id="mhStepNum2" style="width:18px;height:18px;font-size:9px;margin-top:14px">2</div>
+            <div class="cascade-step-body">
+              <div style="font-size:10px;color:#aaa;margin-bottom:3px">Action</div>
+              <select id="mapHeatActionSel" onchange="onMapHeatActionChange()" disabled style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:var(--rsm);font-size:11px;font-family:var(--font);color:var(--txt);background:var(--surf);outline:none"></select>
+            </div>
+          </div>
+          <div class="cascade-step" style="margin-bottom:8px">
+            <div class="step-num inactive" id="mhStepNum3" style="width:18px;height:18px;font-size:9px;margin-top:14px">3</div>
+            <div class="cascade-step-body">
+              <div style="font-size:10px;color:#aaa;margin-bottom:3px">Sous-action</div>
+              <select id="mapHeatSousActionSel" onchange="onMapHeatSousActionChange()" disabled style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:var(--rsm);font-size:11px;font-family:var(--font);color:var(--txt);background:var(--surf);outline:none"></select>
+            </div>
+          </div>
           <div style="font-size:10px;color:#aaa;margin-bottom:3px">Indicateur</div>
           <div id="mapHeatChips" class="map-heat-chips"></div>
         </div>
@@ -3145,8 +3162,7 @@ async function openCartePage(){
   });
   var s=document.getElementById('mapSearch');if(s)s.style.display='';
   var df=document.getElementById('mapDeptFilter');if(df)df.style.display='';
-  var hw=document.getElementById('mapHeatWpWrap');if(hw)hw.style.display='none';
-  var hi=document.getElementById('mapHeatIndicWrap');if(hi)hi.style.display='none';
+  var hc=document.getElementById('mapHeatCascadeWrap');if(hc)hc.style.display='none';
   var lg=document.getElementById('mapHeatLegend');if(lg)lg.style.display='none';
   showPage('carte');
   await loadEtablissements();
@@ -3162,9 +3178,8 @@ function setMapLayer(layer){
   var isHeat=layer==='heat';
   var s=document.getElementById('mapSearch');if(s)s.style.display=isHeat?'none':'';
   var df=document.getElementById('mapDeptFilter');if(df)df.style.display=isHeat?'none':'';
-  var hw=document.getElementById('mapHeatWpWrap');if(hw)hw.style.display=isHeat?'':'none';
-  var hi=document.getElementById('mapHeatIndicWrap');if(hi)hi.style.display=isHeat?'':'none';
-  if(isHeat){populateHeatWpChips();populateHeatIndicSelect();renderMapHeat();}
+  var hc=document.getElementById('mapHeatCascadeWrap');if(hc)hc.style.display=isHeat?'':'none';
+  if(isHeat){populateMapHeatCascade();}
   else{var lg=document.getElementById('mapHeatLegend');if(lg)lg.style.display='none';renderMap();}
 }
 
@@ -3313,7 +3328,8 @@ function getProjetIndicList(wpFilter){
   return Object.values(byId).sort(function(a,b){return(a.libelle_indicateurs||'').localeCompare(b.libelle_indicateurs||'','fr');});
 }
 
-let _deptGeoJSON=null,_mapHeatIndicId=0,_mapHeatLayer=null,_mapHeatDeptLayers={},_mapHeatWpFilter=0;
+let _deptGeoJSON=null,_mapHeatIndicId=0,_mapHeatLayer=null,_mapHeatDeptLayers={};
+let _mapHeatWp=0,_mapHeatAction=0,_mapHeatSousAction=0;
 
 async function loadDeptGeoJSON(){
   if(_deptGeoJSON)return _deptGeoJSON;
@@ -3334,35 +3350,100 @@ function normDeptCode(raw){
   return suffix?num+suffix:num.padStart(2,'0');
 }
 
-function populateHeatWpChips(){
-  var wrap=document.getElementById('mapHeatWpChips');if(!wrap)return;
+// Cascade WP/Axe → Action → Sous-action → Indicateur, calquée sur la saisie d'action.
+function populateMapHeatCascade(){
   var proj=PROJETS.find(function(p){return p.id===currentProjetId;});
   var actnProj=proj&&ACTN_PROJETS.find(function(ap){return ap.cod_projet===proj.code;});
   var wps=actnProj?ACTN_AXES.filter(function(a){return a.projet_ref===actnProj.id;}):[];
-  if(_mapHeatWpFilter&&!wps.some(function(w){return w.id===_mapHeatWpFilter;}))_mapHeatWpFilter=0;
-  var chips='<button type="button" class="map-heat-chip'+(!_mapHeatWpFilter?' active':'')+'" onclick="selectMapHeatWp(0)">Tous les WP/Axes</button>'
-    +wps.map(function(w){
-      var active=_mapHeatWpFilter===w.id,col=actAxeCol(w);
-      var style=active?'background:'+col+';border-color:'+col+';color:#fff':'border-color:'+col+'66;color:'+col;
-      return'<button type="button" class="map-heat-chip" style="'+style+'" onclick="selectMapHeatWp('+w.id+')">'+esc(w.cod_wp_axe)+'</button>';
-    }).join('');
-  wrap.innerHTML=chips;
+  if(_mapHeatWp&&!wps.some(function(w){return w.id===_mapHeatWp;}))_mapHeatWp=0;
+  var wpSel=document.getElementById('mapHeatWpSel');
+  if(wpSel)wpSel.innerHTML='<option value="0">Tous les WP/Axes</option>'+wps.map(function(w){
+    return'<option value="'+w.id+'"'+(w.id===_mapHeatWp?' selected':'')+'>'+esc(w.cod_wp_axe)+'</option>';
+  }).join('');
+  refreshMapHeatActionSel();
 }
 
-function selectMapHeatWp(id){
-  _mapHeatWpFilter=id;
-  populateHeatWpChips();
+function onMapHeatWpChange(){
+  _mapHeatWp=parseInt(document.getElementById('mapHeatWpSel').value)||0;
+  _mapHeatAction=0;_mapHeatSousAction=0;
+  refreshMapHeatActionSel();
+}
+
+function refreshMapHeatActionSel(){
+  var actSel=document.getElementById('mapHeatActionSel');
+  var s2=document.getElementById('mhStepNum2');
+  if(!_mapHeatWp){
+    if(actSel){actSel.innerHTML='<option value="0">— Choisir d\'abord un WP/Axe —</option>';actSel.disabled=true;}
+    _mapHeatAction=0;
+    if(s2)s2.className='step-num inactive';
+  }else{
+    var actions=ACTN_ACTIONS.filter(function(a){return a.wp_axe_ref===_mapHeatWp;});
+    if(_mapHeatAction&&!actions.some(function(a){return a.id===_mapHeatAction;}))_mapHeatAction=0;
+    if(actSel){
+      actSel.disabled=false;
+      actSel.innerHTML='<option value="0">Toutes les actions</option>'+actions.map(function(a){
+        return'<option value="'+a.id+'"'+(a.id===_mapHeatAction?' selected':'')+'>'+esc(a.id_action_calc||a.lib_action)+'</option>';
+      }).join('');
+    }
+    if(s2)s2.className='step-num';
+  }
+  refreshMapHeatSousActionSel();
+}
+
+function onMapHeatActionChange(){
+  _mapHeatAction=parseInt(document.getElementById('mapHeatActionSel').value)||0;
+  _mapHeatSousAction=0;
+  refreshMapHeatSousActionSel();
+}
+
+function refreshMapHeatSousActionSel(){
+  var saSel=document.getElementById('mapHeatSousActionSel');
+  var s3=document.getElementById('mhStepNum3');
+  if(!_mapHeatAction){
+    if(saSel){saSel.innerHTML='<option value="0">— Choisir d\'abord une action —</option>';saSel.disabled=true;}
+    _mapHeatSousAction=0;
+    if(s3)s3.className='step-num inactive';
+  }else{
+    var subs=ACTN_SOUS_ACTIONS.filter(function(s){return s.action_ref===_mapHeatAction;});
+    if(_mapHeatSousAction&&!subs.some(function(s){return s.id===_mapHeatSousAction;}))_mapHeatSousAction=0;
+    if(saSel){
+      saSel.disabled=false;
+      saSel.innerHTML='<option value="0">Toutes les sous-actions</option>'+subs.map(function(s){
+        return'<option value="'+s.id+'"'+(s.id===_mapHeatSousAction?' selected':'')+'>'+esc(s.id_sous_action_calc||s.lib_sous_action)+'</option>';
+      }).join('');
+    }
+    if(s3)s3.className='step-num';
+  }
   populateHeatIndicSelect();
   renderMapHeat();
 }
 
+function onMapHeatSousActionChange(){
+  _mapHeatSousAction=parseInt(document.getElementById('mapHeatSousActionSel').value)||0;
+  populateHeatIndicSelect();
+  renderMapHeat();
+}
+
+function getMapHeatIndicList(){
+  if(_mapHeatSousAction){
+    return ALL_INDIC_CONFIG.filter(function(c){return c.type_sous_action===_mapHeatSousAction;})
+      .sort(function(a,b){return(a.libelle_indicateurs||'').localeCompare(b.libelle_indicateurs||'','fr');});
+  }
+  if(_mapHeatAction){
+    var subIds=ACTN_SOUS_ACTIONS.filter(function(s){return s.action_ref===_mapHeatAction;}).map(function(s){return s.id;});
+    return ALL_INDIC_CONFIG.filter(function(c){return subIds.indexOf(c.type_sous_action)>=0;})
+      .sort(function(a,b){return(a.libelle_indicateurs||'').localeCompare(b.libelle_indicateurs||'','fr');});
+  }
+  return getProjetIndicList(_mapHeatWp);
+}
+
 function populateHeatIndicSelect(){
   var wrap=document.getElementById('mapHeatChips');if(!wrap)return;
-  var indics=getProjetIndicList(_mapHeatWpFilter);
+  var indics=getMapHeatIndicList();
   if(!indics.some(function(c){return c.id===_mapHeatIndicId;}))_mapHeatIndicId=indics[0]?indics[0].id:0;
   wrap.innerHTML=indics.map(function(c){
     return'<button type="button" class="map-heat-chip'+(c.id===_mapHeatIndicId?' active':'')+'" onclick="selectMapHeatIndic('+c.id+')">'+esc(c.libelle_indicateurs)+'</button>';
-  }).join('')||'<div class="map-panel-empty">Aucun indicateur pour ce WP/Axe</div>';
+  }).join('')||'<div class="map-panel-empty">Aucun indicateur pour cette sélection</div>';
 }
 
 function selectMapHeatIndic(id){
@@ -3396,7 +3477,12 @@ async function renderMapHeat(){
   var proj=PROJETS.find(function(p){return p.id===currentProjetId;});
   var accentColor=(proj&&proj.couleur)||'#534AB7';
   var actnProj=proj&&ACTN_PROJETS.find(function(ap){return ap.cod_projet===proj.code;});
-  var actions=actnProj?(window._ALL_ACTIONS||[]).filter(function(a){return a.projet_ref===actnProj.id&&(!_mapHeatWpFilter||a.wp_axe_ref===_mapHeatWpFilter);}):[];
+  var actions=actnProj?(window._ALL_ACTIONS||[]).filter(function(a){
+    return a.projet_ref===actnProj.id
+      &&(!_mapHeatWp||a.wp_axe_ref===_mapHeatWp)
+      &&(!_mapHeatAction||a.action_ref===_mapHeatAction)
+      &&(!_mapHeatSousAction||a.sous_action_ref===_mapHeatSousAction);
+  }):[];
   var indicId=_mapHeatIndicId;
   var indicCfg=indicId?ALL_INDIC_CONFIG.find(function(c){return c.id===indicId;}):null;
 

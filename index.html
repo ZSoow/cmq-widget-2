@@ -639,7 +639,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 
 <!-- ══ SIDEBAR ══ -->
 <div class="sb" id="sidebar">
-  <div class="sb-brand">Nom sympa ?</div>
+  <div class="sb-brand">CMQ <em>·</em> Pilotage</div>
   <div class="sb-sec-lbl">Projets</div>
   <div id="sbProjects"><div style="padding:8px 12px;font-size:12px;color:var(--faint)">Chargement…</div></div>
   <div class="sb-sep" id="sbNavSep" style="display:none"></div>
@@ -3183,7 +3183,7 @@ function renderMap(){
         +'<button class="mpop-open-btn" onclick="openPartDetail('+p.id+')" title="Voir la fiche">+</button></div>',{maxWidth:240});
       m.on('click',function(){highlightPanelItem(idx);});
       _mapMarkers.push(m);
-      _mapData.push({marker:m,lat:lat,lng:lng,type:'part',entity:{name:p.nom_entreprise||'',city:p.ville||'',postal:p.code_postal||'',subtype:p.type_partenaire||'',dept:(p.code_postal||'').slice(0,2)||''}});
+      _mapData.push({marker:m,lat:lat,lng:lng,type:'part',entity:{name:p.nom_entreprise||'',city:p.ville||'',postal:p.code_postal||'',subtype:p.type_partenaire||'',dept:(p.code_postal||'').slice(0,2)?('0'+(p.code_postal||'').slice(0,2)).slice(-3):''}});
       bounds.push([lat,lng]);
     });
   }

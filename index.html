@@ -5087,9 +5087,10 @@ function genRapport(){
   let section1='';
   projets.forEach(proj=>{
     const actionsProj=actions.filter(a=>String(a.projet_ref)===String(proj.id));if(!actionsProj.length)return;
-    const isBea=proj.cod_projet==='BEA';
-    const badgeStyle=isBea?'background:var(--p50);color:var(--p800)':'background:var(--t50);color:var(--t800)';
-    const acc=isBea?'var(--p600)':'var(--t600)';
+    const realProj=PROJETS.find(p=>p.code===proj.cod_projet);
+    const projColor=realProj?.couleur||'#534AB7';
+    const badgeStyle=`background:${lighten(projColor)};color:${projColor}`;
+    const acc=projColor;
     const wpMap={};actionsProj.forEach(a=>{if(!wpMap[a.wp_axe_ref])wpMap[a.wp_axe_ref]=[];wpMap[a.wp_axe_ref].push(a)});
     let wpBlocs='';
     Object.entries(wpMap).forEach(([wpId,wpActions])=>{

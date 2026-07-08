@@ -3189,6 +3189,7 @@ function renderMap(){
 
   _mapMarkers.forEach(function(m){_leafletMap.removeLayer(m);});
   _mapMarkers=[];_mapData=[];
+  if(_mapHeatLayer){_leafletMap.removeLayer(_mapHeatLayer);_mapHeatLayer=null;}
 
   var proj=PROJETS.find(function(p){return p.id===currentProjetId;});
   var actnProj=proj&&ACTN_PROJETS.find(function(ap){return ap.cod_projet===proj.code;});

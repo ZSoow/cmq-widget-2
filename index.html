@@ -1380,14 +1380,6 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
         <label class="f-label">Type</label>
         <select id="etType" style="width:100%">
           <option value="">— Choisir —</option>
-          <option>Lycée</option>
-          <option>Université</option>
-          <option>IUT</option>
-          <option>CFA</option>
-          <option>École d'ingénieurs</option>
-          <option>Grande école</option>
-          <option>Lycée agricole</option>
-          <option>Autre</option>
         </select>
       </div>
       <div class="f-field">
@@ -1468,7 +1460,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 /* ══════════════════════════════════════════════
    ÉTAT GLOBAL
 ══════════════════════════════════════════════ */
-let PROJETS=[], ALL_TACHES=[], ALL_MEMBRES=[], ALL_AXES=[];
+let PROJETS=[], ALL_TACHES=[], ALL_MEMBRES=[], ALL_AXES=[], TYPES_ETAB=[];
 let indicActiveTab='suivi';
 let ACTN_PROJETS=[], ACTN_AXES=[], ACTN_ACTIONS=[], ACTN_SOUS_ACTIONS=[];
 let ALL_RH=[], ALL_INDIC_CONFIG=[], ALL_INDIC_VAL=[];
@@ -1611,7 +1603,7 @@ async function loadAll(){
   // Timeout de 3s : si Grist ne répond pas, on passe en mode démo
   const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),5000));
   try{
-    const [projets,taches,membres,axes,actnProjets,actnAxes,actnActions,actnSousActions,rh,indicConfig,indicVal,saisieActions,etabParts,entParts,objectifs,partenaires,formations]=await Promise.race([
+    const [projets,taches,membres,axes,actnProjets,actnAxes,actnActions,actnSousActions,rh,indicConfig,indicVal,saisieActions,etabParts,entParts,objectifs,partenaires,formations,typesEtab]=await Promise.race([
       Promise.all([
         grist.docApi.fetchTable('CONFIG_PROJETS'),
         grist.docApi.fetchTable('SUIVI_TACHES_ALL'),
@@ -1630,10 +1622,12 @@ async function loadAll(){
         grist.docApi.fetchTable('CONFIG_objectifs_indicateurs'),
         grist.docApi.fetchTable('CONFIG_entreprises_partenaires'),
         grist.docApi.fetchTable('CONFIG_FORMATIONS'),
+        grist.docApi.fetchTable('CONFIG_type_d_etablissement'),
       ]),
       timeout
     ]);
     PROJETS=tableToRows(projets);
+    TYPES_ETAB=tableToRows(typesEtab);
     ALL_TACHES=tableToRows(taches);
     ALL_MEMBRES=tableToRows(membres);
     ALL_AXES=tableToRows(axes);
@@ -2625,7 +2619,10 @@ async function submitNewPartenaire(){
 /* ── Modal nouvel établissement ── */
 function openModalNewEtab(){
   ['etNom','etCP','etCommune'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
-  var etType=document.getElementById('etType');if(etType)etType.selectedIndex=0;
+  var etType=document.getElementById('etType');
+  if(etType){
+    etType.innerHTML='<option value="">— Choisir —</option>'+TYPES_ETAB.map(function(t){return'<option>'+esc(t.type_etablissement)+'</option>';}).join('');
+  }
   var err=document.getElementById('etError');if(err){err.style.display='none';err.textContent='';}
   document.getElementById('modalNewEtab').classList.add('open');
   setTimeout(function(){var el=document.getElementById('etNom');if(el)el.focus();},50);
@@ -2642,21 +2639,22 @@ async function submitNewEtab(){
   err.style.display='none';
   var cp=document.getElementById('etCP').value||'';
   var commune=(document.getElementById('etCommune').value||'').trim();
+  var typeEtab=document.getElementById('etType').value||'';
   var record={
     nom_etablissement:nom,
     code_postal_etablissement:cp,
     libelle_commune:commune,
-    statut_public_prive_etablissement:document.getElementById('etType').value||'',
+    type_etablissement_ref:typeEtab,
     participation_CMQ_YN:true
   };
   try{
-    var res=await grist.docApi.applyUserActions([['AddRecord','CONFIG_liste_des_etablissements_RGE',null,record]]);
+    var res=await grist.docApi.applyUserActions([['AddRecord','CONFIG_etablissements_partenaires',null,record]]);
     var newId=res&&res.retValues&&res.retValues[0]||null;
     var newE=Object.assign({id:newId},record);
     if(!window._ALL_ETABLISSEMENTS)window._ALL_ETABLISSEMENTS=[];
     window._ALL_ETABLISSEMENTS.push(newE);
     if(newId){
-      _saPartnerSelected.push({type:'etablissement',id:newE.id,label:newE.nom_etablissement,cp:cp,region_ref:0,dept_ref:0,type_etab_ref:0});
+      _saPartnerSelected.push({type:'etablissement',id:newE.id,label:newE.nom_etablissement,cp:cp,region_ref:0,dept_ref:0,type_etab_ref:typeEtab||0});
       renderSaPartnerChips();
     }
     closeModalNewEtab();
@@ -5775,6 +5773,11 @@ function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/<
    DONNÉES DE DÉMO
 ══════════════════════════════════════════════ */
 function loadDemo(){
+  TYPES_ETAB=[
+    {id:1,type_etablissement:'Autre'},{id:2,type_etablissement:'Collège'},{id:3,type_etablissement:'Ecole'},
+    {id:4,type_etablissement:'EREA'},{id:5,type_etablissement:'Information et orientation'},{id:6,type_etablissement:'Lycée'},
+    {id:7,type_etablissement:'Médico-social'},{id:8,type_etablissement:'Service Administratif'},
+  ];
   PROJETS=[
     {id:1,code:'FIBI',nom:'FIBI',nom_long:'Formations Innovantes en Biotechnologies Industrielles',type_axes:'WP',couleur:'#534AB7',badge:'PIA4',emoji:'🔬',actif:1},
     {id:2,code:'BEA',nom:'BEA',nom_long:'Bioeco Academy',type_axes:'AXE',couleur:'#0F6E56',badge:'PIA3',emoji:'🌿',actif:1},

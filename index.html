@@ -439,6 +439,8 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 .mpop-sub{color:var(--sub);font-size:11px;margin-top:2px}
 .mpop-badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;margin-top:7px}
 .mpop-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.mpop-ft{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px}
+.mpop-ft .mpop-badge{margin-top:0}
 .mpop-open-btn{flex-shrink:0;width:20px;height:20px;border-radius:50%;border:none;background:var(--accent);color:#fff;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 .mpop-open-btn:hover{filter:brightness(1.1)}
 .rapport-filters{background:#fff;border:.5px solid #e0e0e0;border-radius:var(--r);padding:14px 18px;margin-bottom:18px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
@@ -635,7 +637,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 
 <!-- ══ SIDEBAR ══ -->
 <div class="sb" id="sidebar">
-  <div class="sb-brand">Nom sympa ?</div>
+  <div class="sb-brand">CMQ <em>·</em> Pilotage</div>
   <div class="sb-sec-lbl">Projets</div>
   <div id="sbProjects"><div style="padding:8px 12px;font-size:12px;color:var(--faint)">Chargement…</div></div>
   <div class="sb-sep" id="sbNavSep" style="display:none"></div>
@@ -3121,10 +3123,10 @@ function renderMap(){
       var idx=_mapData.length;
       var icon=L.divIcon({className:'',html:'<div style="width:14px;height:14px;border-radius:50%;background:#4A90D9;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(74,144,217,.45);cursor:pointer"></div>',iconSize:[14,14],iconAnchor:[7,7]});
       var m=L.marker([lat,lng],{icon:icon}).addTo(_leafletMap);
-      m.bindPopup('<div class="mpop-hd"><div class="mpop-title">'+esc(e.nom_etablissement||'')+'</div>'
-        +'<button class="mpop-open-btn" onclick="openEtabDetail('+e.id+')" title="Voir la fiche">+</button></div>'
+      m.bindPopup('<div class="mpop-title">'+esc(e.nom_etablissement||'')+'</div>'
         +(e.libelle_commune?'<div class="mpop-sub">'+esc(e.libelle_commune+(e.code_postal_etablissement?' ('+e.code_postal_etablissement+')':''))+'</div>':'')
-        +'<span class="mpop-badge" style="background:#4A90D915;color:#4A90D9">Établissement</span>',{maxWidth:240});
+        +'<div class="mpop-ft"><span class="mpop-badge" style="background:#4A90D915;color:#4A90D9">Établissement</span>'
+        +'<button class="mpop-open-btn" onclick="openEtabDetail('+e.id+')" title="Voir la fiche">+</button></div>',{maxWidth:240});
       m.on('click',function(){highlightPanelItem(idx);});
       _mapMarkers.push(m);
       _mapData.push({marker:m,lat:lat,lng:lng,type:'etab',entity:{name:e.nom_etablissement||'',city:e.libelle_commune||'',postal:e.code_postal_etablissement||'',dept:e.code_departement_calc||''}});
@@ -3145,11 +3147,11 @@ function renderMap(){
       var idx=_mapData.length;
       var icon=L.divIcon({className:'',html:'<div style="width:14px;height:14px;border-radius:50%;background:#E8873A;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(232,135,58,.45);cursor:pointer"></div>',iconSize:[14,14],iconAnchor:[7,7]});
       var m=L.marker([lat,lng],{icon:icon}).addTo(_leafletMap);
-      m.bindPopup('<div class="mpop-hd"><div class="mpop-title">'+esc(p.nom_entreprise||'')+'</div>'
-        +'<button class="mpop-open-btn" onclick="openPartDetail('+p.id+')" title="Voir la fiche">+</button></div>'
+      m.bindPopup('<div class="mpop-title">'+esc(p.nom_entreprise||'')+'</div>'
         +(p.type_partenaire?'<div class="mpop-sub">'+esc(p.type_partenaire)+'</div>':'')
         +(p.ville?'<div class="mpop-sub">'+esc(p.ville+(p.code_postal?' ('+p.code_postal+')':''))+'</div>':'')
-        +'<span class="mpop-badge" style="background:#E8873A15;color:#E8873A">Partenaire</span>',{maxWidth:240});
+        +'<div class="mpop-ft"><span class="mpop-badge" style="background:#E8873A15;color:#E8873A">Partenaire</span>'
+        +'<button class="mpop-open-btn" onclick="openPartDetail('+p.id+')" title="Voir la fiche">+</button></div>',{maxWidth:240});
       m.on('click',function(){highlightPanelItem(idx);});
       _mapMarkers.push(m);
       _mapData.push({marker:m,lat:lat,lng:lng,type:'part',entity:{name:p.nom_entreprise||'',city:p.ville||'',postal:p.code_postal||'',subtype:p.type_partenaire||'',dept:(p.code_postal||'').slice(0,2)||''}});

@@ -1391,10 +1391,14 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
       <label class="f-label">Commune</label>
       <input type="text" id="etCommune" style="width:100%" placeholder="Nom de la commune">
     </div>
+    <div class="f-field">
+      <label class="f-label">Adresse <span style="color:#999;font-weight:400">(optionnel, pour une position plus précise sur la carte)</span></label>
+      <input type="text" id="etAdresse" style="width:100%" placeholder="Ex : 12 rue des Écoles">
+    </div>
     <div id="etError" style="display:none;color:var(--c600);font-size:11px;margin-top:6px"></div>
     <div style="display:flex;gap:8px;margin-top:14px">
       <button class="btn btn-ghost" onclick="closeModalNewEtab()">Annuler</button>
-      <button class="btn btn-primary" style="flex:1" onclick="submitNewEtab()">Enregistrer</button>
+      <button class="btn btn-primary" id="etSaveBtn" style="flex:1" onclick="submitNewEtab()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -2618,7 +2622,7 @@ async function submitNewPartenaire(){
 
 /* ── Modal nouvel établissement ── */
 function openModalNewEtab(){
-  ['etNom','etCP','etCommune'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  ['etNom','etCP','etCommune','etAdresse'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   var etType=document.getElementById('etType');
   if(etType){
     etType.innerHTML='<option value="">— Choisir —</option>'+TYPES_ETAB.map(function(t){return'<option>'+esc(t.type_etablissement)+'</option>';}).join('');
@@ -2632,6 +2636,21 @@ function closeModalNewEtab(){
   document.getElementById('modalNewEtab').classList.remove('open');
 }
 
+async function geocodeCommuneFR(commune,cp,adresse){
+  if(!commune&&!cp&&!adresse)return null;
+  try{
+    var params=adresse
+      ?new URLSearchParams({q:adresse+(commune?' '+commune:''),limit:'1'})
+      :new URLSearchParams({q:commune||cp,limit:'1',type:'municipality'});
+    if(cp)params.set('postcode',cp);
+    var res=await fetch('https://api-adresse.data.gouv.fr/search/?'+params.toString());
+    var data=await res.json();
+    var f=data&&data.features&&data.features[0];
+    if(!f)return null;
+    return{lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0]};
+  }catch(e){return null;}
+}
+
 async function submitNewEtab(){
   var nom=(document.getElementById('etNom').value||'').trim();
   var err=document.getElementById('etError');
@@ -2639,7 +2658,11 @@ async function submitNewEtab(){
   err.style.display='none';
   var cp=document.getElementById('etCP').value||'';
   var commune=(document.getElementById('etCommune').value||'').trim();
+  var adresse=(document.getElementById('etAdresse').value||'').trim();
   var typeEtab=document.getElementById('etType').value||'';
+  var saveBtn=document.getElementById('etSaveBtn');
+  if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='Enregistrement…';}
+  var geo=await geocodeCommuneFR(commune,cp,adresse);
   var record={
     nom_etablissement:nom,
     code_postal_etablissement:cp,
@@ -2647,6 +2670,7 @@ async function submitNewEtab(){
     type_etablissement_ref:typeEtab,
     participation_CMQ_YN:true
   };
+  if(geo){record.latitude_etablissement_EN=geo.lat;record.longitude_etablissement_EN=geo.lon;}
   try{
     var res=await grist.docApi.applyUserActions([['AddRecord','CONFIG_etablissements_partenaires',null,record]]);
     var newId=res&&res.retValues&&res.retValues[0]||null;
@@ -2658,10 +2682,11 @@ async function submitNewEtab(){
       renderSaPartnerChips();
     }
     closeModalNewEtab();
-    showToast('Établissement ajouté','success');
+    showToast(geo?'Établissement ajouté':'Établissement ajouté (position non trouvée)','success');
   }catch(e){
     err.textContent='Erreur : '+e.message;err.style.display='block';
   }
+  if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='Enregistrer';}
 }
 
 let _indicFiltWP=0;

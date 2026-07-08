@@ -1145,7 +1145,14 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
         <select id="mapDeptFilter" onchange="onMapDeptChange()" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:var(--rsm);font-size:11px;font-family:var(--font);margin-bottom:4px;color:var(--txt);background:var(--surf);outline:none">
           <option value="">Tous les départements</option>
         </select>
-        <div id="mapHeatChips" class="map-heat-chips" style="display:none"></div>
+        <div id="mapHeatWpWrap" style="display:none">
+          <div style="font-size:10px;color:#aaa;margin-bottom:3px">WP / Axe</div>
+          <div id="mapHeatWpChips" class="map-heat-chips"></div>
+        </div>
+        <div id="mapHeatIndicWrap" style="display:none">
+          <div style="font-size:10px;color:#aaa;margin-bottom:3px">Indicateur</div>
+          <div id="mapHeatChips" class="map-heat-chips"></div>
+        </div>
         <div class="map-panel-counts" id="mapPanelCounts">—</div>
       </div>
       <div class="map-panel-list" id="mapPanelList"><div class="map-panel-empty">Chargement…</div></div>
@@ -3138,7 +3145,8 @@ async function openCartePage(){
   });
   var s=document.getElementById('mapSearch');if(s)s.style.display='';
   var df=document.getElementById('mapDeptFilter');if(df)df.style.display='';
-  var hi=document.getElementById('mapHeatChips');if(hi)hi.style.display='none';
+  var hw=document.getElementById('mapHeatWpWrap');if(hw)hw.style.display='none';
+  var hi=document.getElementById('mapHeatIndicWrap');if(hi)hi.style.display='none';
   var lg=document.getElementById('mapHeatLegend');if(lg)lg.style.display='none';
   showPage('carte');
   await loadEtablissements();
@@ -3154,8 +3162,9 @@ function setMapLayer(layer){
   var isHeat=layer==='heat';
   var s=document.getElementById('mapSearch');if(s)s.style.display=isHeat?'none':'';
   var df=document.getElementById('mapDeptFilter');if(df)df.style.display=isHeat?'none':'';
-  var hi=document.getElementById('mapHeatChips');if(hi)hi.style.display=isHeat?'':'none';
-  if(isHeat){populateHeatIndicSelect();renderMapHeat();}
+  var hw=document.getElementById('mapHeatWpWrap');if(hw)hw.style.display=isHeat?'':'none';
+  var hi=document.getElementById('mapHeatIndicWrap');if(hi)hi.style.display=isHeat?'':'none';
+  if(isHeat){populateHeatWpChips();populateHeatIndicSelect();renderMapHeat();}
   else{var lg=document.getElementById('mapHeatLegend');if(lg)lg.style.display='none';renderMap();}
 }
 
@@ -3291,10 +3300,10 @@ function renderMapPanel(){
   }).join('')||'<div class="map-panel-empty">Aucun point à afficher</div>';
 }
 
-function getProjetIndicList(){
+function getProjetIndicList(wpFilter){
   var proj=PROJETS.find(function(p){return p.id===currentProjetId;});
   var actnProj=proj&&ACTN_PROJETS.find(function(ap){return ap.cod_projet===proj.code;});
-  var actions=actnProj?(window._ALL_ACTIONS||[]).filter(function(a){return a.projet_ref===actnProj.id;}):[];
+  var actions=actnProj?(window._ALL_ACTIONS||[]).filter(function(a){return a.projet_ref===actnProj.id&&(!wpFilter||a.wp_axe_ref===wpFilter);}):[];
   var byId={};
   actions.forEach(function(a){getIndicForAction(a.id).forEach(function(iv){
     var cfg=ALL_INDIC_CONFIG.find(function(c){return c.id===iv.indicateur_ref;});
@@ -3303,7 +3312,7 @@ function getProjetIndicList(){
   return Object.values(byId).sort(function(a,b){return(a.libelle_indicateurs||'').localeCompare(b.libelle_indicateurs||'','fr');});
 }
 
-let _deptGeoJSON=null,_mapHeatIndicId=0,_mapHeatLayer=null,_mapHeatDeptLayers={};
+let _deptGeoJSON=null,_mapHeatIndicId=0,_mapHeatLayer=null,_mapHeatDeptLayers={},_mapHeatWpFilter=0;
 
 async function loadDeptGeoJSON(){
   if(_deptGeoJSON)return _deptGeoJSON;
@@ -3324,13 +3333,35 @@ function normDeptCode(raw){
   return suffix?num+suffix:num.padStart(2,'0');
 }
 
+function populateHeatWpChips(){
+  var wrap=document.getElementById('mapHeatWpChips');if(!wrap)return;
+  var proj=PROJETS.find(function(p){return p.id===currentProjetId;});
+  var actnProj=proj&&ACTN_PROJETS.find(function(ap){return ap.cod_projet===proj.code;});
+  var wps=actnProj?ACTN_AXES.filter(function(a){return a.projet_ref===actnProj.id;}):[];
+  if(_mapHeatWpFilter&&!wps.some(function(w){return w.id===_mapHeatWpFilter;}))_mapHeatWpFilter=0;
+  var chips='<button type="button" class="map-heat-chip'+(!_mapHeatWpFilter?' active':'')+'" onclick="selectMapHeatWp(0)">Tous les WP/Axes</button>'
+    +wps.map(function(w){
+      var active=_mapHeatWpFilter===w.id,col=actAxeCol(w);
+      var style=active?'background:'+col+';border-color:'+col+';color:#fff':'border-color:'+col+'66;color:'+col;
+      return'<button type="button" class="map-heat-chip" style="'+style+'" onclick="selectMapHeatWp('+w.id+')">'+esc(w.cod_wp_axe)+'</button>';
+    }).join('');
+  wrap.innerHTML=chips;
+}
+
+function selectMapHeatWp(id){
+  _mapHeatWpFilter=id;
+  populateHeatWpChips();
+  populateHeatIndicSelect();
+  renderMapHeat();
+}
+
 function populateHeatIndicSelect(){
   var wrap=document.getElementById('mapHeatChips');if(!wrap)return;
-  var indics=getProjetIndicList();
+  var indics=getProjetIndicList(_mapHeatWpFilter);
   if(!indics.some(function(c){return c.id===_mapHeatIndicId;}))_mapHeatIndicId=indics[0]?indics[0].id:0;
   wrap.innerHTML=indics.map(function(c){
     return'<button type="button" class="map-heat-chip'+(c.id===_mapHeatIndicId?' active':'')+'" onclick="selectMapHeatIndic('+c.id+')">'+esc(c.libelle_indicateurs)+'</button>';
-  }).join('')||'<div class="map-panel-empty">Aucun indicateur</div>';
+  }).join('')||'<div class="map-panel-empty">Aucun indicateur pour ce WP/Axe</div>';
 }
 
 function selectMapHeatIndic(id){
@@ -3364,7 +3395,7 @@ async function renderMapHeat(){
   var proj=PROJETS.find(function(p){return p.id===currentProjetId;});
   var accentColor=(proj&&proj.couleur)||'#534AB7';
   var actnProj=proj&&ACTN_PROJETS.find(function(ap){return ap.cod_projet===proj.code;});
-  var actions=actnProj?(window._ALL_ACTIONS||[]).filter(function(a){return a.projet_ref===actnProj.id;}):[];
+  var actions=actnProj?(window._ALL_ACTIONS||[]).filter(function(a){return a.projet_ref===actnProj.id&&(!_mapHeatWpFilter||a.wp_axe_ref===_mapHeatWpFilter);}):[];
   var indicId=_mapHeatIndicId;
   var indicCfg=indicId?ALL_INDIC_CONFIG.find(function(c){return c.id===indicId;}):null;
 

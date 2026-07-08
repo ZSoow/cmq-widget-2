@@ -4939,7 +4939,8 @@ function getFilteredActions(){
   });
 }
 
-function renderHeatmapSvg(actions,yearStr,dark){
+function renderHeatmapSvg(actions,yearStr,dark,accent){
+  accent=accent||'#534AB7';
   const year=parseInt(yearStr)||new Date().getFullYear();
   const dayCounts={};
   actions.forEach(a=>{
@@ -4958,8 +4959,8 @@ function renderHeatmapSvg(actions,yearStr,dark){
   const totalWeeks=Math.round((gridEnd-gridStart)/604800000)+1;
   const W=labelW+totalWeeks*step,H=headerH+7*step+22;
   const c=dark
-    ?{e:'rgba(255,255,255,0.07)',1:'#6b5fd4',2:'#9488e8',4:'#c5bcf3',t:'rgba(255,255,255,.22)',a:'rgba(255,255,255,.15)'}
-    :{e:'#eeedf8',1:'#c5bcf3',2:'#9488e8',4:'#534AB7',t:'#bbb',a:'#ccc'};
+    ?{e:'rgba(255,255,255,0.07)',1:lighten(accent,.55),2:lighten(accent,.25),4:accent,t:'rgba(255,255,255,.22)',a:'rgba(255,255,255,.15)'}
+    :{e:lighten(accent,.93),1:lighten(accent,.65),2:lighten(accent,.35),4:accent,t:'#bbb',a:'#ccc'};
   function col(n){return!n?c.e:n===1?c[1]:n<=3?c[2]:c[4];}
   const MO=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
   const DA=['L','M','M','J','V','S','D'];
@@ -5076,7 +5077,7 @@ function renderRapportCharts(actions,accentColor){
   </div>
   <div class="rap-heatmap">
     <div class="rap-chart-title">Activité jour par jour — ${yearVal}</div>
-    <div class="rap-heatmap-scroll">${renderHeatmapSvg(actions,yearVal,false)}</div>
+    <div class="rap-heatmap-scroll">${renderHeatmapSvg(actions,yearVal,false,accentColor)}</div>
   </div>`;
 }
 

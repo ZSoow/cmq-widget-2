@@ -433,6 +433,14 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 .mp-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mp-city{font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mp-badge{font-size:9px;font-weight:600;padding:2px 6px;border-radius:8px;flex-shrink:0}
+.map-heat-chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.map-heat-chip{font-size:10.5px;font-family:var(--font);padding:4px 9px;border-radius:16px;border:.5px solid #ddd;background:#fff;color:#888;cursor:pointer;transition:all .15s}
+.map-heat-chip.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.map-heat-chip:hover:not(.active){background:var(--surf2)}
+.map-heat-legend{position:absolute;left:12px;bottom:24px;z-index:1000;background:rgba(255,255,255,.97);padding:9px 12px;border-radius:8px;box-shadow:0 2px 14px rgba(0,0,0,.14);min-width:150px}
+.map-heat-legend-title{font-size:10px;font-weight:600;color:#555;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.map-heat-legend-bar{height:8px;border-radius:4px}
+.map-heat-legend-scale{display:flex;justify-content:space-between;font-size:10px;color:#999;margin-top:3px}
 .leaflet-container{user-select:none;-webkit-user-select:none;cursor:grab!important}
 .leaflet-dragging .leaflet-container{cursor:grabbing!important}
 .leaflet-popup-content-wrapper{border-radius:8px!important;box-shadow:0 4px 20px rgba(0,0,0,.12)!important}
@@ -647,7 +655,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 
 <!-- ══ SIDEBAR ══ -->
 <div class="sb" id="sidebar">
-  <div class="sb-brand">Nom Sympa ?</div>
+  <div class="sb-brand">Nom Sympa <em>?</em></div>
   <div class="sb-sec-lbl">Projets</div>
   <div id="sbProjects"><div style="padding:8px 12px;font-size:12px;color:var(--faint)">Chargement…</div></div>
   <div class="sb-sep" id="sbNavSep" style="display:none"></div>
@@ -1129,6 +1137,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
         <button class="map-chip" id="chipProjet" onclick="toggleMapProjet()">Ce projet</button>
       </div>
       <div id="mapContainer"></div>
+      <div class="map-heat-legend" id="mapHeatLegend" style="display:none"></div>
     </div>
     <div class="map-panel">
       <div class="map-panel-hd">
@@ -1136,7 +1145,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
         <select id="mapDeptFilter" onchange="onMapDeptChange()" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:var(--rsm);font-size:11px;font-family:var(--font);margin-bottom:4px;color:var(--txt);background:var(--surf);outline:none">
           <option value="">Tous les départements</option>
         </select>
-        <select id="mapHeatIndic" onchange="renderMapHeat()" style="display:none;width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:var(--rsm);font-size:11px;font-family:var(--font);margin-bottom:4px;color:var(--txt);background:var(--surf);outline:none"></select>
+        <div id="mapHeatChips" class="map-heat-chips" style="display:none"></div>
         <div class="map-panel-counts" id="mapPanelCounts">—</div>
       </div>
       <div class="map-panel-list" id="mapPanelList"><div class="map-panel-empty">Chargement…</div></div>
@@ -3129,7 +3138,8 @@ async function openCartePage(){
   });
   var s=document.getElementById('mapSearch');if(s)s.style.display='';
   var df=document.getElementById('mapDeptFilter');if(df)df.style.display='';
-  var hi=document.getElementById('mapHeatIndic');if(hi)hi.style.display='none';
+  var hi=document.getElementById('mapHeatChips');if(hi)hi.style.display='none';
+  var lg=document.getElementById('mapHeatLegend');if(lg)lg.style.display='none';
   showPage('carte');
   await loadEtablissements();
   setTimeout(renderMap,100);
@@ -3144,9 +3154,9 @@ function setMapLayer(layer){
   var isHeat=layer==='heat';
   var s=document.getElementById('mapSearch');if(s)s.style.display=isHeat?'none':'';
   var df=document.getElementById('mapDeptFilter');if(df)df.style.display=isHeat?'none':'';
-  var hi=document.getElementById('mapHeatIndic');if(hi)hi.style.display=isHeat?'':'none';
+  var hi=document.getElementById('mapHeatChips');if(hi)hi.style.display=isHeat?'':'none';
   if(isHeat){populateHeatIndicSelect();renderMapHeat();}
-  else renderMap();
+  else{var lg=document.getElementById('mapHeatLegend');if(lg)lg.style.display='none';renderMap();}
 }
 
 function toggleMapProjet(){
@@ -3293,15 +3303,50 @@ function getProjetIndicList(){
   return Object.values(byId).sort(function(a,b){return(a.libelle_indicateurs||'').localeCompare(b.libelle_indicateurs||'','fr');});
 }
 
-function populateHeatIndicSelect(){
-  var sel=document.getElementById('mapHeatIndic');if(!sel)return;
-  var cur=sel.value;
-  var indics=getProjetIndicList();
-  sel.innerHTML=indics.map(function(c){return'<option value="'+c.id+'">'+esc(c.libelle_indicateurs)+'</option>';}).join('')||'<option value="">Aucun indicateur</option>';
-  if(indics.some(function(c){return String(c.id)===cur;}))sel.value=cur;
+let _deptGeoJSON=null,_mapHeatIndicId=0,_mapHeatLayer=null,_mapHeatDeptLayers={};
+
+async function loadDeptGeoJSON(){
+  if(_deptGeoJSON)return _deptGeoJSON;
+  try{
+    var res=await fetch('https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements-version-simplifiee.geojson');
+    _deptGeoJSON=await res.json();
+  }catch(e){_deptGeoJSON=null;}
+  return _deptGeoJSON;
 }
 
-function renderMapHeat(){
+// Normalise un code département (ex: "008"→"08", "02A"→"2A") pour matcher le format du fond de carte GeoJSON.
+function normDeptCode(raw){
+  var s=String(raw||'').trim();
+  var m=s.match(/(\d+)([ABab]?)$/);
+  if(!m)return s;
+  var num=m[1].replace(/^0+/,'')||'0';
+  var suffix=m[2]?m[2].toUpperCase():'';
+  return suffix?num+suffix:num.padStart(2,'0');
+}
+
+function populateHeatIndicSelect(){
+  var wrap=document.getElementById('mapHeatChips');if(!wrap)return;
+  var indics=getProjetIndicList();
+  if(!indics.some(function(c){return c.id===_mapHeatIndicId;}))_mapHeatIndicId=indics[0]?indics[0].id:0;
+  wrap.innerHTML=indics.map(function(c){
+    return'<button type="button" class="map-heat-chip'+(c.id===_mapHeatIndicId?' active':'')+'" onclick="selectMapHeatIndic('+c.id+')">'+esc(c.libelle_indicateurs)+'</button>';
+  }).join('')||'<div class="map-panel-empty">Aucun indicateur</div>';
+}
+
+function selectMapHeatIndic(id){
+  _mapHeatIndicId=id;
+  var wrap=document.getElementById('mapHeatChips');
+  if(wrap)wrap.querySelectorAll('.map-heat-chip').forEach(function(c){c.classList.remove('active');});
+  renderMapHeat();
+  populateHeatIndicSelect();
+}
+
+function zoomToMapHeatDept(code){
+  var layer=_mapHeatDeptLayers[code];
+  if(layer&&_leafletMap){_leafletMap.fitBounds(layer.getBounds(),{padding:[40,40]});layer.openPopup();}
+}
+
+async function renderMapHeat(){
   var container=document.getElementById('mapContainer');
   if(!container)return;
   if(!_leafletMap){
@@ -3313,11 +3358,14 @@ function renderMapHeat(){
   }
   _mapMarkers.forEach(function(m){_leafletMap.removeLayer(m);});
   _mapMarkers=[];_mapData=[];
+  if(_mapHeatLayer){_leafletMap.removeLayer(_mapHeatLayer);_mapHeatLayer=null;}
+  _mapHeatDeptLayers={};
 
   var proj=PROJETS.find(function(p){return p.id===currentProjetId;});
+  var accentColor=(proj&&proj.couleur)||'#534AB7';
   var actnProj=proj&&ACTN_PROJETS.find(function(ap){return ap.cod_projet===proj.code;});
   var actions=actnProj?(window._ALL_ACTIONS||[]).filter(function(a){return a.projet_ref===actnProj.id;}):[];
-  var indicId=parseInt(document.getElementById('mapHeatIndic')?.value)||0;
+  var indicId=_mapHeatIndicId;
   var indicCfg=indicId?ALL_INDIC_CONFIG.find(function(c){return c.id===indicId;}):null;
 
   var deptAgg={};
@@ -3326,43 +3374,54 @@ function renderMapHeat(){
     var e=(window._ALL_ETABLISSEMENTS||[]).find(function(x){return x.id===iv.etablissement_ref;});
     if(!e)return;
     var dept=deptInfoFromEtab(e);
-    var la=parseFloat(e.latitude_etablissement_EN),lo=parseFloat(e.longitude_etablissement_EN);
-    if(!dept||isNaN(la)||isNaN(lo))return;
-    var lat=Math.max(la,lo),lng=Math.min(la,lo);
-    var key=dept.code;
-    if(!deptAgg[key])deptAgg[key]={code:dept.code,name:dept.name,region:dept.region,total:0,nb:0,lats:[],lngs:[]};
+    if(!dept)return;
+    var key=normDeptCode(dept.code);
+    if(!deptAgg[key])deptAgg[key]={code:dept.code,name:dept.name,total:0,nb:0};
     deptAgg[key].total+=(iv.valeur||0);deptAgg[key].nb++;
-    deptAgg[key].lats.push(lat);deptAgg[key].lngs.push(lng);
   });});
 
-  var depts=Object.values(deptAgg).sort(function(a,b){return b.total-a.total;});
-  var maxVal=Math.max.apply(null,depts.map(function(d){return d.total;}).concat([1]));
-  var accentColor=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#E1543A';
-  var bounds=[];
-  depts.forEach(function(d){
-    var lat=d.lats.reduce(function(a,b){return a+b;},0)/d.lats.length;
-    var lng=d.lngs.reduce(function(a,b){return a+b;},0)/d.lngs.length;
-    var ratio=d.total/maxVal;
-    var circle=L.circleMarker([lat,lng],{radius:14+ratio*36,color:accentColor,weight:1,fillColor:accentColor,fillOpacity:0.12+ratio*0.5}).addTo(_leafletMap);
-    circle.bindPopup('<div class="mpop-title">'+esc(d.name)+' <span style="color:#bbb;font-weight:400">('+esc(d.code)+')</span></div>'
-      +'<div class="mpop-sub">'+esc(d.region)+'</div>'
-      +'<div style="margin-top:8px;font-weight:700;font-size:17px;color:'+accentColor+'">'+d.total.toLocaleString('fr-FR')+'</div>'
-      +'<div style="font-size:10px;color:#999">'+d.nb+' saisie'+(d.nb>1?'s':'')+'</div>',{maxWidth:200});
-    _mapMarkers.push(circle);
-    bounds.push([lat,lng]);
-  });
-  if(bounds.length>1)_leafletMap.fitBounds(bounds,{padding:[50,50]});
-  else if(bounds.length===1)_leafletMap.setView(bounds[0],8);
-  else _leafletMap.setView([48.7,4.5],7);
+  var deptsSorted=Object.values(deptAgg).sort(function(a,b){return b.total-a.total;});
+  var maxVal=Math.max.apply(null,deptsSorted.map(function(d){return d.total;}).concat([0]));
+  var geo=await loadDeptGeoJSON();
+
+  function colorFor(val){
+    if(!val||maxVal<=0)return'#eee';
+    var ratio=val/maxVal;
+    return lighten(accentColor,0.85-ratio*0.85);
+  }
+
+  if(geo){
+    _mapHeatLayer=L.geoJSON(geo,{
+      style:function(feature){
+        var key=normDeptCode(feature.properties.code);
+        var d=deptAgg[key];
+        return{fillColor:colorFor(d?d.total:0),weight:1,color:'#fff',fillOpacity:d?0.88:0.35};
+      },
+      onEachFeature:function(feature,layer){
+        var key=normDeptCode(feature.properties.code);
+        var d=deptAgg[key];
+        _mapHeatDeptLayers[key]=layer;
+        layer.bindPopup('<div class="mpop-title">'+esc(feature.properties.nom)+' <span style="color:#bbb;font-weight:400">('+esc(feature.properties.code)+')</span></div>'
+          +(d?'<div style="margin-top:8px;font-weight:700;font-size:17px;color:'+accentColor+'">'+d.total.toLocaleString('fr-FR')+'</div><div style="font-size:10px;color:#999">'+d.nb+' saisie'+(d.nb>1?'s':'')+'</div>'
+             :'<div style="font-size:11px;color:#bbb;margin-top:6px">Aucune donnée</div>'),{maxWidth:200});
+        layer.on('mouseover',function(){layer.setStyle({weight:2,color:accentColor});});
+        layer.on('mouseout',function(){_mapHeatLayer.resetStyle(layer);});
+      }
+    }).addTo(_leafletMap);
+    _leafletMap.fitBounds(_mapHeatLayer.getBounds(),{padding:[20,20]});
+  }else{
+    _leafletMap.setView([46.7,2.5],6);
+  }
 
   var cnt=document.getElementById('mapPanelCounts');
-  if(cnt)cnt.textContent=indicCfg?depts.length+' département'+(depts.length>1?'s':'')+' avec données':'Choisissez un indicateur';
+  if(cnt)cnt.textContent=indicCfg?deptsSorted.length+' département'+(deptsSorted.length>1?'s':'')+' avec données':'Choisissez un indicateur';
   var list=document.getElementById('mapPanelList');
   if(list)list.innerHTML=!indicCfg?'<div class="map-panel-empty">Sélectionnez un indicateur ci-dessus</div>'
-    :depts.map(function(d){
-      var ratio=d.total/maxVal;
-      return'<div class="map-panel-item" style="cursor:default">'
-        +'<div class="mp-dot" style="background:'+accentColor+'"></div>'
+    :deptsSorted.map(function(d){
+      var ratio=maxVal>0?d.total/maxVal:0;
+      var key=normDeptCode(d.code);
+      return'<div class="map-panel-item" onclick="zoomToMapHeatDept(\''+key+'\')">'
+        +'<div class="mp-dot" style="background:'+colorFor(d.total)+';border:1px solid '+accentColor+'33"></div>'
         +'<div style="flex:1;min-width:0">'
         +'<div class="mp-name">'+esc(d.name)+' <span style="color:#bbb;font-weight:400">('+esc(d.code)+')</span></div>'
         +'<div style="height:4px;background:#f0f0f0;border-radius:2px;margin-top:4px"><div style="height:4px;width:'+Math.round(ratio*100)+'%;background:'+accentColor+';border-radius:2px"></div></div>'
@@ -3370,6 +3429,16 @@ function renderMapHeat(){
         +'<span class="mp-badge" style="background:'+accentColor+'18;color:'+accentColor+'">'+d.total.toLocaleString('fr-FR')+'</span>'
         +'</div>';
     }).join('')||'<div class="map-panel-empty">Aucune donnée pour cet indicateur sur ce projet</div>';
+
+  var legend=document.getElementById('mapHeatLegend');
+  if(legend){
+    if(indicCfg&&maxVal>0){
+      legend.style.display='';
+      legend.innerHTML='<div class="map-heat-legend-title">'+esc(indicCfg.libelle_indicateurs)+'</div>'
+        +'<div class="map-heat-legend-bar" style="background:linear-gradient(90deg,'+lighten(accentColor,0.85)+','+accentColor+')"></div>'
+        +'<div class="map-heat-legend-scale"><span>0</span><span>'+maxVal.toLocaleString('fr-FR')+'</span></div>';
+    }else legend.style.display='none';
+  }
   setTimeout(function(){if(_leafletMap)_leafletMap.invalidateSize();},150);
 }
 

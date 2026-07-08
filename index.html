@@ -4964,7 +4964,8 @@ function hideChartTip(){
 }
 let _rapGroupBy='wp';
 function setRapGroupBy(val){_rapGroupBy=val;genRapport();}
-function renderRapportCharts(actions){
+function renderRapportCharts(actions,accentColor){
+  accentColor=accentColor||'#534AB7';
   // --- Graphique 1 : actions par mois ---
   const mCounts={};
   actions.forEach(a=>{
@@ -4984,7 +4985,7 @@ function renderRapportCharts(actions){
       const bh=Math.max(2,Math.round((d.n/max)*(CH-16)));
       const x=10+i*step,y=CH-bh;
       const tip=`${d.lbl} : ${d.n} action${d.n>1?'s':''}`;
-      return`<rect class="chart-bar" data-tip="${esc(tip)}" onmousemove="showChartTip(event)" onmouseleave="hideChartTip()" x="${x}" y="${y}" width="${bw}" height="${bh}" fill="var(--accent)" rx="3" opacity=".82"/>
+      return`<rect class="chart-bar" data-tip="${esc(tip)}" onmousemove="showChartTip(event)" onmouseleave="hideChartTip()" x="${x}" y="${y}" width="${bw}" height="${bh}" fill="${accentColor}" rx="3" opacity=".82"/>
         <text x="${x+bw/2}" y="${y-5}" text-anchor="middle" font-size="11" fill="#555">${d.n}</text>
         <text x="${x+bw/2}" y="${CH+15}" text-anchor="middle" font-size="10" fill="#aaa">${d.lbl}</text>`;
     }).join('');
@@ -5014,9 +5015,10 @@ function renderRapportCharts(actions){
     const rows=grpData.map(([lbl,n],i)=>{
       const bw=Math.round((n/maxG)*barMaxW);
       const y=i*rowH+3;
+      const barColor=_rapGroupBy==='wp'?wpCol(lbl):accentColor;
       const tip=`${lbl} : ${n} action${n>1?'s':''}`;
       return`<text x="${labelW-6}" y="${y+16}" text-anchor="end" font-size="11" fill="#666">${esc(lbl)}</text>
-        <rect class="chart-bar" data-tip="${esc(tip)}" onmousemove="showChartTip(event)" onmouseleave="hideChartTip()" x="${labelW}" y="${y+5}" width="${bw}" height="${rowH-10}" fill="var(--accent)" rx="3" opacity=".82"/>
+        <rect class="chart-bar" data-tip="${esc(tip)}" onmousemove="showChartTip(event)" onmouseleave="hideChartTip()" x="${labelW}" y="${y+5}" width="${bw}" height="${rowH-10}" fill="${barColor}" rx="3" opacity=".82"/>
         <text x="${labelW+bw+6}" y="${y+16}" font-size="11" fill="#555">${n}</text>`;
     }).join('');
     svgGrp=`<svg viewBox="0 0 ${totalW} ${totalH}" style="width:100%;max-height:${totalH+4}px">${rows}</svg>`;
@@ -5051,6 +5053,8 @@ function genRapport(){
   if(from||to)periodeLabel=(from||'…')+' → '+(to||'…');
   if(!periodeLabel)periodeLabel='Toutes périodes';
   const projetLabel=projetF?ACTN_PROJETS.find(p=>String(p.id)===projetF)?.lib_projet||'':'BEA + FIBI';
+  const RAP_NEUTRAL='#534AB7';
+  const rapAccent=projetF?(PROJETS.find(p=>p.code===(ACTN_PROJETS.find(ap=>String(ap.id)===projetF)?.cod_projet))?.couleur||RAP_NEUTRAL):RAP_NEUTRAL;
   const totalActions=actions.length;
   const totalIndics=actions.reduce((s,a)=>s+getIndicForAction(a.id).length,0);
   const projetsActifs=new Set(actions.map(a=>a.projet_ref)).size;
@@ -5087,10 +5091,8 @@ function genRapport(){
   let section1='';
   projets.forEach(proj=>{
     const actionsProj=actions.filter(a=>String(a.projet_ref)===String(proj.id));if(!actionsProj.length)return;
-    const realProj=PROJETS.find(p=>p.code===proj.cod_projet);
-    const projColor=realProj?.couleur||'#534AB7';
-    const badgeStyle=`background:${lighten(projColor)};color:${projColor}`;
-    const acc=projColor;
+    const badgeStyle=`background:${lighten(rapAccent)};color:${rapAccent}`;
+    const acc=rapAccent;
     const wpMap={};actionsProj.forEach(a=>{if(!wpMap[a.wp_axe_ref])wpMap[a.wp_axe_ref]=[];wpMap[a.wp_axe_ref].push(a)});
     let wpBlocs='';
     Object.entries(wpMap).forEach(([wpId,wpActions])=>{
@@ -5129,7 +5131,7 @@ function genRapport(){
       </div>
     </div>
     <div class="rap-kpis">${kpiTop||'<div class="rap-kpi"><div class="rap-kpi-val">—</div><div class="rap-kpi-lbl">Aucun indicateur</div></div>'}</div>
-    ${renderRapportCharts(actions)}
+    ${renderRapportCharts(actions,rapAccent)}
     ${section1}
     <div><div class="rap-recap-title">Récapitulatif des indicateurs</div>
     <table class="rap-recap-table"><thead><tr><th>Indicateur</th><th>Code</th><th style="text-align:center">Saisies</th><th style="text-align:right">Total réalisé</th></tr></thead>

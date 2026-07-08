@@ -1562,6 +1562,16 @@ function wpCol(code){
   return palette[idx>=0?idx%palette.length:0];
 }
 function wpBg(code){return lighten(wpCol(code))}
+function actAxeCol(wp){
+  if(wp?.couleur)return wp.couleur;
+  const proj=PROJETS.find(p=>p.id===currentProjetId);
+  const base=proj?.couleur||'#534AB7';
+  const palette=[base,'#185FA5','#854F0B','#993C1D','#0F6E56'];
+  const sibs=wp?ACTN_AXES.filter(a=>a.projet_ref===wp.projet_ref):[];
+  const idx=wp?sibs.findIndex(a=>a.id===wp.id):-1;
+  return palette[idx>=0?idx%palette.length:0];
+}
+function actAxeBg(wp){return lighten(actAxeCol(wp))}
 function mCol(n){
   const m=MEMBRES.find(mb=>mb.nom===n);
   if(m?.couleur)return m.couleur;
@@ -1910,7 +1920,7 @@ function renderActHistory(proj,actnProj){
       :a.terminee
       ?`<span style="font-size:10px;background:#e6f4ea;color:#1e7e34;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0">Terminée</span>`
       :`<span style="font-size:10px;background:#fff3cd;color:#856404;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0">En cours</span>`;
-    const wpBadge=wp?`<span style="font-size:10px;background:${wpBg(wp.cod_wp_axe)};color:${wpCol(wp.cod_wp_axe)};padding:2px 7px;border-radius:4px;font-weight:600;flex-shrink:0">${esc(wp.cod_wp_axe)}</span>`:'';
+    const wpBadge=wp?`<span style="font-size:10px;background:${actAxeBg(wp)};color:${actAxeCol(wp)};padding:2px 7px;border-radius:4px;font-weight:600;flex-shrink:0">${esc(wp.cod_wp_axe)}</span>`:'';
     const dateStr=a.terminee&&a.date_suivi_action
       ?'Terminée le '+fmtDate(a.date_suivi_action)
       :a.date_debut_action?'Début : '+fmtDate(a.date_debut_action):'';
@@ -2892,7 +2902,7 @@ function renderCalendrierActions(actions, accent){
     var evts=dayActs.slice(0,3).map(function(a){
       var rh=ALL_RH.find(function(r){return r.id===a.responsable_suivi_action_ref;});
       var wp=ACTN_AXES.find(function(w){return w.id===a.wp_axe_ref;});
-      var evCol=wp?wpCol(wp.cod_wp_axe):accent, evBg=wp?wpBg(wp.cod_wp_axe):accent+'22';
+      var evCol=wp?actAxeCol(wp):accent, evBg=wp?actAxeBg(wp):accent+'22';
       return'<div class="cal-event" style="background:'+evBg+';color:'+evCol+';cursor:pointer" title="'+esc((wp?wp.cod_wp_axe+' — ':'')+a.nom_suivi_action)+' — '+(rh?esc(rh.Membre):'')+'" onclick="openSaisieActionPanelEdit('+a.id+')">'+esc(a.nom_suivi_action)+'</div>';
     }).join('');
     if(dayActs.length>3)evts+='<div style="font-size:9px;color:#bbb">+'+( dayActs.length-3)+' autres</div>';
@@ -4995,7 +5005,7 @@ function renderRapportCharts(actions,accentColor){
   // --- Graphique 2 : répartition (WP/Axe, Responsable ou Statut, au choix) ---
   const grpCounts={};
   actions.forEach(a=>{
-    let lbl;
+    let lbl,col=null;
     if(_rapGroupBy==='resp'){
       const rh=ALL_RH.find(m=>m.id===a.responsable_suivi_action_ref);
       lbl=rh?.Membre||'Non attribué';
@@ -5004,22 +5014,24 @@ function renderRapportCharts(actions,accentColor){
     } else {
       const wp=ACTN_AXES.find(w=>w.id===a.wp_axe_ref);
       lbl=wp?(wp.cod_wp_axe||'?'):'Non classé';
+      col=wp?actAxeCol(wp):null;
     }
-    grpCounts[lbl]=(grpCounts[lbl]||0)+1;
+    if(!grpCounts[lbl])grpCounts[lbl]={n:0,col};
+    grpCounts[lbl].n++;
   });
-  const grpData=Object.entries(grpCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const grpData=Object.entries(grpCounts).sort((a,b)=>b[1].n-a[1].n).slice(0,8);
   let svgGrp='<div style="font-size:11px;color:#bbb;text-align:center;padding:16px 0">Pas assez de données</div>';
   if(grpData.length){
-    const maxG=Math.max(...grpData.map(d=>d[1]),1);
+    const maxG=Math.max(...grpData.map(d=>d[1].n),1);
     const rowH=28,labelW=84,barMaxW=280,totalW=labelW+barMaxW+36,totalH=grpData.length*rowH+6;
-    const rows=grpData.map(([lbl,n],i)=>{
-      const bw=Math.round((n/maxG)*barMaxW);
+    const rows=grpData.map(([lbl,d],i)=>{
+      const bw=Math.round((d.n/maxG)*barMaxW);
       const y=i*rowH+3;
-      const barColor=_rapGroupBy==='wp'?wpCol(lbl):accentColor;
-      const tip=`${lbl} : ${n} action${n>1?'s':''}`;
+      const barColor=d.col||accentColor;
+      const tip=`${lbl} : ${d.n} action${d.n>1?'s':''}`;
       return`<text x="${labelW-6}" y="${y+16}" text-anchor="end" font-size="11" fill="#666">${esc(lbl)}</text>
         <rect class="chart-bar" data-tip="${esc(tip)}" onmousemove="showChartTip(event)" onmouseleave="hideChartTip()" x="${labelW}" y="${y+5}" width="${bw}" height="${rowH-10}" fill="${barColor}" rx="3" opacity=".82"/>
-        <text x="${labelW+bw+6}" y="${y+16}" font-size="11" fill="#555">${n}</text>`;
+        <text x="${labelW+bw+6}" y="${y+16}" font-size="11" fill="#555">${d.n}</text>`;
     }).join('');
     svgGrp=`<svg viewBox="0 0 ${totalW} ${totalH}" style="width:100%;max-height:${totalH+4}px">${rows}</svg>`;
   }

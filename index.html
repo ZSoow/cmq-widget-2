@@ -408,6 +408,8 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 .cal-day.today .cal-day-num{color:var(--accent);font-weight:700}
 .cal-event{padding:2px 5px;border-radius:4px;font-size:10px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:opacity .1s}
 .cal-event:hover{opacity:.8}
+.cal-day-add{display:none;position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;border:none;background:var(--accent);color:#fff;font-size:11px;line-height:1;cursor:pointer;align-items:center;justify-content:center;padding:0}
+.cal-day:hover .cal-day-add{display:flex}
 /* ══ CARTE ══ */
 #pageCarte{display:none;flex-direction:column;min-height:100vh}
 .map-layout{display:flex;flex:1;overflow:hidden;min-height:0}
@@ -529,7 +531,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 .cal-nav button{padding:5px 10px;font-size:12px;background:#fff;border:.5px solid #ddd;border-radius:var(--rsm);cursor:pointer;color:#555}
 .cal-nav button:hover{background:#f8f8f8}
 .cal-month{font-size:13px;font-weight:600;min-width:160px;text-align:center}
-.cal-grid{background:#fff;border-radius:var(--r);border:1px solid #e8e8e8;overflow:hidden}
+.tasks-cal-grid{background:#fff;border-radius:var(--r);border:1px solid #e8e8e8;overflow:hidden}
 .cal-days-hdr{display:table;width:100%;table-layout:fixed;border-bottom:1px solid #e8e8e8;background:#f7f7f7}
 .cal-day-hdr{display:table-cell;padding:8px 0;text-align:center;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;width:calc(100%/7)}
 .cal-day-hdr.wknd{color:#ccc}
@@ -924,6 +926,10 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
   <div id="objTabPanelActions">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:.5px solid #e8e8e8">
       <span style="font-size:13px;font-weight:600;color:#1a1a1a" id="actHistoryHd">Actions</span>
+      <div style="display:flex;border:.5px solid #ddd;border-radius:6px;overflow:hidden">
+        <button id="actViewBtnListe" onclick="setActViewMode('liste')" style="font-size:11px;padding:5px 10px;border:none;cursor:pointer;font-family:var(--font);background:var(--accent);color:#fff">Liste</button>
+        <button id="actViewBtnCalendrier" onclick="setActViewMode('calendrier')" style="font-size:11px;padding:5px 10px;border:none;cursor:pointer;font-family:var(--font);background:transparent">Calendrier</button>
+      </div>
     </div>
     <div style="display:flex;gap:8px;padding:10px 14px;border-bottom:.5px solid #f0f0f0;background:#fafafa;flex-wrap:wrap;align-items:center">
       <select id="actFiltWP" onchange="renderActHistoryCurrent()" style="font-size:12px;padding:5px 8px;border:.5px solid #ddd;border-radius:6px;background:#fff;font-family:var(--font)">
@@ -1467,7 +1473,7 @@ let _mapLayer='etab', _mapProjetOnly=false, _leafletMap=null, _mapMarkers=[], _m
 let currentProjetId=null;
 let TACHES=[], MEMBRES=[], WPS=[];
 let filteredTaches=[], activeStatut='';
-let editingId=null, editingActionId=null, _actFiltStatut='';
+let editingId=null, editingActionId=null, _actFiltStatut='', _actViewMode='liste';
 let ganttMode='wp', ganttOffset=0;
 let wpGroupState={};
 let activeTab='kanban';
@@ -1841,6 +1847,13 @@ function setActFiltStatut(val){
   });
   renderActHistoryCurrent();
 }
+function setActViewMode(mode){
+  _actViewMode=mode;
+  const bL=document.getElementById('actViewBtnListe'), bC=document.getElementById('actViewBtnCalendrier');
+  if(bL){bL.style.background=mode==='liste'?'var(--accent)':'transparent';bL.style.color=mode==='liste'?'#fff':'inherit';}
+  if(bC){bC.style.background=mode==='calendrier'?'var(--accent)':'transparent';bC.style.color=mode==='calendrier'?'#fff':'inherit';}
+  renderActHistoryCurrent();
+}
 function renderActHistory(proj,actnProj){
   let projActions=actnProj?[...(window._ALL_ACTIONS||[])].filter(a=>a.projet_ref===actnProj.id):[];
   // Filtre WP/Axe
@@ -1865,6 +1878,11 @@ function renderActHistory(proj,actnProj){
   });
   const total=actnProj?(window._ALL_ACTIONS||[]).filter(a=>a.projet_ref===actnProj.id).length:0;
   document.getElementById('actHistoryHd').textContent=`Actions — ${proj?.nom||''} (${projActions.length}${projActions.length!==total?' / '+total:''})`;
+  if(_actViewMode==='calendrier'){
+    const accent=proj?.couleur||'#534AB7';
+    document.getElementById('actHistoryList').innerHTML=renderCalendrierActions(projActions,accent);
+    return;
+  }
   if(!projActions.length){
     document.getElementById('actHistoryList').innerHTML='<div style="padding:24px;text-align:center;font-size:12px;color:#bbb">Aucune action trouvée.<br>Modifiez les filtres ou créez une nouvelle action.</div>';
     return;
@@ -1941,6 +1959,10 @@ async function openIndicateursPage(){
     const b=document.getElementById('actFiltBtn'+k);
     if(b){b.style.background=k==='All'?'var(--accent)':'transparent';b.style.color=k==='All'?'#fff':'inherit';}
   });
+  _actViewMode='liste';
+  const bL=document.getElementById('actViewBtnListe'), bC=document.getElementById('actViewBtnCalendrier');
+  if(bL){bL.style.background='var(--accent)';bL.style.color='#fff';}
+  if(bC){bC.style.background='transparent';bC.style.color='inherit';}
   _indicFiltWP=0;
   await loadEtablissements();
   renderActHistory(proj,actnProj);
@@ -2679,14 +2701,11 @@ function renderObjectifs(){
   var tabBar=wpFilter+'<div class="subtab-bar" style="padding:0 0 14px;border-bottom:.5px solid #ebebeb;margin-bottom:16px">'
     +'<button class="subtab'+(indicActiveTab==='suivi'?' active':'')+'" onclick="indicActiveTab=\'suivi\';renderObjectifs()">Suivi</button>'
     +'<button class="subtab'+(indicActiveTab==='objectifs'?' active':'')+'" onclick="indicActiveTab=\'objectifs\';renderObjectifs()">Objectifs</button>'
-    +'<button class="subtab'+(indicActiveTab==='calendrier'?' active':'')+'" onclick="indicActiveTab=\'calendrier\';renderObjectifs()">Calendrier</button>'
     +'</div>';
 
   var content='';
 
-  if(indicActiveTab==='calendrier'){
-    content=renderCalendrierActions(indicActions,accent);
-  } else if(indicActiveTab==='objectifs'){
+  if(indicActiveTab==='objectifs'){
     // ── Onglet Objectifs : cards avec inputs éditables ──
     var rows=projIndics.map(function(ind){
       var code=ind.Code_indicateur;
@@ -2864,12 +2883,15 @@ function renderCalendrierActions(actions, accent){
   for(var d=1;d<=lastDay.getDate();d++){
     var isToday=d===today.getDate()&&m===today.getMonth()&&y===today.getFullYear();
     var dayActs=byDay[d]||[];
+    var dateStr=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     var evts=dayActs.slice(0,3).map(function(a){
       var rh=ALL_RH.find(function(r){return r.id===a.responsable_suivi_action_ref;});
       return'<div class="cal-event" style="background:'+accent+'22;color:'+accent+';cursor:pointer" title="'+esc(a.nom_suivi_action)+' — '+(rh?esc(rh.Membre):'')+'" onclick="openSaisieActionPanelEdit('+a.id+')">'+esc(a.nom_suivi_action)+'</div>';
     }).join('');
     if(dayActs.length>3)evts+='<div style="font-size:9px;color:#bbb">+'+( dayActs.length-3)+' autres</div>';
-    cells+='<div class="cal-day'+(isToday?' today':'')+'"><div class="cal-day-num">'+d+'</div>'+evts+'</div>';
+    cells+='<div class="cal-day'+(isToday?' today':'')+'"><div class="cal-day-num">'+d+'</div>'
+      +'<button class="cal-day-add" onclick="event.stopPropagation();quickAddActionForDate(\''+dateStr+'\')" title="Ajouter une action ce jour">+</button>'
+      +evts+'</div>';
   }
   // Compléter la grille (multiple de 7)
   var total=startDow+lastDay.getDate();
@@ -2877,11 +2899,16 @@ function renderCalendrierActions(actions, accent){
   if(remainder>0){for(var i=remainder;i<7;i++)cells+='<div class="cal-day other-month"></div>';}
 
   return'<div class="cal-nav">'
-    +'<button onclick="_calMonth--;if(_calMonth<0){_calMonth=11;_calYear--;}renderObjectifs()">← Mois préc.</button>'
+    +'<button onclick="_calMonth--;if(_calMonth<0){_calMonth=11;_calYear--;}renderActHistoryCurrent()">← Mois préc.</button>'
     +'<span class="cal-nav-title">'+MOIS[m]+' '+y+'</span>'
-    +'<button onclick="_calMonth++;if(_calMonth>11){_calMonth=0;_calYear++;}renderObjectifs()">Mois suiv. →</button>'
+    +'<button onclick="_calMonth++;if(_calMonth>11){_calMonth=0;_calYear++;}renderActHistoryCurrent()">Mois suiv. →</button>'
     +'</div>'
     +'<div class="cal-grid">'+hdCells+cells+'</div>';
+}
+function quickAddActionForDate(dateStr){
+  openSaisieActionPanel();
+  var el=document.getElementById('saDate');
+  if(el)el.value=dateStr;
 }
 
 /* ══════════════════════════════════════════════
@@ -4221,7 +4248,7 @@ function renderCalendrier(){
       <button onclick="calNext()">→</button>
       <button class="btn btn-ghost btn-sm" onclick="calToday()" style="margin-left:4px">Aujourd'hui</button>
     </div>
-    <div class="cal-grid">
+    <div class="tasks-cal-grid">
       <div class="cal-days-hdr">${jours.map((j,i)=>`<div class="cal-day-hdr${i>=5?' wknd':''}">${joursCourts[i]}</div>`).join('')}</div>
       <div class="cal-cells">${cellsHtml}</div>
     </div>`;

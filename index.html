@@ -2886,7 +2886,9 @@ function renderCalendrierActions(actions, accent){
     var dateStr=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     var evts=dayActs.slice(0,3).map(function(a){
       var rh=ALL_RH.find(function(r){return r.id===a.responsable_suivi_action_ref;});
-      return'<div class="cal-event" style="background:'+accent+'22;color:'+accent+';cursor:pointer" title="'+esc(a.nom_suivi_action)+' — '+(rh?esc(rh.Membre):'')+'" onclick="openSaisieActionPanelEdit('+a.id+')">'+esc(a.nom_suivi_action)+'</div>';
+      var wp=ACTN_AXES.find(function(w){return w.id===a.wp_axe_ref;});
+      var evCol=wp?wpCol(wp.cod_wp_axe):accent, evBg=wp?wpBg(wp.cod_wp_axe):accent+'22';
+      return'<div class="cal-event" style="background:'+evBg+';color:'+evCol+';cursor:pointer" title="'+esc((wp?wp.cod_wp_axe+' — ':'')+a.nom_suivi_action)+' — '+(rh?esc(rh.Membre):'')+'" onclick="openSaisieActionPanelEdit('+a.id+')">'+esc(a.nom_suivi_action)+'</div>';
     }).join('');
     if(dayActs.length>3)evts+='<div style="font-size:9px;color:#bbb">+'+( dayActs.length-3)+' autres</div>';
     cells+='<div class="cal-day'+(isToday?' today':'')+'"><div class="cal-day-num">'+d+'</div>'

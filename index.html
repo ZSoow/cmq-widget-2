@@ -5716,7 +5716,7 @@ function openEtabDetail(id){
   if(etags)html+='<div class="ann-card-tags" style="margin-top:6px">'+etags+'</div>';
   if(e.identifiant_etablissement)html+='<div style="margin-top:6px;font-size:11px;color:#999">UAI : <strong>'+esc(e.identifiant_etablissement)+'</strong></div>';
   html+='</div>';
-  html+='<div class="pd-kpis"><div class="pd-kpi"><div class="pd-kpi-val">'+events.length+'</div><div class="pd-kpi-lbl">action'+(events.length>1?'s':'')+' impliquées</div></div></div>';
+  html+='<div class="pd-kpis"><div class="pd-kpi"><div class="pd-kpi-val">'+events.length+'</div><div class="pd-kpi-lbl">action'+(events.length>1?'s':'')+' impliquées (tous projets)</div></div></div>';
   if(events.length){
     html+='<div style="font-size:12px;font-weight:600;color:#444;margin-bottom:10px">Actions auxquelles cet établissement a participé</div>';
     html+=events.map(({a})=>{

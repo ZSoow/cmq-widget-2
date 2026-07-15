@@ -1242,7 +1242,7 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 
 <!-- MODALE NOUVEAU PROJET -->
 <div class="overlay" id="newProjetOverlay">
-<div class="modal modal-sm">
+<div class="modal modal-sm" style="width:680px">
   <div class="modal-hd"><span class="modal-title">Nouveau projet</span><button class="btn-x" onclick="closeNewProjet()">×</button></div>
   <div class="fg"><label class="fl">Code court <span class="req">*</span></label>
     <input type="text" id="npCode" style="width:100%;text-transform:uppercase" placeholder="Ex: CYCLO" maxlength="10" oninput="this.value=this.value.toUpperCase();updateProjetPreview()"></div>
@@ -1259,9 +1259,27 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
   <div class="fg"><label class="fl">Aperçu</label>
     <div class="color-preview" id="npPreview"><span id="npPreviewText">CODE — Nom</span></div>
   </div>
+
+  <div class="fg" style="margin-top:10px;border-top:1px solid #eee;padding-top:12px">
+    <label class="fl">WP / Axes, actions, sous-actions, indicateurs</label>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:8px">Optionnel — vous pouvez aussi ne créer que le projet et compléter la structure plus tard.</div>
+    <div id="npWpList"></div>
+    <button type="button" class="btn btn-ghost btn-xs" onclick="npAddWp()">+ Ajouter un WP/Axe</button>
+  </div>
+
+  <div class="fg" style="margin-top:10px;border-top:1px solid #eee;padding-top:12px">
+    <label class="fl">Équipe</label>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:8px">L'équipe est rattachée au <b>programme</b> (ex: PIA3, PIA4), pas au projet précis. En choisissant un programme existant, l'équipe déjà taguée pour ce programme est automatiquement héritée — rien à faire. En créant un nouveau programme, les personnes cochées seront taguées pour <b>tous les futurs projets</b> de ce programme, pas seulement celui-ci.</div>
+    <select id="npTypProjetMode" onchange="npOnTypModeChange()" style="width:100%;margin-bottom:8px"></select>
+    <div id="npNewProgWrap" style="display:none">
+      <input type="text" id="npNewTypProjet" placeholder="Nom du nouveau programme (ex: PIA5)" style="width:100%;margin-bottom:8px;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+      <div id="npMembresList" style="max-height:160px;overflow-y:auto;border:1px solid #eee;border-radius:8px;padding:6px"></div>
+    </div>
+  </div>
+
   <div class="modal-ft">
     <button class="btn btn-ghost" onclick="closeNewProjet()">Annuler</button>
-    <button class="btn btn-primary" onclick="saveNewProjet()">Créer le projet</button>
+    <button class="btn btn-primary" id="btnSaveNewProjet" onclick="saveNewProjet()">Créer le projet</button>
   </div>
 </div>
 </div>
@@ -4968,8 +4986,26 @@ async function deleteTask(){
 
 /* ══════════════════════════════════════════════
    MODAL NOUVEAU PROJET
+   Cascade complète : CONFIG_PROJETS + PROJET_projet
+   (bridge indispensable, sinon le projet reste invisible
+   partout sauf le Kanban de base — cf. bug du 2026-07-09)
+   → WP/Axes (CONFIG_AXES_ALL + PROJET_axes en parallèle,
+   même code/couleur explicite dans les deux pour ne pas
+   dépendre du fallback positionnel de wpCol())
+   → Actions → Sous-actions → Indicateurs → Équipe
 ══════════════════════════════════════════════ */
-function openNewProjet(){document.getElementById('newProjetOverlay').classList.add('open');updateProjetPreview()}
+const NP_PALETTE=['#534AB7','#185FA5','#854F0B','#993C1D','#0F6E56'];
+let _npTree=[],_npIdSeq=0;
+
+function openNewProjet(){
+  document.getElementById('newProjetOverlay').classList.add('open');
+  document.getElementById('npDesc').value='';
+  _npTree=[];_npIdSeq=0;
+  renderNpWpList();
+  npPopulateTypModeSelect();
+  document.getElementById('npNewProgWrap').style.display='none';
+  updateProjetPreview();
+}
 function closeNewProjet(){document.getElementById('newProjetOverlay').classList.remove('open')}
 function updateProjetPreview(){
   const code=document.getElementById('npCode').value||'CODE';
@@ -4978,18 +5014,235 @@ function updateProjetPreview(){
   document.getElementById('npPreview').style.background=color;
   document.getElementById('npPreviewText').textContent=`${code} — ${nom}`;
 }
+
+/* --- Arbre WP/Axe > Action > Sous-action > Indicateur --- */
+function npFindWp(tid){return _npTree.find(w=>w.tid===tid)}
+function npFindAction(tid){for(const wp of _npTree){const a=wp.actions.find(x=>x.tid===tid);if(a)return{a,wp}}return null}
+function npFindSousAction(tid){for(const wp of _npTree)for(const a of wp.actions){const s=a.sousActions.find(x=>x.tid===tid);if(s)return{s,a,wp}}return null}
+function npFindIndicateur(tid){for(const wp of _npTree)for(const a of wp.actions)for(const s of a.sousActions){const i=s.indicateurs.find(x=>x.tid===tid);if(i)return{i,s,a,wp}}return null}
+
+function npSetField(kind,tid,field,val){
+  let node=null;
+  if(kind==='wp')node=npFindWp(tid);
+  else if(kind==='action')node=npFindAction(tid)?.a;
+  else if(kind==='sa')node=npFindSousAction(tid)?.s;
+  else if(kind==='ind')node=npFindIndicateur(tid)?.i;
+  if(node)node[field]=val;
+}
+
+function npAddWp(){
+  _npTree.push({tid:++_npIdSeq,code:'',label:'',couleur:NP_PALETTE[_npTree.length%NP_PALETTE.length],actions:[]});
+  renderNpWpList();
+}
+function npAddAction(wpTid){
+  const wp=npFindWp(wpTid);if(!wp)return;
+  wp.actions.push({tid:++_npIdSeq,code:'',label:'',sousActions:[]});
+  renderNpWpList();
+}
+function npAddSousAction(actionTid){
+  const r=npFindAction(actionTid);if(!r)return;
+  r.a.sousActions.push({tid:++_npIdSeq,code:'',label:'',indicateurs:[]});
+  renderNpWpList();
+}
+function npAddIndicateur(saTid){
+  const r=npFindSousAction(saTid);if(!r)return;
+  r.s.indicateurs.push({tid:++_npIdSeq,code:'',label:'',type:'nombre',obligatoire:false});
+  renderNpWpList();
+}
+function npRemove(kind,tid){
+  if(kind==='wp')_npTree=_npTree.filter(w=>w.tid!==tid);
+  else if(kind==='action'){const r=npFindAction(tid);if(r)r.wp.actions=r.wp.actions.filter(x=>x.tid!==tid)}
+  else if(kind==='sa'){const r=npFindSousAction(tid);if(r)r.a.sousActions=r.a.sousActions.filter(x=>x.tid!==tid)}
+  else if(kind==='ind'){const r=npFindIndicateur(tid);if(r)r.s.indicateurs=r.s.indicateurs.filter(x=>x.tid!==tid)}
+  renderNpWpList();
+}
+
+function renderNpWpList(){
+  const cont=document.getElementById('npWpList');
+  if(!_npTree.length){cont.innerHTML='';return}
+  cont.innerHTML=_npTree.map(wp=>`
+    <div style="border:1px solid #eee;border-radius:8px;padding:9px;margin-bottom:8px;background:#fafafa">
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="color" value="${wp.couleur}" onchange="npSetField('wp',${wp.tid},'couleur',this.value)" style="width:30px;height:28px;padding:0;border:none;cursor:pointer;flex-shrink:0">
+        <input type="text" placeholder="Code (ex: WP1)" value="${esc(wp.code)}" oninput="npSetField('wp',${wp.tid},'code',this.value.toUpperCase());this.value=this.value.toUpperCase()" style="width:90px;flex-shrink:0">
+        <input type="text" placeholder="Libellé du WP/Axe" value="${esc(wp.label)}" oninput="npSetField('wp',${wp.tid},'label',this.value)" style="flex:1;min-width:0">
+        <button type="button" class="btn-x" onclick="npRemove('wp',${wp.tid})">×</button>
+      </div>
+      <div style="margin-left:22px;margin-top:8px">
+        ${wp.actions.map(a=>renderNpAction(a)).join('')}
+        <button type="button" class="btn btn-ghost btn-xs" onclick="npAddAction(${wp.tid})">+ Action</button>
+      </div>
+    </div>`).join('');
+}
+function renderNpAction(a){
+  return`
+    <div style="border-left:2px solid #e5e5e5;padding-left:10px;margin-bottom:8px">
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="text" placeholder="Code action" value="${esc(a.code)}" oninput="npSetField('action',${a.tid},'code',this.value)" style="width:100px;flex-shrink:0">
+        <input type="text" placeholder="Libellé de l'action" value="${esc(a.label)}" oninput="npSetField('action',${a.tid},'label',this.value)" style="flex:1;min-width:0">
+        <button type="button" class="btn-x" onclick="npRemove('action',${a.tid})">×</button>
+      </div>
+      <div style="margin-left:22px;margin-top:6px">
+        ${a.sousActions.map(s=>renderNpSousAction(s)).join('')}
+        <button type="button" class="btn btn-ghost btn-xs" onclick="npAddSousAction(${a.tid})">+ Sous-action</button>
+      </div>
+    </div>`;
+}
+function renderNpSousAction(s){
+  return`
+    <div style="border-left:2px solid #eee;padding-left:10px;margin-bottom:8px">
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="text" placeholder="Code sous-action" value="${esc(s.code)}" oninput="npSetField('sa',${s.tid},'code',this.value)" style="width:110px;flex-shrink:0">
+        <input type="text" placeholder="Libellé de la sous-action" value="${esc(s.label)}" oninput="npSetField('sa',${s.tid},'label',this.value)" style="flex:1;min-width:0">
+        <button type="button" class="btn-x" onclick="npRemove('sa',${s.tid})">×</button>
+      </div>
+      <div style="margin-left:22px;margin-top:6px">
+        ${s.indicateurs.map(i=>renderNpIndicateur(i)).join('')}
+        <button type="button" class="btn btn-ghost btn-xs" onclick="npAddIndicateur(${s.tid})">+ Indicateur</button>
+      </div>
+    </div>`;
+}
+function renderNpIndicateur(i){
+  return`
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+      <input type="text" placeholder="Libellé indicateur" value="${esc(i.label)}" oninput="npSetField('ind',${i.tid},'label',this.value)" style="flex:1;min-width:0">
+      <input type="text" placeholder="Code" value="${esc(i.code)}" oninput="npSetField('ind',${i.tid},'code',this.value.trim().replace(/\\s+/g,'_'))" style="width:110px;flex-shrink:0">
+      <select onchange="npSetField('ind',${i.tid},'type',this.value)" style="width:90px;flex-shrink:0">
+        <option value="nombre"${i.type==='nombre'?' selected':''}>Nombre</option>
+        <option value="booleen"${i.type==='booleen'?' selected':''}>Oui/Non</option>
+      </select>
+      <label style="font-size:10px;display:flex;align-items:center;gap:3px;flex-shrink:0"><input type="checkbox" ${i.obligatoire?'checked':''} onchange="npSetField('ind',${i.tid},'obligatoire',this.checked)">Oblig.</label>
+      <button type="button" class="btn-x" onclick="npRemove('ind',${i.tid})">×</button>
+    </div>`;
+}
+
+/* --- Équipe (Programme PIA3/PIA4/...) --- */
+function npPopulateTypModeSelect(){
+  const sel=document.getElementById('npTypProjetMode');
+  const existing=[...new Set(ACTN_PROJETS.map(p=>p.typ_projet).filter(Boolean))];
+  sel.innerHTML='<option value="">— Aucune équipe pour l\'instant —</option>'+
+    existing.map(t=>`<option value="${esc(t)}">${esc(t)} (programme existant — équipe héritée automatiquement)</option>`).join('')+
+    '<option value="__new__">+ Nouveau programme</option>';
+}
+function npOnTypModeChange(){
+  const v=document.getElementById('npTypProjetMode').value;
+  document.getElementById('npNewProgWrap').style.display=v==='__new__'?'block':'none';
+  if(v==='__new__')npRenderMembresList();
+}
+function npRenderMembresList(){
+  const cont=document.getElementById('npMembresList');
+  cont.innerHTML=(ALL_RH||[]).map(m=>`<label style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:12px"><input type="checkbox" value="${m.id}" class="np-membre-cb"> ${esc(m.Membre||'#'+m.id)}</label>`).join('')
+    ||'<div style="font-size:11px;color:#bbb;padding:4px">Aucun membre CMQ_RH chargé.</div>';
+}
+
 async function saveNewProjet(){
   const code=document.getElementById('npCode').value.trim().toUpperCase();
   const nom=document.getElementById('npNom').value.trim();
   if(!code||!nom){alert('Code et nom obligatoires.');return}
   if(PROJETS.find(p=>p.code===code)){alert(`Un projet "${code}" existe déjà.`);return}
   const color=document.getElementById('npColor').value;
-  const record={code,nom,nom_long:nom,type_axes:document.getElementById('npType').value,couleur:color,actif:1};
+  const typeAxes=document.getElementById('npType').value;
+
+  // Validation légère de l'arbre : un WP/Action/Sous-action/Indicateur ajouté doit avoir au moins un code + un libellé
+  for(const wp of _npTree){
+    if(!wp.code.trim()||!wp.label.trim()){alert('Chaque WP/Axe ajouté doit avoir un code et un libellé (ou supprimez-le).');return}
+    for(const a of wp.actions){
+      if(!a.code.trim()||!a.label.trim()){alert(`Chaque action du WP "${wp.code}" doit avoir un code et un libellé.`);return}
+      for(const s of a.sousActions){
+        if(!s.code.trim()||!s.label.trim()){alert(`Chaque sous-action de l'action "${a.code}" doit avoir un code et un libellé.`);return}
+        for(const ind of s.indicateurs){
+          if(!ind.label.trim()||!ind.code.trim()){alert(`Chaque indicateur de la sous-action "${s.code}" doit avoir un libellé et un code.`);return}
+        }
+      }
+    }
+  }
+
+  const typModeVal=document.getElementById('npTypProjetMode').value;
+  let typProjet=typModeVal&&typModeVal!=='__new__'?typModeVal:'';
+  let newTypProjet='',membresACocher=[];
+  if(typModeVal==='__new__'){
+    newTypProjet=document.getElementById('npNewTypProjet').value.trim().toUpperCase();
+    if(!newTypProjet){alert('Indiquez un nom pour le nouveau programme, ou choisissez "Aucune équipe pour l\'instant".');return}
+    typProjet=newTypProjet;
+    membresACocher=Array.from(document.querySelectorAll('.np-membre-cb:checked')).map(cb=>parseInt(cb.value));
+  }
+
+  const btn=document.getElementById('btnSaveNewProjet');
+  btn.disabled=true;btn.textContent='Création en cours…';
   try{
-    await grist.docApi.applyUserActions([['AddRecord','CONFIG_PROJETS',null,record]]);
+    // 1) CONFIG_PROJETS
+    const resProjet=await grist.docApi.applyUserActions([['AddRecord','CONFIG_PROJETS',null,
+      {code,nom,nom_long:nom,type_axes:typeAxes,couleur:color,actif:1}]]);
+    // 2) PROJET_projet — bridge indispensable (cod_projet===code), sinon le projet
+    //    reste invisible pour tout le système Actions/Rapport/Indicateurs/Carte
+    const libProjet=typProjet?`${typProjet} - ${code}`:code;
+    const resActnProjet=await grist.docApi.applyUserActions([['AddRecord','PROJET_projet',null,
+      {cod_projet:code,lib_projet:libProjet,typ_projet:typProjet,type_axes:typeAxes,couleur:color,actif:true}]]);
+    const actnProjId=resActnProjet.retValues[0];
+
+    // 3) WP/Axes — CONFIG_AXES_ALL (Kanban) + PROJET_axes (Actions/Rapport) en parallèle,
+    //    couleur explicite dans les deux (jamais de fallback positionnel implicite)
+    if(_npTree.length){
+      const projetId=resProjet.retValues[0];
+      const axeActions=[];
+      _npTree.forEach(wp=>{
+        axeActions.push(['AddRecord','CONFIG_AXES_ALL',null,{projet_id:projetId,code:wp.code,label:`${wp.code} - ${wp.label}`,couleur:wp.couleur}]);
+        axeActions.push(['AddRecord','PROJET_axes',null,{cod_wp_axe:wp.code,lib_wp_axe:wp.label,projet_ref:actnProjId,couleur:wp.couleur}]);
+      });
+      const resAxes=await grist.docApi.applyUserActions(axeActions);
+      _npTree.forEach((wp,i)=>{wp.__axeId=resAxes.retValues[i*2+1]});
+
+      // 4) Actions (toutes, tous WP confondus, en un seul appel)
+      const actionActions=[];
+      const actionRefs=[];
+      _npTree.forEach(wp=>wp.actions.forEach(a=>{
+        actionActions.push(['AddRecord','PROJET_Actions',null,{cod_action:a.code,lib_action:a.label,wp_axe_ref:wp.__axeId}]);
+        actionRefs.push(a);
+      }));
+      if(actionActions.length){
+        const resActions=await grist.docApi.applyUserActions(actionActions);
+        actionRefs.forEach((a,i)=>{a.__actionId=resActions.retValues[i]});
+
+        // 5) Sous-actions (toutes, en un seul appel)
+        const saActions=[];
+        const saRefs=[];
+        actionRefs.forEach(a=>a.sousActions.forEach(s=>{
+          saActions.push(['AddRecord','PROJET_sous_actions',null,{cod_sous_action:s.code,lib_sous_action:s.label,action_ref:a.__actionId}]);
+          saRefs.push(s);
+        }));
+        if(saActions.length){
+          const resSa=await grist.docApi.applyUserActions(saActions);
+          saRefs.forEach((s,i)=>{s.__saId=resSa.retValues[i]});
+
+          // 6) Indicateurs (tous, en un seul appel)
+          const indActions=[];
+          saRefs.forEach(s=>s.indicateurs.forEach(ind=>{
+            indActions.push(['AddRecord','CONFIG_liste_des_indicateurs_par_action',null,
+              {libelle_indicateurs:ind.label,Code_indicateur:ind.code,type_valeur:ind.type,obligatoire:ind.obligatoire?1:0,type_sous_action:s.__saId}]);
+          }));
+          if(indActions.length)await grist.docApi.applyUserActions(indActions);
+        }
+      }
+    }
+
+    // 7) Équipe — uniquement si nouveau programme + membres cochés
+    //    (programme existant = équipe déjà taguée, héritée automatiquement, rien à écrire)
+    if(newTypProjet&&membresACocher.length){
+      const teamActions=membresACocher.map(mid=>{
+        const m=(ALL_RH||[]).find(x=>x.id===mid);
+        const tags=(m&&Array.isArray(m.Equipe)?m.Equipe.filter(t=>t!=='L'):[]);
+        if(!tags.includes(newTypProjet))tags.push(newTypProjet);
+        return['UpdateRecord','CMQ_RH',mid,{Equipe:['L',...tags]}];
+      });
+      await grist.docApi.applyUserActions(teamActions);
+    }
+
     await loadAll();closeNewProjet();
+    showToast('Projet créé avec sa structure','success');
   }catch(e){
     showToast('Erreur Grist : '+e.message,'error');
+  }finally{
+    btn.disabled=false;btn.textContent='Créer le projet';
   }
 }
 

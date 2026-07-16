@@ -1284,6 +1284,23 @@ textarea{width:100%;padding:8px 10px;border:.5px solid #ddd;border-radius:var(--
 </div>
 </div>
 
+<!-- MODALE SUPPRESSION PROJET -->
+<div class="overlay" id="deleteProjetOverlay" style="z-index:600">
+<div class="modal modal-sm" style="width:480px">
+  <div class="modal-hd"><span class="modal-title">⚠ Supprimer le projet</span><button class="btn-x" onclick="closeDeleteProjet()">×</button></div>
+  <p style="font-size:12px;color:var(--c600);font-weight:600;margin:0 0 10px">Cette action est irréversible et supprime l'intégralité des données du projet.</p>
+  <div id="dpSummary" style="font-size:12px;color:var(--sub);background:#fafafa;border:1px solid #eee;border-radius:8px;padding:10px 12px;margin-bottom:12px">Calcul en cours…</div>
+  <div class="fg"><label class="fl">Tapez le code du projet (<b id="dpCodeAttendu"></b>) pour confirmer</label>
+    <input type="text" id="dpCodeConfirm" style="width:100%;text-transform:uppercase" oninput="this.value=this.value.toUpperCase();dpCheckReady()"></div>
+  <div class="fg"><label class="fl">Code de sécurité</label>
+    <input type="password" id="dpSecret" style="width:100%" oninput="dpCheckReady()" placeholder="Code de sécurité fourni par l'administrateur"></div>
+  <div class="modal-ft">
+    <button class="btn btn-ghost" onclick="closeDeleteProjet()">Annuler</button>
+    <button class="btn btn-danger" id="btnDeleteProjet" disabled onclick="executeDeleteProjet()">Supprimer définitivement</button>
+  </div>
+</div>
+</div>
+
 <!-- MODALE ACTION RÉALISÉE -->
 <div class="overlay" id="actionOverlay">
 <div class="modal">
@@ -3865,9 +3882,12 @@ function renderAccueil(){
           <div class="proj-item-stats">${lateStr}${tasks.length} tâche${tasks.length!==1?'s':''} · ${nbAct} action${nbAct!==1?'s':''}</div>
           <div class="proj-item-bar"><div class="proj-item-bar-fill" style="width:${pct}%;background:${p.couleur||'#534AB7'}"></div></div>
         </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:13px;font-weight:700;color:${p.couleur||'#534AB7'}">${pct}%</div>
-          <div class="proj-item-caret" style="margin-top:2px">›</div>
+        <div style="text-align:right;flex-shrink:0;display:flex;align-items:center;gap:10px">
+          <button type="button" class="btn-x" title="Supprimer le projet" onclick="event.stopPropagation();openDeleteProjet(${p.id})" style="color:#ccc">🗑</button>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:${p.couleur||'#534AB7'}">${pct}%</div>
+            <div class="proj-item-caret" style="margin-top:2px">›</div>
+          </div>
         </div>
       </div>`;
     }).join('')+
@@ -5247,6 +5267,148 @@ async function saveNewProjet(){
 }
 
 /* ══════════════════════════════════════════════
+   SUPPRESSION D'UN PROJET (cascade complète)
+   Code de sécurité fixe demandé par l'utilisateur pour
+   éviter une suppression accidentelle, + confirmation par
+   saisie du code exact du projet (double vérification).
+   Compte/supprime dans TOUTES les tables qui référencent
+   le projet, pas seulement celles créées par le wizard
+   (le projet peut être plus ancien que le wizard).
+══════════════════════════════════════════════ */
+const DP_SECRET_CODE='CODECMQSUP';
+let _dpProjetId=null,_dpImpact=null;
+
+async function openDeleteProjet(projetId){
+  _dpProjetId=projetId;_dpImpact=null;
+  const proj=PROJETS.find(p=>p.id===projetId);
+  if(!proj)return;
+  document.getElementById('dpCodeAttendu').textContent=proj.code;
+  document.getElementById('dpCodeConfirm').value='';
+  document.getElementById('dpSecret').value='';
+  document.getElementById('dpSummary').textContent='Calcul en cours…';
+  document.getElementById('btnDeleteProjet').disabled=true;
+  document.getElementById('deleteProjetOverlay').classList.add('open');
+  try{
+    _dpImpact=await dpComputeDeleteImpact(proj);
+    const c=_dpImpact.counts;
+    document.getElementById('dpSummary').innerHTML=
+      `Seront supprimés définitivement :<br>`+
+      `• ${c.wp} WP/Axe(s)<br>`+
+      `• ${c.actions} action(s) de structure, ${c.sousActions} sous-action(s)<br>`+
+      `• ${c.indicConfig} indicateur(s) configuré(s), ${c.valeursIndic} valeur(s) saisie(s)<br>`+
+      `• ${c.actionsRealisees} action(s) réalisée(s) (saisies de suivi)<br>`+
+      `• ${c.taches} tâche(s)<br>`+
+      `• ${c.membres} membre(s) de l'équipe Kanban, ${c.objectifs} objectif(s)`;
+  }catch(e){
+    document.getElementById('dpSummary').textContent='Erreur lors du calcul : '+e.message;
+  }
+}
+function closeDeleteProjet(){
+  document.getElementById('deleteProjetOverlay').classList.remove('open');
+  _dpProjetId=null;_dpImpact=null;
+}
+function dpCheckReady(){
+  const proj=PROJETS.find(p=>p.id===_dpProjetId);
+  const codeOk=proj&&document.getElementById('dpCodeConfirm').value.trim()===proj.code;
+  const secretOk=document.getElementById('dpSecret').value===DP_SECRET_CODE;
+  document.getElementById('btnDeleteProjet').disabled=!(codeOk&&secretOk&&_dpImpact);
+}
+
+async function dpComputeDeleteImpact(proj){
+  const [axesAllT,projetsT,axesT,actionsT,sousActionsT,indicConfigT,indicValT,saisieActionsT,etabPartsT,entPartsT,formPartsT,indicEtabT,tachesT,membresT,objectifsT]=await Promise.all([
+    grist.docApi.fetchTable('CONFIG_AXES_ALL'),
+    grist.docApi.fetchTable('PROJET_projet'),
+    grist.docApi.fetchTable('PROJET_axes'),
+    grist.docApi.fetchTable('PROJET_Actions'),
+    grist.docApi.fetchTable('PROJET_sous_actions'),
+    grist.docApi.fetchTable('CONFIG_liste_des_indicateurs_par_action'),
+    grist.docApi.fetchTable('SUIVI_indicateurs'),
+    grist.docApi.fetchTable('SAISIE_actions_realisees'),
+    grist.docApi.fetchTable('SAISIE_etablissements_participants_par_action'),
+    grist.docApi.fetchTable('SAISIE_entreprises_par_action'),
+    grist.docApi.fetchTable('SAISIE_formations_par_action'),
+    grist.docApi.fetchTable('SAISIE_indicateurs_par_etab'),
+    grist.docApi.fetchTable('SUIVI_TACHES_ALL'),
+    grist.docApi.fetchTable('CONFIG_MEMBRES_ALL'),
+    grist.docApi.fetchTable('CONFIG_objectifs_indicateurs'),
+  ]);
+  const rAxesAll=tableToRows(axesAllT),rProjets=tableToRows(projetsT),rAxes=tableToRows(axesT),rActions=tableToRows(actionsT),
+        rSousActions=tableToRows(sousActionsT),rIndicConfig=tableToRows(indicConfigT),rIndicVal=tableToRows(indicValT),
+        rSaisieActions=tableToRows(saisieActionsT),rEtabParts=tableToRows(etabPartsT),rEntParts=tableToRows(entPartsT),
+        rFormParts=tableToRows(formPartsT),rIndicEtab=tableToRows(indicEtabT),rTaches=tableToRows(tachesT),
+        rMembres=tableToRows(membresT),rObjectifs=tableToRows(objectifsT);
+
+  const actnProj=rProjets.find(p=>p.cod_projet===proj.code);
+  const axeIds=rAxes.filter(a=>actnProj&&a.projet_ref===actnProj.id).map(a=>a.id);
+  const axeIdSet=new Set(axeIds);
+  const actionIds=rActions.filter(a=>axeIdSet.has(a.wp_axe_ref)).map(a=>a.id);
+  const actionIdSet=new Set(actionIds);
+  const sousActionIds=rSousActions.filter(s=>actionIdSet.has(s.action_ref)).map(s=>s.id);
+  const sousActionIdSet=new Set(sousActionIds);
+  const indicConfigIds=rIndicConfig.filter(i=>sousActionIdSet.has(i.type_sous_action)).map(i=>i.id);
+  const saisieActionIds=rSaisieActions.filter(a=>actnProj&&a.projet_ref===actnProj.id).map(a=>a.id);
+  const saisieActionIdSet=new Set(saisieActionIds);
+  const indicValIds=rIndicVal.filter(v=>saisieActionIdSet.has(v.action_ref)).map(v=>v.id);
+  const etabPartIds=rEtabParts.filter(p=>saisieActionIdSet.has(p.ACTION_CONCERNEE)).map(p=>p.id);
+  const entPartIds=rEntParts.filter(p=>saisieActionIdSet.has(p.action_ref)).map(p=>p.id);
+  const formPartIds=rFormParts.filter(p=>saisieActionIdSet.has(p.action_ref)).map(p=>p.id);
+  const indicEtabIds=rIndicEtab.filter(p=>saisieActionIdSet.has(p.action_ref)).map(p=>p.id);
+  const tacheIds=rTaches.filter(t=>t.projet_id===proj.id).map(t=>t.id);
+  const membreIds=rMembres.filter(m=>m.projet_id===proj.id).map(m=>m.id);
+  const axeAllIds=rAxesAll.filter(a=>a.projet_id===proj.id).map(a=>a.id);
+  const objectifIds=rObjectifs.filter(o=>o.projet_code===proj.code).map(o=>o.id);
+
+  return{
+    actnProjId:actnProj?actnProj.id:null,
+    axeIds,actionIds,sousActionIds,indicConfigIds,saisieActionIds,
+    indicValIds,etabPartIds,entPartIds,formPartIds,indicEtabIds,
+    tacheIds,membreIds,axeAllIds,objectifIds,
+    counts:{
+      wp:axeIds.length,actions:actionIds.length,sousActions:sousActionIds.length,indicConfig:indicConfigIds.length,
+      actionsRealisees:saisieActionIds.length,valeursIndic:indicValIds.length,taches:tacheIds.length,
+      membres:membreIds.length,objectifs:objectifIds.length,
+    }
+  };
+}
+
+async function executeDeleteProjet(){
+  if(!_dpImpact||!_dpProjetId)return;
+  const proj=PROJETS.find(p=>p.id===_dpProjetId);
+  if(!proj)return;
+  const btn=document.getElementById('btnDeleteProjet');
+  btn.disabled=true;btn.textContent='Suppression en cours…';
+  const im=_dpImpact;
+  const del=(table,ids)=>ids.map(id=>['RemoveRecord',table,id]);
+  const actions=[
+    ...del('SUIVI_indicateurs',im.indicValIds),
+    ...del('SAISIE_etablissements_participants_par_action',im.etabPartIds),
+    ...del('SAISIE_entreprises_par_action',im.entPartIds),
+    ...del('SAISIE_formations_par_action',im.formPartIds),
+    ...del('SAISIE_indicateurs_par_etab',im.indicEtabIds),
+    ...del('SUIVI_TACHES_ALL',im.tacheIds),
+    ...del('SAISIE_actions_realisees',im.saisieActionIds),
+    ...del('CONFIG_liste_des_indicateurs_par_action',im.indicConfigIds),
+    ...del('PROJET_sous_actions',im.sousActionIds),
+    ...del('PROJET_Actions',im.actionIds),
+    ...del('PROJET_axes',im.axeIds),
+    ...del('CONFIG_AXES_ALL',im.axeAllIds),
+    ...del('CONFIG_MEMBRES_ALL',im.membreIds),
+    ...del('CONFIG_objectifs_indicateurs',im.objectifIds),
+    ...(im.actnProjId?[['RemoveRecord','PROJET_projet',im.actnProjId]]:[]),
+    ['RemoveRecord','CONFIG_PROJETS',proj.id],
+  ];
+  try{
+    if(actions.length)await grist.docApi.applyUserActions(actions);
+    await loadAll();
+    closeDeleteProjet();
+    showToast('Projet et toutes ses données supprimés','info');
+  }catch(e){
+    showToast('Erreur suppression : '+e.message,'error');
+    btn.disabled=false;btn.textContent='Supprimer définitivement';
+  }
+}
+
+/* ══════════════════════════════════════════════
    MODAL ACTION (overlay complet)
 ══════════════════════════════════════════════ */
 function openActionModal(id=null){
@@ -6244,7 +6406,7 @@ function quickAddFromKanban(statut){
 /* Fermeture modales par Esc */
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
-  ['taskOverlay','newProjetOverlay','actionOverlay','indicOverlay','adminOverlay','indicFormOverlay'].forEach(id=>{
+  ['taskOverlay','newProjetOverlay','actionOverlay','indicOverlay','adminOverlay','indicFormOverlay','deleteProjetOverlay'].forEach(id=>{
     const el=document.getElementById(id);
     if(el?.classList.contains('open'))el.classList.remove('open');
   });

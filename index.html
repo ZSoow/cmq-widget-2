@@ -1640,6 +1640,18 @@ function actAxeCol(wp){
   return palette[idx>=0?idx%palette.length:0];
 }
 function actAxeBg(wp){return lighten(actAxeCol(wp))}
+/* Retrouve la ligne PROJET_axes correspondant à un code WP du système Kanban
+   (CONFIG_AXES_ALL). Les deux systèmes n'ont AUCUNE clé commune — juste une
+   convention de préfixe qui diverge selon les projets (BEA: Kanban "A4" vs
+   Actions "AXE4", FIBI: "WP1" des deux côtés). On rapproche donc par le
+   suffixe numérique du code, seule partie garantie identique dans les deux
+   tables (cf. bug "Action liée" introuvable pour BEA, 2026-07-17). */
+function findActnAxeByWpCode(wpCode,actnProjId){
+  if(!wpCode||!actnProjId)return null;
+  const num=(wpCode.match(/(\d+)\s*$/)||[])[1];
+  if(!num)return null;
+  return ACTN_AXES.find(a=>a.projet_ref===actnProjId&&(a.cod_wp_axe||'').match(/(\d+)\s*$/)?.[1]===num)||null;
+}
 function mCol(n){
   const m=MEMBRES.find(mb=>mb.nom===n);
   if(m?.couleur)return m.couleur;
@@ -4080,7 +4092,7 @@ function onMWPChange(){
   if(!wpCode)return;
   const proj=PROJETS.find(p=>p.id===currentProjetId);
   const actnProj=proj&&ACTN_PROJETS.find(ap=>ap.cod_projet===proj.code);
-  const axe=actnProj&&ACTN_AXES.find(a=>a.projet_ref===actnProj.id&&a.cod_wp_axe===wpCode);
+  const axe=actnProj&&findActnAxeByWpCode(wpCode,actnProj.id);
   if(!axe)return;
   (window._ALL_ACTIONS||[]).filter(a=>a.wp_axe_ref===axe.id)
     .sort((a,b)=>(a.nom_suivi_action||'').localeCompare(b.nom_suivi_action||'','fr'))
@@ -4095,7 +4107,7 @@ function onFWpChange(){
     fa.innerHTML='<option value="">Toutes</option>';
     const proj=PROJETS.find(p=>p.id===currentProjetId);
     const actnProj=proj&&ACTN_PROJETS.find(ap=>ap.cod_projet===proj.code);
-    const axeId=wpCode?(ACTN_AXES.find(x=>x.cod_wp_axe===wpCode&&x.projet_ref===actnProj?.id)?.id||null):null;
+    const axeId=wpCode?(findActnAxeByWpCode(wpCode,actnProj?.id)?.id||null):null;
     const list=(window._ALL_ACTIONS||[])
       .filter(a=>actnProj&&a.projet_ref===actnProj.id&&!a.terminee)
       .filter(a=>!axeId||a.wp_axe_ref===axeId)

@@ -1990,13 +1990,11 @@ function renderActHistory(proj,actnProj){
     const act=ACTN_ACTIONS.find(x=>x.id===a.action_ref);
     const sa=ACTN_SOUS_ACTIONS.find(s=>s.id===a.sous_action_ref);
     const indics=getIndicForAction(a.id);
-    const chips=indics.map(iv=>{const cfg=ALL_INDIC_CONFIG.find(c=>c.id===iv.indicateur_ref);return cfg?`<span class="ah-chip">${esc(cfg.libelle_indicateurs)} <strong>${(iv.valeur||0).toLocaleString('fr-FR')}</strong></span>`:''}).filter(Boolean).join('');
     const partenaires=(window._ALL_ETAB_PARTS||[]).filter(p=>p.ACTION_CONCERNEE===a.id);
-    const etabChips=partenaires.map(p=>{
-      const e=(window._ALL_ETABLISSEMENTS||[]).find(x=>x.id===p.ETABLISSEMENT_PARTICIPANT);
-      const label=e?.nom_etablissement||`Étab. #${p.ETABLISSEMENT_PARTICIPANT}`;
-      return`<span class="ah-chip" style="background:#f0f4ff;border:.5px solid #c5d3f0;color:#2a4a8a" title="${esc(label)}">${esc(label.length>30?label.substring(0,28)+'…':label)}</span>`;
-    }).join('');
+    const summaryParts=[];
+    if(partenaires.length)summaryParts.push(partenaires.length+' étab.');
+    if(indics.length)summaryParts.push(indics.length+' indicateur'+(indics.length>1?'s':''));
+    const summary=summaryParts.length?`<div style="margin-top:6px;font-size:11px;color:var(--sub)">${summaryParts.join(' · ')}</div>`:'';
     const statutBadge=a.cloturee
       ?`<span style="font-size:10px;background:#eee;color:#666;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0">Archivée</span>`
       :a.terminee
@@ -2020,7 +2018,7 @@ function renderActHistory(proj,actnProj){
           ${dateStr?`<span style="font-size:10px;color:var(--sub)">${dateStr}</span>`:''}
         </div>
       </div>
-      ${chips||etabChips?`<div class="ah-indics" style="margin-top:6px">${chips}${etabChips}</div>`:''}
+      ${summary}
     </div>`;
   }).join('');
 }
@@ -2352,6 +2350,7 @@ async function submitSaisieAction(){
 
 /* Recherche établissements dans le panneau de saisie */
 let _saPartnerSelected=[];
+let _saFormAddOpen=new Set();
 let _editingSaisieActionId=null;
 
 async function openSaisieActionPanelEdit(actionId){
@@ -2450,6 +2449,7 @@ async function openSaisieActionPanelEdit(actionId){
 
 function resetSaPartnerSection(){
   _saPartnerSelected=[];
+  _saFormAddOpen.clear();
   const inp=document.getElementById('saEtabSearch');if(inp)inp.value='';
   const res=document.getElementById('saPartnerResults');if(res){res.innerHTML='';res.classList.remove('open')}
   renderSaPartnerChips();
@@ -2521,6 +2521,39 @@ function removeFormFromEtab(etabId,formId){
   renderSaPartnerChips();
 }
 
+function toggleAddFormForEtab(etabId){
+  if(_saFormAddOpen.has(etabId))_saFormAddOpen.delete(etabId);
+  else _saFormAddOpen.add(etabId);
+  renderSaPartnerChips();
+}
+
+async function submitNewFormation(etabId){
+  const p=_saPartnerSelected.find(x=>x.id===etabId);if(!p)return;
+  const nomEl=document.getElementById(`saNewFormNom_${etabId}`);
+  const nom=(nomEl?.value||'').trim();
+  const errEl=document.getElementById(`saNewFormErr_${etabId}`);
+  if(!nom){if(errEl){errEl.textContent='Le nom de la formation est obligatoire.';errEl.style.display='block'}return}
+  if(errEl)errEl.style.display='none';
+  const diplome=(document.getElementById(`saNewFormDiplome_${etabId}`)?.value||'').trim();
+  const niveau=document.getElementById(`saNewFormNiveau_${etabId}`)?.value||'';
+  const record={
+    nom_formation:nom,type_diplome:diplome,niveau:niveau,description:'',
+    nom_etablissement_source:p.label,ville:'',code_postal:p.cp||'',url_formation:'',
+    etablissement_ref:p.id,actif:true
+  };
+  try{
+    const res=await grist.docApi.applyUserActions([['AddRecord','CONFIG_FORMATIONS',null,record]]);
+    const newId=res?.retValues?.[0];
+    if(!newId)throw new Error('id manquant');
+    ALL_FORMATIONS.push(Object.assign({id:newId},record));
+    _saFormAddOpen.delete(etabId);
+    addFormToEtab(etabId,newId);
+    showToast('Formation ajoutée','success');
+  }catch(e){
+    if(errEl){errEl.textContent="Erreur lors de l'enregistrement : "+e.message;errEl.style.display='block'}
+  }
+}
+
 function renderSaPartnerChips(){
   const el=document.getElementById('saPartnerChips');if(!el)return;
   const sid=parseInt(document.getElementById('saSousAction')?.value)||0;
@@ -2536,7 +2569,21 @@ function renderSaPartnerChips(){
     const availForms=etabForms.filter(f=>!selectedForms.includes(f.id));
     const formSelect=etabForms.length
       ?`<select onchange="addFormToEtab(${p.id},this.value);this.value=''" style="font-size:12px;font-family:var(--font);padding:5px 8px;border:.5px solid #ddd;border-radius:var(--rsm);color:#555;width:100%"><option value="">— Sélectionner une formation —</option>${availForms.map(f=>`<option value="${f.id}">${esc(f.type_diplome&&f.description?f.type_diplome+' · '+f.description:f.nom_formation)}</option>`).join('')}</select>`
-      :`<span style="font-size:11px;color:#bbb;font-style:italic">Aucune formation configurée — à ajouter dans CONFIG_FORMATIONS</span>`;
+      :`<span style="font-size:11px;color:#bbb;font-style:italic">Aucune formation configurée pour cet établissement</span>`;
+    const addFormOpen=_saFormAddOpen.has(p.id);
+    const addFormHtml=addFormOpen?`<div style="margin-top:8px;padding:8px;background:#fafafa;border:.5px solid #eee;border-radius:var(--rsm);display:flex;flex-direction:column;gap:6px">
+        <input type="text" id="saNewFormNom_${p.id}" placeholder="Nom de la formation *" style="font-size:12px;font-family:var(--font);padding:5px 8px;border:.5px solid #ddd;border-radius:var(--rsm);width:100%;box-sizing:border-box">
+        <div style="display:flex;gap:6px">
+          <input type="text" id="saNewFormDiplome_${p.id}" list="saFormDiplomeList" placeholder="Diplôme (ex: BTS)" style="font-size:12px;font-family:var(--font);padding:5px 8px;border:.5px solid #ddd;border-radius:var(--rsm);flex:1;min-width:0">
+          <select id="saNewFormNiveau_${p.id}" style="font-size:12px;font-family:var(--font);padding:5px 8px;border:.5px solid #ddd;border-radius:var(--rsm);width:80px"><option value="">Niveau</option>${[3,4,5,6,7,8,9].map(n=>`<option value="${n}">${n}</option>`).join('')}</select>
+        </div>
+        <div id="saNewFormErr_${p.id}" style="display:none;font-size:11px;color:#c0392b"></div>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button type="button" onclick="toggleAddFormForEtab(${p.id})" style="font-size:11px;padding:5px 10px;border:.5px solid #ddd;border-radius:var(--rsm);background:#fff;color:#666;cursor:pointer">Annuler</button>
+          <button type="button" onclick="submitNewFormation(${p.id})" style="font-size:11px;padding:5px 10px;border:none;border-radius:var(--rsm);background:var(--accent);color:#fff;cursor:pointer">Enregistrer</button>
+        </div>
+      </div>`
+      :`<button type="button" onclick="toggleAddFormForEtab(${p.id})" style="margin-top:6px;font-size:11px;padding:4px 8px;border:.5px dashed #ccc;border-radius:var(--rsm);background:#fff;color:#666;cursor:pointer">+ Ajouter une formation</button>`;
     const indicHtml=indics.length?`<div>
       <div class="sa-etab-section-lbl">Indicateurs</div>
       ${indics.map(ind=>`<div class="indic-row">
@@ -2552,11 +2599,16 @@ function renderSaPartnerChips(){
         <span class="partner-chip-x" onclick="removeSaPartner(${p.id})" style="font-size:18px;color:#ccc">×</span>
       </div>
       <div class="sa-etab-card-body">
-        <div><div class="sa-etab-section-lbl">Formations</div>${formSelect}<div class="sa-form-chips">${formChips}</div></div>
+        <div><div class="sa-etab-section-lbl">Formations</div>${formSelect}<div class="sa-form-chips">${formChips}</div>${addFormHtml}</div>
         ${indicHtml}
       </div>
     </div>`;
   }).join('');
+  if(!document.getElementById('saFormDiplomeList')){
+    const dl=document.createElement('datalist');dl.id='saFormDiplomeList';document.body.appendChild(dl);
+  }
+  const dl=document.getElementById('saFormDiplomeList');
+  dl.innerHTML=[...new Set(ALL_FORMATIONS.map(f=>f.type_diplome).filter(Boolean))].sort().map(d=>`<option value="${esc(d)}">`).join('');
 }
 
 /* ══ PARTENAIRES (entreprises/entités) ══ */

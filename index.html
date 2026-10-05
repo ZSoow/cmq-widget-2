@@ -4086,7 +4086,9 @@ function switchTab(t,silent=false){
   if(!silent)render();
 }
 
+let _selectsProjetId=null;
 function populateSelects(){
+  _selectsProjetId=currentProjetId;
   const proj=PROJETS.find(p=>p.id===currentProjetId);
   const actnProj=ACTN_PROJETS.find(ap=>ap.cod_projet===proj?.code);
   const membresProjet=getMembresActionsListe(actnProj?.typ_projet);
@@ -4986,7 +4988,15 @@ function openAddModal(){
   document.getElementById('taskOverlay').classList.add('open');
 }
 function openEditModal(id){
-  const t=TACHES.find(x=>x.id===id);if(!t)return;
+  const t=ALL_TACHES.find(x=>x.id===id);if(!t)return;
+  // Ouverture hors de "Suivi des tâches" (ex. Actions > Tâches liées) : aligner le contexte projet et les listes du formulaire
+  if(t.projet_id!==currentProjetId){
+    currentProjetId=t.projet_id;
+    TACHES=ALL_TACHES.filter(x=>x.projet_id===currentProjetId);
+    MEMBRES=ALL_MEMBRES.filter(m=>m.projet_id===currentProjetId);
+    WPS=ALL_AXES.filter(a=>a.projet_id===currentProjetId).sort((a,b)=>(a.code||'').localeCompare(b.code||'',undefined,{numeric:true}));
+  }
+  if(_selectsProjetId!==currentProjetId)populateSelects();
   editingId=id;
   document.getElementById('modalTitle').textContent='Modifier la tâche';
   document.getElementById('mTache').value=t.tache||'';
